@@ -22,6 +22,7 @@ const log = createLogger('DataStore')
 /** 数据域 */
 export type StoreDomain =
   | 'conferences'
+  | 'checkpoints'
   | 'events'
   | 'battles'
   | 'settings'
@@ -30,6 +31,7 @@ export type StoreDomain =
 /** 数据域 → 文件名映射 */
 const FILES: Record<StoreDomain, string> = {
   conferences: 'conferences.json',
+  checkpoints: 'committee-checkpoints.json',
   events: 'conference-events.json',
   battles: 'battles.json',
   settings: 'settings.json',
@@ -62,6 +64,7 @@ export function loadStore<T>(domain: StoreDomain): T | null {
     return JSON.parse(raw) as T
   } catch (err) {
     log.error(`Failed to read ${domain}:`, err)
+    if (domain === 'conferences' || domain === 'checkpoints') throw err
     return null
   }
 }
@@ -78,7 +81,9 @@ export function saveStore<T>(domain: StoreDomain, data: T): void {
 
   const filePath = getFilePath(domain)
   try {
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8')
+    const temporaryPath = `${filePath}.${process.pid}.tmp`
+    fs.writeFileSync(temporaryPath, JSON.stringify(data, null, 2), 'utf-8')
+    fs.renameSync(temporaryPath, filePath)
   } catch (err) {
     log.error(`Failed to save ${domain}:`, err)
     throw err

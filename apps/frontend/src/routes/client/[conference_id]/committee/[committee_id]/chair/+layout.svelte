@@ -1,11 +1,13 @@
 <script lang="ts">
   import { page } from '$app/state'
+  import MeetingRecovery from '$lib/components/conference/chair/meeting-recovery.svelte'
   import {
     currentCommittee,
     loadConference,
     motionDraft,
     pointDraft,
-    saveConferencesNow
+    saveConferencesNow,
+    restoringCheckpoint
   } from '$lib/classes/stores/conference/conference-store'
   import {
     chairDisplayExtra,
@@ -50,4 +52,7 @@
   })
 </script>
 
-{@render children()}
+<MeetingRecovery />
+<div class="min-h-0 flex-1" inert={$restoringCheckpoint}>
+  {@render children()}
+</div>

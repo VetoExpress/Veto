@@ -40,9 +40,17 @@ import { tallyVotesEngine } from '$lib/classes/services/engine/conference-engine
 import { getDisplayBridge, buildDisplayData } from '$lib/classes/clients/conference-display-client'
 import { bootstrapStore, saveToStore } from '../../helpers/store-bridge'
 import { generateInviteCode } from '$lib/classes/services/seat-access'
+import { createConferenceSaver } from '$lib/classes/services/conference-save'
+import { makeCheckpoint, saveCheckpoint, restoreCheckpoint, type CommitteeCheckpoint } from '$lib/classes/services/committee-checkpoints'
+import { destroyAllTimers } from '$lib/classes/services/timer/timer'
 
 const STORAGE_KEY = 'veto_conferences'
 const STORE_DOMAIN = 'conferences'
+const saver = createConferenceSaver((data) => saveToStore(STORE_DOMAIN, data))
+export const conferenceSaveStatus = saver.status
+export const restoringCheckpoint = writable(false)
+const savedPhases = new Map<string, ConferencePhase>()
+let storageReady = false
 
 // ---- 引擎注册表 ----------------------------------------------------------
 
@@ -72,6 +80,10 @@ function syncEngine(engine: Committee): void {
   if (!conference || !conference.getCommittee(engine.id)) return
   conference.replaceCommittee(engine)
   conferences.update((list) => [...list])
+  if (storageReady && savedPhases.get(engine.id) !== engine.phase) {
+    savedPhases.set(engine.id, engine.phase)
+    void saveCheckpoint(makeCheckpoint(conference.id, engine, '阶段切换'))
+  }
 }
 
 /** 将当前委员会引擎的变更写回其所属大会。 */
@@ -108,27 +120,23 @@ function loadConferencesFromStorage(): Conference[] {
 
 let _saveTimer: ReturnType<typeof setTimeout> | null = null
 function saveConferencesToStorage(confs: Conference[]): void {
-  if (typeof localStorage === 'undefined') return
+  if (typeof localStorage === 'undefined' || !storageReady) return
+  saver.pending()
   if (_saveTimer) clearTimeout(_saveTimer)
   _saveTimer = setTimeout(() => {
-    const json = JSON.stringify(confs.map((conference) => conference.toJSON()))
-    localStorage.setItem(STORAGE_KEY, json)
-    // 通过 JSON round-trip 确保纯 JSON 对象（剥离 Svelte $state 代理等）
-    saveToStore(STORE_DOMAIN, JSON.parse(json))
+    _saveTimer = null
+    void saver.save(confs.map((conference) => conference.toJSON()))
   }, 2000)
 }
 
 /** 立即保存（绕过防抖），用于离开页面前保存计时器状态 */
-export async function saveConferencesNow(): Promise<void> {
-  if (typeof localStorage === 'undefined') return
+export async function saveConferencesNow(): Promise<boolean> {
+  if (typeof localStorage === 'undefined' || !storageReady) return false
   if (_saveTimer) {
     clearTimeout(_saveTimer)
     _saveTimer = null
   }
-  const json = JSON.stringify(get(conferences).map((conference) => conference.toJSON()))
-  localStorage.setItem(STORAGE_KEY, json)
-  // 通过 JSON round-trip 确保纯 JSON 对象（剥离 Svelte $state 代理等）
-  await saveToStore(STORE_DOMAIN, JSON.parse(json))
+  return saver.save(get(conferences).map((conference) => conference.toJSON()))
 }
 
 // ---- 核心 Stores ----------------------------------------------------------
@@ -138,16 +146,54 @@ export const conferences = writable<Conference[]>(loadConferencesFromStorage())
 conferences.subscribe(saveConferencesToStorage)
 
 /** 启动完成 Promise：文件数据已加载并同步到 localStorage */
-export const conferencesReady: Promise<void> = bootstrapStore<ConferenceDTO[]>(
-  STORE_DOMAIN,
-  []
-).then((data) => {
+export async function retryConferenceStorage(): Promise<void> {
+  if (storageReady) { await saveConferencesNow(); return }
+  try {
+  const data = await bootstrapStore<ConferenceDTO[]>(STORE_DOMAIN, [])
+  if (!Array.isArray(data)) throw new Error('会议存档格式无效，原文件已保留')
   const restored = data.map((conference) => Conference.fromJSON(conference))
   for (const conference of restored) {
-    for (const committee of conference.committees) registerEngine(committee)
+    for (const committee of conference.committees) {
+      registerEngine(committee)
+      savedPhases.set(committee.id, committee.phase)
+    }
   }
   conferences.set(restored)
-})
+  storageReady = true
+  saver.status.set({ state: 'saved' })
+  } catch (error) { saver.fail(error) }
+}
+export const conferencesReady: Promise<void> = retryConferenceStorage()
+
+export async function createCommitteeCheckpoint(label = '手动快照'): Promise<boolean> {
+  const conference = get(currentConferenceRecord)
+  const committee = getCurrentEngine()
+  if (!conference || !committee || !storageReady) return false
+  return saveCheckpoint(makeCheckpoint(conference.id, committee, label))
+}
+
+export async function restoreCommitteeCheckpoint(checkpoint: CommitteeCheckpoint): Promise<void> {
+  if (get(restoringCheckpoint)) return
+  const conference = get(currentConferenceRecord)
+  const current = getCurrentEngine()
+  if (!conference || !current || !storageReady) throw new Error('会议尚未加载完成')
+  const restored = restoreCheckpoint(checkpoint, conference.id, current)
+  restoringCheckpoint.set(true)
+  try {
+    destroyAllTimers()
+    if (current.activeSpeaker) current.activeSpeaker = { ...current.activeSpeaker, paused: true }
+    if (current.activeCaucus) current.activeCaucus = { ...current.activeCaucus, paused: true }
+    if (!await saveCheckpoint(makeCheckpoint(conference.id, current, '恢复前自动备份'))) throw new Error('恢复前备份失败，当前会议已暂停')
+    const data = get(conferences).map((item) => {
+      const json = item.toJSON()
+      return item.id === conference.id ? { ...json, committees: json.committees.map((committee) => committee.id === restored.id ? restored.toJSON() : committee) } : json
+    })
+    if (!await saver.save(data)) throw new Error('恢复保存失败，当前会议已暂停，原记录仍保留')
+    registerEngine(restored)
+    syncEngine(restored)
+    getDisplayBridge().sendUpdate(buildDisplayData(restored))
+  } finally { restoringCheckpoint.set(false) }
+}
 
 /** 当前激活的大会 ID */
 export const currentConferenceId = writable<string | null>(null)
