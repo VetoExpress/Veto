@@ -59,8 +59,11 @@ import {
   scheduleError,
 } from "@/lib/conference-schedule"
 import { usePlatformAuth } from "@/lib/use-platform-auth"
+import { conferenceEdit, mergeConferenceEdit, sameEditValue, editLabels, describeEditValue, type ConferenceEdit } from "@/lib/conference-edit"
+import { useUnsavedChanges } from "@/lib/use-unsaved-changes"
 
-type SavingSection = "metadata" | "structure" | "delete"
+type SavingSection = "metadata" | "structure" | "delete" | "review"
+const pendingEdits = new Map<string, { base: ConferenceEdit; local: ConferenceEdit }>()
 
 export default function ConferenceDetailPage(): JSX.Element {
   const params = useParams<{ id: string }>()
@@ -81,7 +84,48 @@ export default function ConferenceDetailPage(): JSX.Element {
   const [error, setError] = useState("")
   const [fieldErrors, setFieldErrors] = useState<string[]>([])
   const [activeTab, setActiveTab] = useState("readiness")
+  const [editBase, setEditBase] = useState<ConferenceEdit>()
+  const [versionConflict, setVersionConflict] = useState(false)
+  const [review, setReview] = useState<{ remote: Conference; local: ConferenceEdit; result: ReturnType<typeof mergeConferenceEdit> }>()
+  const [choices, setChoices] = useState<Partial<Record<keyof ConferenceEdit, "local" | "remote">>>({})
   const conferenceId = params.id
+  const draftKey = `${token}:${conferenceId}`
+  const localEdit: ConferenceEdit = { name, description, organizer, startsAt, endsAt, structure }
+  const dirty = !!editBase && !sameEditValue(editBase, localEdit)
+  useUnsavedChanges(dirty && saving !== "delete")
+  useEffect(() => {
+    if (!editBase) return
+    if (dirty) pendingEdits.set(draftKey, { base: editBase, local: localEdit })
+    else pendingEdits.delete(draftKey)
+  })
+  function applyEdit(edit: ConferenceEdit) {
+    setName(edit.name); setDescription(edit.description); setOrganizer(edit.organizer)
+    setStartsAt(edit.startsAt); setEndsAt(edit.endsAt); setStructure(edit.structure)
+  }
+  function receiveConference(next: Conference) {
+    if (!editBase) return
+    const result = mergeConferenceEdit(editBase, localEdit, conferenceEdit(next))
+    if (result.conflicts.length) { setReview({ remote: next, local: localEdit, result }); setChoices({}); return }
+    setConference(next); setEditBase(conferenceEdit(next)); applyEdit(result.merged)
+  }
+  async function reviewLatest() {
+    if (!token || !editBase || saving) return
+    setSaving("review")
+    try {
+      const next = await getConference(token, conferenceId, { refresh: true })
+      setReview({ remote: next, local: localEdit, result: mergeConferenceEdit(editBase, localEdit, conferenceEdit(next)) })
+      setChoices({})
+    } catch (caught) { handleError(caught, "无法加载最新版本，输入已保留") }
+    finally { setSaving(undefined) }
+  }
+  function applyReview() {
+    if (!review || review.result.conflicts.some((key) => !choices[key])) return
+    const merged = { ...review.result.merged }
+    const remote = conferenceEdit(review.remote)
+    for (const key of review.result.conflicts) Object.assign(merged, { [key]: choices[key] === "remote" ? remote[key] : review.local[key] })
+    setConference(review.remote); setEditBase(remote); applyEdit(merged)
+    setReview(undefined); setVersionConflict(false); setError(""); setFieldErrors([])
+  }
 
   const handleError = useCallback(
     (caught: unknown, fallback: string): void => {
@@ -93,7 +137,8 @@ export default function ConferenceDetailPage(): JSX.Element {
         caught instanceof ConferenceApiError &&
         caught.code === "CONFERENCE_VERSION_CONFLICT"
       ) {
-        setError("大会已在其他位置更新，请刷新后再保存。")
+        setVersionConflict(true)
+        setError("大会已在其他位置更新，你的输入已保留。请查看变更并选择如何合并。")
       } else {
         setError(caught instanceof Error ? caught.message : fallback)
       }
@@ -116,6 +161,8 @@ export default function ConferenceDetailPage(): JSX.Element {
       setFieldErrors([])
       try {
         const next = await getConference(token, conferenceId, { refresh })
+        const pending = pendingEdits.get(`${token}:${conferenceId}`)
+        setEditBase(conferenceEdit(next))
         setConference(next)
         setName(next.name)
         setDescription(next.description ?? "")
@@ -126,6 +173,11 @@ export default function ConferenceDetailPage(): JSX.Element {
           roleTemplates: next.roleTemplates,
           committees: next.committees,
         })
+        if (pending) {
+          const result = mergeConferenceEdit(pending.base, pending.local, conferenceEdit(next))
+          applyEdit(result.merged)
+          if (result.conflicts.length) { setReview({ remote: next, local: pending.local, result }); setChoices({}) }
+        }
       } catch (caught) {
         handleError(caught, "加载大会失败")
       } finally {
@@ -140,7 +192,7 @@ export default function ConferenceDetailPage(): JSX.Element {
   }, [load])
 
   async function saveMetadata(): Promise<void> {
-    if (!token || !conference || conference.lifecycle === "closed" || saving)
+    if (!token || !conference || conference.lifecycle === "closed" || saving || review || versionConflict)
       return
     if (!name.trim()) {
       setError("大会名称不能为空")
@@ -180,6 +232,7 @@ export default function ConferenceDetailPage(): JSX.Element {
       setOrganizer(next.organizer ?? "")
       setStartsAt(scheduleInput(next.startsAt))
       setEndsAt(scheduleInput(next.endsAt))
+      setEditBase((base) => ({ ...conferenceEdit(next), structure: base?.structure ?? conferenceEdit(next).structure }))
     } catch (caught) {
       handleError(caught, "保存大会信息失败")
     } finally {
@@ -188,7 +241,7 @@ export default function ConferenceDetailPage(): JSX.Element {
   }
 
   async function saveStructure(): Promise<void> {
-    if (!token || !conference || conference.lifecycle === "closed" || saving)
+    if (!token || !conference || conference.lifecycle === "closed" || saving || review || versionConflict)
       return
     setSaving("structure")
     setError("")
@@ -205,6 +258,7 @@ export default function ConferenceDetailPage(): JSX.Element {
         roleTemplates: next.roleTemplates,
         committees: next.committees,
       })
+      setEditBase((base) => ({ ...(base ?? conferenceEdit(next)), structure: conferenceEdit(next).structure }))
     } catch (caught) {
       handleError(caught, "保存大会结构失败")
     } finally {
@@ -225,6 +279,7 @@ export default function ConferenceDetailPage(): JSX.Element {
     setError("")
     try {
       await deleteConference(token, conference.id, conference.version)
+      pendingEdits.delete(draftKey)
       router.replace("/")
     } catch (caught) {
       handleError(caught, "删除大会失败")
@@ -306,19 +361,35 @@ export default function ConferenceDetailPage(): JSX.Element {
                   ))}
                 </ul>
               ) : null}
-              {error.includes("其他位置更新") ? (
+              {versionConflict ? (
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   className="mt-3"
-                  onClick={() => void load(true)}
+                  disabled={Boolean(saving)}
+                  onClick={() => void reviewLatest()}
                 >
-                  重新加载
+                  查看远端变更
                 </Button>
               ) : null}
             </div>
           ) : null}
+
+          {dirty && <p role="status" className="rounded-lg border p-3 text-sm">有未保存的修改，请保存基本信息或大会结构后离开。</p>}
+          {review && <section aria-label="合并大会修改" className="space-y-4 rounded-xl border p-5">
+            <h2 className="text-lg font-semibold">核对最新版本</h2>
+            <p className="text-sm">远端更新：{review.result.changed.map((key) => editLabels[key]).join("、") || "版本信息"}。没有冲突的字段已自动合并；应用后仍需点击保存。</p>
+            {review.result.conflicts.map((key) => <fieldset key={key} className="space-y-3 rounded-lg border p-3">
+              <legend className="px-1 font-medium">{editLabels[key]}</legend>
+              {(["local", "remote"] as const).map((source) => <label key={source} className="block cursor-pointer rounded-md bg-muted/30 p-3 text-sm">
+                <input type="radio" name={`conflict-${key}`} checked={choices[key] === source} onChange={() => setChoices({ ...choices, [key]: source })} /> {source === "local" ? "保留我的修改" : "使用远端版本"}
+                <pre className="mt-2 max-h-56 overflow-auto font-sans whitespace-pre-wrap">{describeEditValue((source === "local" ? review.local : conferenceEdit(review.remote))[key])}</pre>
+              </label>)}
+            </fieldset>)}
+            {review.remote.lifecycle === "closed" && <p role="alert">大会已结束，保留的输入可复制查看，不能再保存。</p>}
+            <Button disabled={review.result.conflicts.some((key) => !choices[key])} onClick={applyReview}>应用合并结果</Button>
+          </section>}
 
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(String(value))} className="gap-0">
             <TabsList
@@ -371,8 +442,9 @@ export default function ConferenceDetailPage(): JSX.Element {
             </TabsList>
 
             <TabsPanels className="mt-8">
+              <fieldset disabled={Boolean(review)} className="min-w-0">
               <TabsPanel value="readiness">
-                <ConferenceReadiness conference={conference} hasUnsavedChanges={JSON.stringify(structure) !== JSON.stringify({ roleTemplates: conference.roleTemplates, committees: conference.committees })} onNavigate={setActiveTab} />
+                <ConferenceReadiness conference={conference} hasUnsavedChanges={dirty} onNavigate={setActiveTab} />
               </TabsPanel>
               <TabsPanel value="settings">
                 {conference.lifecycle !== "closed" && token ? (
@@ -396,7 +468,7 @@ export default function ConferenceDetailPage(): JSX.Element {
                         })
                       }
                       settingsOnly
-                      onConferenceChange={setConference}
+                      onConferenceChange={receiveConference}
                       onError={handleError}
                     />
                   </div>
@@ -500,7 +572,7 @@ export default function ConferenceDetailPage(): JSX.Element {
                         conferenceId={conference.id}
                         lifecycle={conference.lifecycle}
                         version={conference.version}
-                        onConferenceChange={setConference}
+                        onConferenceChange={receiveConference}
                         onError={handleError}
                       />
                     ) : null}
@@ -610,7 +682,7 @@ export default function ConferenceDetailPage(): JSX.Element {
                   <ConferenceSituationWorkspace
                     token={token}
                     conference={conference}
-                    onConferenceChange={setConference}
+                    onConferenceChange={receiveConference}
                     onError={handleError}
                   />
                 ) : null}
@@ -628,6 +700,7 @@ export default function ConferenceDetailPage(): JSX.Element {
                   />
                 ) : null}
               </TabsPanel>
+              </fieldset>
             </TabsPanels>
           </Tabs>
         </div>
