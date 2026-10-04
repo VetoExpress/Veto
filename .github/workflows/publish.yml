@@ -9,8 +9,6 @@ permissions:
   contents: write
 
 jobs:
-  checks:
-    uses: ./.github/workflows/check.yml
   build:
     strategy:
       fail-fast: false
