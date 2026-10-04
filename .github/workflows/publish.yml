@@ -12,7 +12,6 @@ jobs:
   checks:
     uses: ./.github/workflows/check.yml
   build:
-    needs: checks
     strategy:
       fail-fast: false
       matrix:
