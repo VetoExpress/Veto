@@ -19,12 +19,14 @@
     "build:mac": "pnpm build:frontend && node scripts/copy-frontend.mjs && npm --prefix apps/electron run build:mac",
     "build": "pnpm build:win",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "sync-version": "tsx scripts/sync-version.ts",
     "test:watch": "vitest"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "eslint": "^9.39.1",
     "prettier": "^3.0.0",
-    "typescript": "^5.9.2",
-    "eslint": "^9.39.1"
+    "typescript": "^5.9.2"
   }
 }

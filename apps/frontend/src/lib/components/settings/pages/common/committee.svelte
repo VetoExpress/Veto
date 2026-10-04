@@ -9,6 +9,7 @@
     currentCommittee,
     setSubstantiveVotingMajority
   } from '$lib/classes/stores/conference/conference-store'
+  import CommitteeSnapshots from './committee-snapshots.svelte'
   import { fly } from 'svelte/transition'
 
   let offsetX = $state($globalSettings.displayOffsetX)
@@ -36,7 +37,7 @@
 <div in:fly={{ y: 8, duration: 320, opacity: 0 }}>
   <ScrollArea>
     <div class="mb-1 text-xl font-bold">会议设置</div>
-    <p class="mb-4 text-sm">配置当前委员会的投票规则与展示选项。</p>
+    <p class="mb-4 text-sm">配置当前委员会的投票规则、展示选项与本地会议快照。</p>
     <div class="space-y-3">
       <SettingCard title="投票规则" description="实质性投票所需的赞成票门槛，按出席且拥有投票权的席位计算。">
         {#if $currentCommittee}
@@ -108,5 +109,7 @@
         </div>
       </SettingCard>
     </div>
+
+    <CommitteeSnapshots />
   </ScrollArea>
 </div>

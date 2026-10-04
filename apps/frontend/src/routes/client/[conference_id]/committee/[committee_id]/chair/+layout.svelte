@@ -1,7 +1,6 @@
 <script lang="ts">
   import { page } from '$app/state'
   import { beforeNavigate } from '$app/navigation'
-  import MeetingRecovery from '$lib/components/conference/chair/meeting-recovery.svelte'
   import {
     currentCommittee,
     loadConference,
@@ -54,7 +53,6 @@
   })
 </script>
 
-<MeetingRecovery />
 <div class="min-h-0 flex-1" inert={$restoringCheckpoint}>
   {@render children()}
 </div>

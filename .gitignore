@@ -8,6 +8,9 @@ out
 release.ps1
 .vscode/*
 .worktrees/
+playwright-report/
+test-results/
+apps/platform/.next-e2e/
 docs/*
 !docs/adr/
 !docs/adr/*.md
