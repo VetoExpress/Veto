@@ -186,6 +186,21 @@ export interface SeatCommitteeUser {
   displayName: string
 }
 
+export interface OrganizerSeatAccess {
+  seatId: string
+  committeeId: string
+  user: { id: string; displayName: string; claimedAt: string } | null
+}
+
+export async function listOrganizerSeatAccess(token: string, id: string): Promise<OrganizerSeatAccess[]> {
+  const result = await apiRequest<{ ok: true; seats: OrganizerSeatAccess[] }>(token, `${conferencePath(id)}/seat-access`, { refreshCache: true, cache: "no-store" })
+  return result.seats
+}
+
+export async function resetOrganizerSeatUser(token: string, id: string, seatId: string, userId: string, reason: string): Promise<void> {
+  await apiRequest(token, `${conferencePath(id)}/seats/${encodeURIComponent(seatId)}/reset-user`, { method: "POST", body: JSON.stringify({ userId, reason }) })
+}
+
 export interface SeatCommitteeSession {
   ok: true
   conference: {

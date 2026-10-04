@@ -564,7 +564,8 @@ export default function ConferenceDetailPage(): JSX.Element {
               </TabsPanel>
 
               <TabsPanel value="seats">
-                <ConferenceSeatOverview
+                {token && <ConferenceSeatOverview
+                  token={token}
                   conference={conference}
                   hasUnsavedStructure={
                     JSON.stringify(structure) !==
@@ -573,7 +574,7 @@ export default function ConferenceDetailPage(): JSX.Element {
                       committees: conference.committees,
                     })
                   }
-                />
+                />}
               </TabsPanel>
 
               <TabsPanel value="news">
