@@ -140,8 +140,7 @@ _Avoid_: DelegateSession, User Session, SeatAccess
 
 **User (用户)**:
 大会内由 Veto 识别的自然人身份，与一个 Seat 严格一对一。User 保存自主设置的登录密码；User 不等同于
-其使用的 Seat，当前也不要求跨大会或跨设备延续。User 包含代表姓名，密码为可选；未设置密码时，
-邀请码本身就是完整认证凭证。Organizer Platform 可以在误认领或遗忘密码时重置 Seat 的 User，允许重新认领。
+其使用的 Seat，当前也不要求跨大会或跨设备延续。User 包含代表姓名，首次认领时必须设置密码。Organizer Platform 可以在误认领或遗忘密码时重置 Seat 的 User，允许重新认领。
 User 由 Conference 持有，只能在认领 Seat 时创建；重置 Seat 时直接删除原 User。
 _Avoid_: Account, Seat, Delegate
 
@@ -159,12 +158,12 @@ _Avoid_: User, Account, Credential
 授予持有者进入指定 Seat 权限的 4-4-4 登录凭证（代码字段 `inviteCode`，UI 中称"Key"）。
 云端大会由 Organizer Platform 生成、查看、复制和轮换；创建向导不配置它。
 邀请码首次使用时确定该 Seat 的 User，由 User 自主设置密码；后续使用"邀请码 + User 密码"连接席位。
-密码可以留空；此时后续仅凭邀请码即可连接。邀请码只定位并授予 Seat 访问入口，密码属于 User。
+首次认领时密码必填；后续凭邀请码与 User 密码连接。邀请码只定位并授予 Seat 访问入口，密码属于 User。
 _Avoid_: Password, 席位 key
 
 **SeatClaim（席位认领）**:
 Cloud Conference 中首次成功使用 SeatAccess 将 User 绑定到未占用 Seat 的动作。
-认领时确定代表姓名，密码可选；认领完成后，该 Seat 不得被第二次认领，只能由 User 凭证进入。
+认领时必须填写代表姓名和密码；认领完成后，该 Seat 不得被第二次认领，只能由 User 凭证进入。
 _Avoid_: Register, Login, Sign-up
 
 ## RoleTemplate（角色模板）
