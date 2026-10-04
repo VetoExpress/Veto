@@ -23,6 +23,7 @@ import {
   textareaClassName,
 } from "@/components/conference-structure-editor"
 import { ConferenceSeatOverview } from "@/components/conference-seat-overview"
+import { ConferenceReadiness } from "@/components/conference-readiness"
 import { ConferenceSituationWorkspace } from "@/components/conference-situation-workspace"
 import { ConferenceDirectiveWorkspace } from "@/components/conference-directive-workspace"
 import { ConferenceNewsWorkspace } from "@/components/conference-news-workspace"
@@ -79,6 +80,7 @@ export default function ConferenceDetailPage(): JSX.Element {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
   const [fieldErrors, setFieldErrors] = useState<string[]>([])
+  const [activeTab, setActiveTab] = useState("readiness")
   const conferenceId = params.id
 
   const handleError = useCallback(
@@ -318,11 +320,12 @@ export default function ConferenceDetailPage(): JSX.Element {
             </div>
           ) : null}
 
-          <Tabs defaultValue="settings" className="gap-0">
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(String(value))} className="gap-0">
             <TabsList
-              className="grid h-auto w-full grid-cols-6"
+              className="grid h-auto w-full grid-cols-4 sm:grid-cols-7"
               aria-label="大会工作区"
             >
+              <TabsTab value="readiness" className="min-h-11 min-w-0 py-2 text-xs sm:text-sm">开会前检查</TabsTab>
               <TabsTab
                 value="settings"
                 className="min-h-11 min-w-0 py-2 text-xs sm:text-sm"
@@ -368,6 +371,9 @@ export default function ConferenceDetailPage(): JSX.Element {
             </TabsList>
 
             <TabsPanels className="mt-8">
+              <TabsPanel value="readiness">
+                <ConferenceReadiness conference={conference} hasUnsavedChanges={JSON.stringify(structure) !== JSON.stringify({ roleTemplates: conference.roleTemplates, committees: conference.committees })} onNavigate={setActiveTab} />
+              </TabsPanel>
               <TabsPanel value="settings">
                 {conference.lifecycle !== "closed" && token ? (
                   <div className="mb-8 space-y-4">
