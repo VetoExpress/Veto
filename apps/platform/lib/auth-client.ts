@@ -72,9 +72,11 @@ export async function fetchMe(token: string): Promise<PlatformUser> {
     throw new AuthError("无法连接认证服务")
   }
 
-  const payload = (await response.json().catch(() => null)) as
-    | { ok?: boolean; error?: string; user?: PlatformUser }
-    | null
+  const payload = (await response.json().catch(() => null)) as {
+    ok?: boolean
+    error?: string
+    user?: PlatformUser
+  } | null
 
   if (!response.ok || payload?.ok === false || !payload?.user) {
     const message = payload?.error ? String(payload.error) : "请求失败"
@@ -95,6 +97,26 @@ export async function login(email: string, password: string): Promise<string> {
 
 export async function sendVerificationCode(email: string): Promise<void> {
   await request<{ ok: true }>("/v1/auth/send-code", { email })
+}
+
+export async function forgotPassword(email: string): Promise<void> {
+  const result = await request<{ ok: true }>("/v1/auth/forgot-password", {
+    email,
+  })
+  if (result?.ok !== true) throw new AuthError("发送失败，请稍后再试")
+}
+
+export async function resetPassword(
+  email: string,
+  code: string,
+  password: string
+): Promise<void> {
+  const result = await request<{ ok: true }>("/v1/auth/reset-password", {
+    email,
+    code,
+    password,
+  })
+  if (result?.ok !== true) throw new AuthError("重设密码失败，请稍后再试")
 }
 
 export async function verifyCode(email: string, code: string): Promise<string> {

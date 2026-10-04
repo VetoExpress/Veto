@@ -37,6 +37,7 @@ import {
 } from "@/lib/auth-client"
 import { ThemeToggler } from "@/components/theme-toggler"
 import { BubbleBackground } from "@/components/animate-ui/components/backgrounds/bubble"
+import { PasswordResetForm } from "@/components/password-reset-form"
 
 type AuthTab = "login" | "register"
 type RegisterStage = "email" | "code" | "password"
@@ -45,6 +46,8 @@ const RESEND_COOLDOWN_SECONDS = 60
 
 export default function Page() {
   const [tab, setTab] = useState<AuthTab>("login")
+  const [resettingPassword, setResettingPassword] = useState(false)
+  const [resetEmail, setResetEmail] = useState("")
   const router = useRouter()
 
   useEffect(() => {
@@ -81,32 +84,53 @@ export default function Page() {
           <section className="flex w-full items-center justify-center px-6 py-12 lg:w-[560px]">
             <Card className="w-full max-w-md rounded-2xl bg-card/90 p-0 shadow-2xl ring-0 backdrop-blur-xl">
               <CardHeader className="p-6 pb-4">
-                <CardTitle className="text-2xl font-bold">Veto 平台</CardTitle>
+                <CardTitle className="text-2xl font-bold">
+                  {resettingPassword ? "找回密码" : "Veto 平台"}
+                </CardTitle>
                 <CardDescription className="text-sm">
-                  使用邮箱登录或注册 Veto 账号
+                  {resettingPassword
+                    ? "通过注册邮箱验证身份并设置新密码"
+                    : "使用邮箱登录或注册 Veto 账号"}
                 </CardDescription>
               </CardHeader>
 
               <CardContent className="px-6 pb-5">
-                <Tabs
-                  value={tab}
-                  onValueChange={(value) => setTab(value as AuthTab)}
-                  className="gap-4"
-                >
-                  <TabsList className="w-full">
-                    <TabsTab value="login">登录</TabsTab>
-                    <TabsTab value="register">注册</TabsTab>
-                  </TabsList>
+                {resettingPassword ? (
+                  <PasswordResetForm
+                    onCancel={() => setResettingPassword(false)}
+                    onSuccess={(email) => {
+                      setResetEmail(email)
+                      setTab("login")
+                      setResettingPassword(false)
+                    }}
+                  />
+                ) : (
+                  <Tabs
+                    value={tab}
+                    onValueChange={(value) => setTab(value as AuthTab)}
+                    className="gap-4"
+                  >
+                    <TabsList className="w-full">
+                      <TabsTab value="login">登录</TabsTab>
+                      <TabsTab value="register">注册</TabsTab>
+                    </TabsList>
 
-                  <TabsPanels>
-                    <TabsPanel value="login">
-                      <LoginForm />
-                    </TabsPanel>
-                    <TabsPanel value="register">
-                      <RegisterForm onSuccess={() => setTab("login")} />
-                    </TabsPanel>
-                  </TabsPanels>
-                </Tabs>
+                    <TabsPanels>
+                      <TabsPanel value="login">
+                        <LoginForm
+                          initialEmail={resetEmail}
+                          onForgotPassword={() => {
+                            setResetEmail("")
+                            setResettingPassword(true)
+                          }}
+                        />
+                      </TabsPanel>
+                      <TabsPanel value="register">
+                        <RegisterForm onSuccess={() => setTab("login")} />
+                      </TabsPanel>
+                    </TabsPanels>
+                  </Tabs>
+                )}
               </CardContent>
 
               <CardFooter className="flex-col gap-3 border-t bg-transparent p-6">
@@ -169,9 +193,15 @@ function HeroStat({ label, title }: { label: string; title: string }) {
   )
 }
 
-function LoginForm() {
+function LoginForm({
+  initialEmail,
+  onForgotPassword,
+}: {
+  initialEmail: string
+  onForgotPassword: () => void
+}) {
   const router = useRouter()
-  const [email, setEmail] = useState("")
+  const [email, setEmail] = useState(initialEmail)
   const [password, setPassword] = useState("")
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
@@ -195,6 +225,11 @@ function LoginForm() {
 
   return (
     <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+      {initialEmail ? (
+        <p role="status" className="text-sm text-muted-foreground">
+          密码已重设，请使用新密码登录。
+        </p>
+      ) : null}
       <div className="flex flex-col gap-2">
         <Label htmlFor="login-email">邮箱</Label>
         <Input
@@ -208,7 +243,18 @@ function LoginForm() {
         />
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="login-password">密码</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="login-password">密码</Label>
+          <Button
+            type="button"
+            variant="link"
+            size="sm"
+            disabled={busy}
+            onClick={onForgotPassword}
+          >
+            忘记密码？
+          </Button>
+        </div>
         <Input
           id="login-password"
           type="password"
@@ -330,11 +376,7 @@ function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
             busyIcon={<Loader2 className="size-4 animate-spin" />}
             busy={busy}
             disabled={busy || cooldown > 0 || !email.trim()}
-            label={
-              cooldown > 0
-                ? `重新发送（${cooldown}s）`
-                : "发送验证码"
-            }
+            label={cooldown > 0 ? `重新发送（${cooldown}s）` : "发送验证码"}
           />
         </form>
       ) : null}
@@ -429,7 +471,12 @@ function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
             icon={<UserPlus className="size-4" />}
             busyIcon={<Loader2 className="size-4 animate-spin" />}
             busy={busy}
-            disabled={busy || !name.trim() || !organization.trim() || password.length < 6}
+            disabled={
+              busy ||
+              !name.trim() ||
+              !organization.trim() ||
+              password.length < 6
+            }
             label="完成注册"
           />
         </form>
