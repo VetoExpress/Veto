@@ -1,6 +1,6 @@
 {
   "name": "@vetoexpress/electron",
-  "version": "0.130.0",
+  "version": "0.140.0",
   "description": "Veto —— A modern, cross-platform, and extensible Model United Nations Conference platform.",
   "main": "./out/main/index.js",
   "author": "Miaoyww",
