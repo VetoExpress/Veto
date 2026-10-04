@@ -82,7 +82,8 @@ function syncEngine(engine: Committee): void {
   conferences.update((list) => [...list])
   if (storageReady && savedPhases.get(engine.id) !== engine.phase) {
     savedPhases.set(engine.id, engine.phase)
-    void saveCheckpoint(makeCheckpoint(conference.id, engine, '阶段切换'))
+    const checkpoint = makeCheckpoint(conference.id, engine, '阶段切换')
+    void saveConferencesNow().then((saved) => saved && saveCheckpoint(checkpoint))
   }
 }
 
@@ -169,6 +170,7 @@ export async function createCommitteeCheckpoint(label = '手动快照'): Promise
   const conference = get(currentConferenceRecord)
   const committee = getCurrentEngine()
   if (!conference || !committee || !storageReady) return false
+  if (!await saveConferencesNow()) return false
   return saveCheckpoint(makeCheckpoint(conference.id, committee, label))
 }
 

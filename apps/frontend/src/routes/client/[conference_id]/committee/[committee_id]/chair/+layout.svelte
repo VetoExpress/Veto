@@ -1,5 +1,6 @@
 <script lang="ts">
   import { page } from '$app/state'
+  import { beforeNavigate } from '$app/navigation'
   import MeetingRecovery from '$lib/components/conference/chair/meeting-recovery.svelte'
   import {
     currentCommittee,
@@ -20,6 +21,7 @@
   } from '$lib/classes/clients/conference-display-client'
 
   let { children } = $props()
+  beforeNavigate((navigation) => { if ($restoringCheckpoint) navigation.cancel() })
 
   const conferenceId = $derived(page.params.conference_id ?? null)
   const committeeId = $derived(page.params.committee_id ?? null)
