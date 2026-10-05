@@ -39,7 +39,7 @@
           <Card.Title>大会云同步</Card.Title>
           <Switch aria-label="大会云同步" checked={$conferenceSync.enabled} onCheckedChange={(enabled) => conferenceSync.setEnabled(enabled)} />
         </div>
-        <Card.Description>默认开启。登录后自动同步本机已有和新建大会，并在其他设备恢复；关闭后继续保存到本机。</Card.Description>
+        <Card.Description>默认开启。登录后每 24 小时自动同步一次本机大会，也可点击“立即同步”；关闭后继续保存到本机。</Card.Description>
       </Card.Header>
       <Card.Content class="space-y-3 text-sm">
         <p role="status" class="text-muted-foreground">

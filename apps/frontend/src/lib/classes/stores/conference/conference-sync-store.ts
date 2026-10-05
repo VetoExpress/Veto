@@ -10,15 +10,20 @@ interface Tracking { owner: string; fingerprint?: string; version: number }
 interface SyncState { enabled: boolean; syncing: boolean; error: string; syncedAt: number | null; conflicts: { id: string; name: string }[] }
 const PREFERENCE_KEY = 'veto.conference-cloud-sync'
 const TRACKING_KEY = 'veto.conference-cloud-tracking'
+const SCHEDULE_KEY = 'veto.conference-cloud-schedule'
+const SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000
+interface SyncHistory { attemptedAt: number; syncedAt: number | null }
 function read<T>(key: string, fallback: T): T {
   try { return JSON.parse(localStorage.getItem(key) ?? 'null') ?? fallback } catch { return fallback }
 }
 const state = writable<SyncState>({ enabled: read<boolean>(PREFERENCE_KEY, true) !== false, syncing: false, error: '', syncedAt: null, conflicts: [] })
 let tracking = read<Record<string, Tracking>>(TRACKING_KEY, {})
+const history = read<Record<string, SyncHistory>>(SCHEDULE_KEY, {})
 let running: Promise<void> | null = null
 let requested = false
 let generation = 0
 let timer: ReturnType<typeof setTimeout> | undefined
+let watching = false
 const choices = new Map<string, 'local' | 'cloud'>()
 function persistTracking() { localStorage.setItem(TRACKING_KEY, JSON.stringify(tracking)) }
 async function fingerprint(snapshot: ConferenceDTO): Promise<string> {
@@ -100,7 +105,12 @@ async function reconcile(): Promise<void> {
       choices.delete(id)
       persistTracking()
     }
-    if (valid()) state.update((s) => ({ ...s, conflicts, syncedAt: conflicts.length ? s.syncedAt : Date.now() }))
+    if (valid()) {
+      const syncedAt = conflicts.length ? get(state).syncedAt : Date.now()
+      history[email] = { attemptedAt: history[email]?.attemptedAt ?? Date.now(), syncedAt }
+      localStorage.setItem(SCHEDULE_KEY, JSON.stringify(history))
+      state.update((s) => ({ ...s, conflicts, syncedAt }))
+    }
   } catch (error) {
     if (valid()) state.update((s) => ({ ...s, error: error instanceof Error ? error.message : '云同步失败，请重试' }))
   } finally {
@@ -108,14 +118,29 @@ async function reconcile(): Promise<void> {
   }
 }
 async function sync(): Promise<void> {
-  requested = true
   if (running) return running
+  const email = get(accountStore).user?.email
+  if (!email || !get(state).enabled) return
+  history[email] = { attemptedAt: Date.now(), syncedAt: history[email]?.syncedAt ?? null }
+  localStorage.setItem(SCHEDULE_KEY, JSON.stringify(history))
+  requested = true
   running = (async () => { while (requested) { requested = false; await reconcile() } })()
-  try { await running } finally { running = null }
+  try { await running } finally { running = null; schedule() }
 }
 function schedule() {
   if (timer) clearTimeout(timer)
-  timer = setTimeout(() => { timer = undefined; void sync() }, 2500)
+  timer = undefined
+  const email = get(accountStore).user?.email
+  if (!watching || !email || !get(state).enabled) return
+  const remaining = Math.max(1, (history[email]?.attemptedAt ?? 0) + SYNC_INTERVAL_MS - Date.now())
+  timer = setTimeout(() => { timer = undefined; void autoSync() }, Math.min(remaining, SYNC_INTERVAL_MS))
+}
+async function autoSync(): Promise<void> {
+  const email = get(accountStore).user?.email
+  if (!email || !get(state).enabled) { schedule(); return }
+  const lastAttempt = history[email]?.attemptedAt
+  if (lastAttempt !== undefined && Date.now() - lastAttempt < SYNC_INTERVAL_MS) { schedule(); return }
+  await sync()
 }
 export const conferenceSync = {
   subscribe: state.subscribe,
@@ -124,27 +149,31 @@ export const conferenceSync = {
     generation++
     localStorage.setItem(PREFERENCE_KEY, JSON.stringify(enabled))
     state.update((s) => ({ ...s, enabled, error: '', conflicts: [] }))
-    if (enabled) void sync()
+    if (enabled) void autoSync()
+    else schedule()
   },
-  resolve(id: string, choice: 'local' | 'cloud') { choices.set(id, choice); void sync() },
+  resolve(id: string, choice: 'local' | 'cloud') {
+    choices.set(id, choice)
+    if (running) requested = true
+    void sync()
+  },
   start() {
+    watching = true
     let email: string | null | undefined
     const stopAccount = accountStore.subscribe((account) => {
       const next = account.user?.email ?? null
       if (email === next) return
       email = next; generation++; choices.clear()
-      state.update((s) => ({ ...s, error: '', syncedAt: null, conflicts: [] }))
-      void sync()
+      state.update((s) => ({ ...s, error: '', syncedAt: next ? history[next]?.syncedAt ?? null : null, conflicts: [] }))
+      void autoSync()
     })
-    const stopConferences = conferences.subscribe(schedule)
-    const stopCurrent = currentConferenceId.subscribe(schedule)
-    const retry = () => void sync()
+    const retry = () => void autoSync()
     window.addEventListener('online', retry)
-    const poll = setInterval(retry, 60_000)
     return () => {
-      generation++; stopAccount(); stopConferences(); stopCurrent()
+      watching = false
+      generation++; stopAccount()
       if (timer) clearTimeout(timer)
-      clearInterval(poll); window.removeEventListener('online', retry)
+      window.removeEventListener('online', retry)
     }
   }
 }
