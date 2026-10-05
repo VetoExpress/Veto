@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ExternalLink } from '@lucide/svelte'
+  import { ExternalLink, UserRound, ArrowRight, Cloud } from '@lucide/svelte'
   import { accountStore } from '$lib/classes/stores/app/account-store'
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'
@@ -24,10 +24,10 @@
   }
 </script>
 
-<div class="flex max-w-xl flex-col gap-6">
+<div class="@container/account flex w-full min-w-0 flex-col gap-6">
   <div>
     <h2 class="text-2xl font-semibold">账号</h2>
-    <p class="mt-2 text-sm text-muted-foreground">管理你的 Veto 账号与登录状态。</p>
+    <p class="mt-2 text-sm text-muted-foreground">在这里管理个人资料、账号安全与登录状态。</p>
   </div>
 
   {#if $accountStore.error}
@@ -46,8 +46,13 @@
   {#if !$accountStore.ready}
     <p role="status" class="flex items-center gap-2"><Spinner />正在恢复登录状态…</p>
   {:else if !$accountStore.available}
-    <Card.Root>
+    <Card.Root class="mx-auto w-full max-w-md">
       <Card.Header>
+        <div
+          class="mb-2 flex size-12 items-center justify-center rounded-xl bg-muted text-muted-foreground"
+        >
+          <Cloud class="size-6" />
+        </div>
         <Card.Title role="heading" aria-level={3}>前往云平台</Card.Title>
         <Card.Description>网页版账号管理请使用云平台。</Card.Description>
       </Card.Header>
@@ -65,30 +70,37 @@
       onPassword={(password) => accountStore.updateProfile({ password })}
     />
   {:else}
-    <Card.Root>
+    <Card.Root class="mx-auto w-full max-w-md">
       <Card.Header>
+        <div
+          class="mb-2 flex size-12 items-center justify-center rounded-xl bg-muted text-muted-foreground"
+        >
+          <UserRound class="size-6" />
+        </div>
         <Card.Title role="heading" aria-level={3}>登录 Veto</Card.Title>
         <Card.Description>使用与云平台相同的邮箱和密码登录。</Card.Description>
       </Card.Header>
       <Card.Content>
         <form id="account-login" onsubmit={login}>
           <Field.FieldGroup>
-            <Field.Field>
+            <Field.Field data-disabled={$accountStore.pending}>
               <Field.FieldLabel for="account-email">邮箱</Field.FieldLabel>
               <Input
                 id="account-email"
                 type="email"
+                placeholder="输入注册邮箱"
                 autocomplete="username"
                 bind:value={email}
                 required
                 disabled={$accountStore.pending}
               />
             </Field.Field>
-            <Field.Field>
+            <Field.Field data-disabled={$accountStore.pending}>
               <Field.FieldLabel for="account-password">密码</Field.FieldLabel>
               <Input
                 id="account-password"
                 type="password"
+                placeholder="输入密码"
                 autocomplete="current-password"
                 bind:value={password}
                 required
@@ -98,10 +110,11 @@
           </Field.FieldGroup>
         </form>
       </Card.Content>
-      <Card.Footer class="flex-wrap gap-2">
-        <Button type="submit" form="account-login" disabled={$accountStore.pending}>
+      <Card.Footer class="flex-col gap-3">
+        <Button class="w-full" type="submit" form="account-login" disabled={$accountStore.pending}>
           {#if $accountStore.pending}<Spinner data-icon="inline-start" />{/if}
           {$accountStore.pending ? '正在登录…' : '登录'}
+          {#if !$accountStore.pending}<ArrowRight data-icon="inline-end" />{/if}
         </Button>
         <Button variant="link" onclick={openPlatform}>
           注册 / 找回密码<ExternalLink data-icon="inline-end" />

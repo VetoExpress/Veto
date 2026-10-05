@@ -75,7 +75,7 @@
   <Dialog.Portal>
     <Dialog.Overlay />
     <Dialog.Content
-      class="w-[1024px] max-w-[calc(100vw-40px)] sm:max-w-[1024px] h-[85vh] p-0 gap-0"
+      class="w-[calc(100vw-40px)] max-w-[1024px] sm:max-w-[1024px] h-[85vh] p-0 gap-0"
       showCloseButton={false}
     >
       <!-- 关闭按钮 -->
@@ -166,7 +166,7 @@
         </div>
 
         <!-- 右侧内容 -->
-        <div class="flex flex-1 flex-col bg-background">
+        <div class="flex min-w-0 flex-1 flex-col bg-background">
           <ScrollArea class="h-full w-full">
             <div class="p-10">
               {#if activeSection === 'general'}<GeneralPage />{/if}

@@ -39,7 +39,9 @@ test('桌面账号设置：登录、恢复、刷新与退出同步用户卡片',
                   user: {
                     ...session.user,
                     ...(body.name ? { name: body.name } : {}),
-                    ...(body.avatar ? { avatar: `data:image/png;base64,${body.avatar}` } : {})
+                    ...(body.avatar
+                      ? { avatar: 'https://avatar.example.test/v1/auth/avatars/test.png' }
+                      : {})
                   }
                 }),
           signOut: async () => update(empty),
@@ -81,6 +83,9 @@ test('桌面账号设置：登录、恢复、刷新与退出同步用户卡片',
     context.fillRect(0, 0, 64, 64)
     return canvas.toDataURL('image/png').split(',')[1]
   })
+  await page.route('https://avatar.example.test/v1/auth/avatars/test.png', (route) =>
+    route.fulfill({ contentType: 'image/png', body: Buffer.from(avatar, 'base64') })
+  )
   await dialog.locator('#account-avatar-upload').setInputFiles({
     name: 'avatar.png',
     mimeType: 'image/png',
@@ -96,8 +101,9 @@ test('桌面账号设置：登录、恢复、刷新与退出同步用户卡片',
   await expect(dialog.getByText('个人信息已更新', { exact: true })).toBeVisible()
   await expect(dialog.getByRole('button', { name: '更换头像' }).locator('img')).toHaveAttribute(
     'src',
-    /^data:image\/png;base64,/
+    'https://avatar.example.test/v1/auth/avatars/test.png'
   )
+  await expect(dialog.getByRole('button', { name: '更换头像' }).locator('img')).toBeVisible()
   await dialog.getByLabel('新密码', { exact: true }).fill('new-password')
   await dialog.getByLabel('确认新密码', { exact: true }).fill('different')
   await dialog.getByRole('button', { name: '修改密码', exact: true }).click()
