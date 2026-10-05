@@ -77,6 +77,9 @@
       ? ($conferences.find((conference) => conference.id === $lastOpenedConferenceId) ?? null)
       : null
   )
+  const lastOpenedPlatform = $derived(
+    !lastOpened ? $platformConferences.conferences.find((conference) => conference.id === $lastOpenedConferenceId) : undefined
+  )
   const filteredPlatformConferences = $derived($platformConferences.conferences.filter((conference) =>
     `${conference.name} ${conference.organizer ?? ''}`.toLowerCase().includes(query.trim().toLowerCase())
   ))
@@ -95,7 +98,12 @@
   }
 
   function resumeConference(): void {
-    if (lastOpened) navigateToConference(lastOpened.id)
+    if (!lastOpened) return
+    if (lastOpened.source === 'cloud') {
+      void rejoinCloudConference(lastOpened)
+      return
+    }
+    navigateToConference(lastOpened.id)
   }
 
   async function rejoinWithMembership(membership: CloudMembership): Promise<void> {
@@ -310,6 +318,13 @@
               </Button>
             </Card.Content>
           </Card.Root>
+        </section>
+      {/if}
+
+      {#if lastOpenedPlatform && !query.trim()}
+        <section aria-label="最近打开">
+          <p class="mb-3 text-xs font-medium text-muted-foreground">最近打开 · 云平台大会</p>
+          <PlatformConferenceCard conference={lastOpenedPlatform} />
         </section>
       {/if}
 
