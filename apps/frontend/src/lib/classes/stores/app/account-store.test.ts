@@ -14,6 +14,8 @@ function bridge() {
   let listener: ((session: AccountSnapshot) => void) | undefined
   const unsubscribe = vi.fn()
   const api: DesktopAccountAPI = {
+    getAccessToken: vi.fn(),
+    adoptToken: vi.fn(),
     getSession: vi.fn().mockResolvedValue({ ok: true, session: empty }),
     login: vi.fn().mockResolvedValue({ ok: true, session: loggedIn }),
     refresh: vi.fn().mockResolvedValue({ ok: true, session: loggedIn }),

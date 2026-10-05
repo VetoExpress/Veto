@@ -18,6 +18,27 @@ function setup(saved: StoredAccount | null = null) {
 }
 
 describe('desktop account session', () => {
+  it('adopts a validated platform credential and exposes it separately from public state', async () => {
+    const { session, client, changed } = setup()
+    await session.adoptToken('platform-token')
+    expect(client.fetchMe).toHaveBeenCalledWith('platform-token')
+    expect(await session.getAccessToken()).toEqual({
+      session: { user, persistent: true, warning: null },
+      token: 'platform-token'
+    })
+    expect(JSON.stringify(changed.mock.calls)).not.toContain('platform-token')
+  })
+  it('does not replace a desktop login during legacy migration or sign it out on an old 401', async () => {
+    const { session, client, storage } = setup({ token: 'desktop-token', user })
+    await session.getSession()
+    await session.adoptToken('legacy-token', true)
+    expect(client.fetchMe).not.toHaveBeenCalledWith('legacy-token')
+    await session.signOut('legacy-token')
+    expect((await session.getAccessToken()).token).toBe('desktop-token')
+    expect(storage.clear).not.toHaveBeenCalled()
+    await session.signOut('desktop-token')
+    expect((await session.getAccessToken()).token).toBeNull()
+  })
   it('logs in, saves credentials, publishes user state without credentials, and signs out', async () => {
     const { session, client, storage, changed } = setup()
     expect((await session.getSession()).user).toBeNull()

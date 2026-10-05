@@ -9,11 +9,14 @@ const api = {}
 
 const veto = {
   account: {
+    getAccessToken: () => ipcRenderer.invoke('veto:account:get-access-token'),
+    adoptToken: (token: string, onlyIfSignedOut?: boolean) =>
+      ipcRenderer.invoke('veto:account:adopt-token', token, onlyIfSignedOut),
     getSession: () => ipcRenderer.invoke('veto:account:get-session'),
     login: (email: string, password: string) =>
       ipcRenderer.invoke('veto:account:login', email, password),
     refresh: () => ipcRenderer.invoke('veto:account:refresh'),
-    signOut: () => ipcRenderer.invoke('veto:account:sign-out'),
+    signOut: (expectedToken?: string) => ipcRenderer.invoke('veto:account:sign-out', expectedToken),
     onChanged: (callback: (session: AccountSnapshot) => void) => {
       const listener = (_event: Electron.IpcRendererEvent, session: AccountSnapshot) =>
         callback(session)

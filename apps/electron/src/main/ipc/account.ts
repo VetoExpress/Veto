@@ -1,12 +1,17 @@
 import { app, BrowserWindow, ipcMain, type IpcMainInvokeEvent } from 'electron'
 import { is } from '@electron-toolkit/utils'
 import { AuthError, createAuthClient } from '@vetoexpress/auth'
-import type { AccountResult, AccountSnapshot } from '@vetoexpress/auth/desktop'
+import type { AccountResult, AccountSnapshot, AccountTokenResult } from '@vetoexpress/auth/desktop'
 import { createAccountSession, type AccountSession } from '../account-session'
 import { createAccountStorage } from '../account-storage'
 
 export function isAccountOrigin(origin: string, development: boolean): boolean {
-  return origin === 'veto://app' || (development && origin === 'http://localhost:5173')
+  return (
+    origin === 'veto://app' ||
+    origin === 'https://platform.miaoyww.top' ||
+    (development &&
+      ['http://localhost:5173', 'http://localhost:4174', 'http://localhost:3000'].includes(origin))
+  )
 }
 
 function trusted(event: IpcMainInvokeEvent) {
@@ -49,7 +54,29 @@ export function registerAccountIpc(session?: AccountSession): void {
   }
   handle('veto:account:get-session', () => account.getSession())
   handle('veto:account:refresh', () => account.refresh())
-  handle('veto:account:sign-out', () => account.signOut())
+  handle('veto:account:sign-out', (expectedToken) => {
+    if (expectedToken !== undefined && typeof expectedToken !== 'string')
+      throw new AuthError('无效账号凭据')
+    return account.signOut(expectedToken)
+  })
+  ipcMain.handle('veto:account:get-access-token', async (event): Promise<AccountTokenResult> => {
+    if (!trusted(event)) return { ok: false, error: '此页面无法访问桌面账号。' }
+    try {
+      return { ok: true, ...(await account.getAccessToken()) }
+    } catch {
+      return { ok: false, error: '无法读取桌面账号会话，请重试。' }
+    }
+  })
+  handle('veto:account:adopt-token', (token, onlyIfSignedOut) => {
+    if (
+      typeof token !== 'string' ||
+      !token ||
+      token.length > 8192 ||
+      (onlyIfSignedOut !== undefined && typeof onlyIfSignedOut !== 'boolean')
+    )
+      throw new AuthError('无效账号凭据')
+    return account.adoptToken(token, onlyIfSignedOut)
+  })
   handle('veto:account:login', (email, password) => {
     if (
       typeof email !== 'string' ||

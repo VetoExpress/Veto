@@ -23,21 +23,48 @@ function event(origin: string, subframe = false) {
   } as unknown as IpcMainInvokeEvent
 }
 describe('account IPC', () => {
-  const account = { getSession: vi.fn(), login: vi.fn(), refresh: vi.fn(), signOut: vi.fn() }
+  const account = {
+    getSession: vi.fn(),
+    getAccessToken: vi.fn(),
+    adoptToken: vi.fn(),
+    login: vi.fn(),
+    refresh: vi.fn(),
+    signOut: vi.fn()
+  }
   beforeEach(() => {
     vi.resetAllMocks()
     handlers.clear()
     for (const method of Object.values(account)) method.mockResolvedValue(snapshot)
     registerAccountIpc(account)
   })
-  it('accepts the local app, rejects remote pages and subframes', async () => {
+  it('accepts the local app and official platform, rejects unrelated pages and subframes', async () => {
     const get = handlers.get('veto:account:get-session')!
     expect(await get(event('veto://app'))).toEqual({ ok: true, session: snapshot })
-    expect(await get(event('https://platform.miaoyww.top'))).toMatchObject({ ok: false })
+    expect(await get(event('https://platform.miaoyww.top'))).toEqual({
+      ok: true,
+      session: snapshot
+    })
+    expect(await get(event('https://platform.miaoyww.top.evil.test'))).toMatchObject({ ok: false })
     expect(await get(event('veto://app', true))).toMatchObject({ ok: false })
-    expect(account.getSession).toHaveBeenCalledOnce()
+    expect(account.getSession).toHaveBeenCalledTimes(2)
     expect(isAccountOrigin('http://localhost:5173', false)).toBe(false)
     expect(isAccountOrigin('https://evil.test', true)).toBe(false)
+  })
+  it('only returns credentials to trusted top-level frames and validates adopted tokens', async () => {
+    const get = handlers.get('veto:account:get-access-token')!
+    account.getAccessToken.mockResolvedValue({ session: snapshot, token: 'account-token' })
+    expect(await get(event('https://platform.miaoyww.top'))).toMatchObject({
+      ok: true,
+      token: 'account-token'
+    })
+    expect(await get(event('https://evil.test'))).toMatchObject({ ok: false })
+    expect(await get(event('https://platform.miaoyww.top', true))).toMatchObject({ ok: false })
+    expect(account.getAccessToken).toHaveBeenCalledOnce()
+    const adopt = handlers.get('veto:account:adopt-token')!
+    expect(await adopt(event('veto://app'), '', true)).toMatchObject({ ok: false })
+    expect(account.adoptToken).not.toHaveBeenCalled()
+    await adopt(event('https://platform.miaoyww.top'), 'legacy-token', true)
+    expect(account.adoptToken).toHaveBeenCalledWith('legacy-token', true)
   })
   it('validates login input and preserves structured authentication errors', async () => {
     const login = handlers.get('veto:account:login')!

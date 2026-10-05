@@ -39,6 +39,8 @@ import { ThemeToggler } from "@/components/theme-toggler"
 import { returnToApp, useAppEnvironment } from "@/components/app-environment"
 import { BubbleBackground } from "@/components/animate-ui/components/backgrounds/bubble"
 import { PasswordResetForm } from "@/components/password-reset-form"
+import { usePlatformAuth } from "@/lib/use-platform-auth"
+import { saveWebToken } from "@/lib/platform-session"
 
 type AuthTab = "login" | "register"
 type RegisterStage = "email" | "code" | "password"
@@ -51,15 +53,21 @@ export default function Page() {
   const [resettingPassword, setResettingPassword] = useState(false)
   const [resetEmail, setResetEmail] = useState("")
   const router = useRouter()
+  const { token, isReady, error: sessionError } = usePlatformAuth(false)
 
   useEffect(() => {
-    if (localStorage.getItem("veto_token")) {
+    if (isReady && token) {
       router.replace("/")
     }
-  }, [router])
+  }, [router, token, isReady])
 
   return (
     <div className="relative min-h-svh overflow-clip">
+      {sessionError && (
+        <p role="alert" className="relative z-30 p-4 text-destructive">
+          {sessionError}
+        </p>
+      )}
       <a
         href="https://veto.miaoyww.top"
         className="absolute top-6 left-8 z-20 flex items-center gap-3 py-2 pr-4 pl-2"
@@ -216,7 +224,7 @@ function LoginForm({
     setError("")
     try {
       const token = await login(email.trim(), password)
-      localStorage.setItem("veto_token", token)
+      saveWebToken(token)
       router.replace("/")
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "登录失败")

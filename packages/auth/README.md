@@ -18,4 +18,6 @@ Platform 的 `lib/auth-client.ts` 是配置适配层，注入 `NEXT_PUBLIC_API_U
 
 桌面 App 的客户端运行在 Electron 主进程，由 `account-session.ts` 管理会话，API 地址通过构建时的 `VETO_ACCOUNT_API_URL` 配置（默认 `https://api.miaoyww.top`）。渲染页面通过 `window.veto.account` 登录、读取公开账号状态、刷新用户信息、退出及监听变化；接口类型从 `@vetoexpress/auth/desktop` 导出，状态不含 token。
 
-凭据与用户缓存通过 Electron `safeStorage` 加密后写入用户数据目录的 `account-session.enc`。安全存储不可用时仅保留内存会话。重启后重新查询当前用户；网络故障保留已有信息并提示，401 清除会话。当前后端尚无刷新凭据或服务端退出接口，因此 `refresh()` 只刷新用户信息并校验当前凭据，退出只清除本机会话。内嵌 platform 的会话同步尚未接入。
+凭据与用户缓存通过 Electron `safeStorage` 加密后写入用户数据目录的 `account-session.enc`。安全存储不可用时仅保留内存会话。重启后重新查询当前用户；网络故障保留已有信息并提示，401 清除会话。当前后端尚无刷新凭据或服务端退出接口，因此 `refresh()` 只刷新用户信息并校验当前凭据，退出只清除本机会话。
+
+内嵌 platform 与 App 共用该会话。`getAccessToken()` 仅向可信顶层页面按需返回当前凭据，用于现有 Bearer API 请求；广播仍只包含公开账号状态。可信来源为 `veto://app` 和 `https://platform.miaoyww.top`，开发模式另允许本项目的 localhost 5173、4174、3000 端口。平台登录走主进程，注册后通过 `adoptToken()` 校验并接入主进程；已有平台 `localStorage` 凭据只在桌面未登录时迁移，成功后删除。内嵌平台不再把凭据写回网页存储。`signOut(expectedToken)` 防止旧账号请求的迟到 401 退出新账号。普通浏览器保留原来的网页会话。

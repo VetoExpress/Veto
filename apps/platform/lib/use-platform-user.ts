@@ -2,43 +2,75 @@
 
 import { useEffect, useState } from "react"
 
-import { AuthError, fetchMe, readCachedUser, type PlatformUser } from "@/lib/auth-client"
+import {
+  AuthError,
+  fetchMe,
+  readCachedUser,
+  type PlatformUser,
+} from "@/lib/auth-client"
+import { desktopAccount, requireAccountResult } from "./platform-session"
 
 export function usePlatformUser(
   token: string | undefined,
   onUnauthorized?: () => void
 ) {
-  const [user, setUser] = useState<PlatformUser | undefined>(() =>
-    token ? readCachedUser(token) : undefined
-  )
+  const [profile, setProfile] = useState<{
+    token?: string
+    user?: PlatformUser
+  }>(() => ({
+    token,
+    user: token ? readCachedUser(token) : undefined,
+  }))
   const [error, setError] = useState("")
 
   useEffect(() => {
     if (!token) return
 
-    const cached = readCachedUser(token)
+    const api = desktopAccount()
+    const cached = api ? undefined : readCachedUser(token)
     if (cached) {
-      setUser(cached)
+      setProfile({ token, user: cached })
       return
     }
 
     let cancelled = false
-    fetchMe(token)
-      .then((result) => {
-        if (!cancelled) setUser(result)
-      })
-      .catch((caught: unknown) => {
-        if (cancelled) return
-        if (caught instanceof AuthError && caught.status === 401) {
-          onUnauthorized?.()
-          return
-        }
-        setError(caught instanceof Error ? caught.message : "加载用户信息失败")
-      })
+    setError("")
+    let revision = 0
+    const load = () => {
+      const requestRevision = ++revision
+      const request = api
+        ? api.getAccessToken().then((result) => {
+            const current = requireAccountResult(result)
+            return current.token === token
+              ? (current.session.user ?? undefined)
+              : undefined
+          })
+        : fetchMe(token)
+      return request
+        .then((result) => {
+          if (!cancelled && revision === requestRevision)
+            setProfile({ token, user: result })
+        })
+        .catch((caught: unknown) => {
+          if (cancelled || revision !== requestRevision) return
+          if (caught instanceof AuthError && caught.status === 401) {
+            onUnauthorized?.()
+            return
+          }
+          setError(
+            caught instanceof Error ? caught.message : "加载用户信息失败"
+          )
+        })
+    }
+    const unsubscribe = api?.onChanged(() => {
+      void load()
+    })
+    void load()
     return () => {
       cancelled = true
+      unsubscribe?.()
     }
   }, [token, onUnauthorized])
 
-  return { user, error }
+  return { user: profile.token === token ? profile.user : undefined, error }
 }

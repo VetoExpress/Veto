@@ -73,6 +73,20 @@ export function createAccountSession(
   })
 
   return {
+    getAccessToken: () =>
+      serial(async () => ({ session: snapshot, token: account?.token ?? null })),
+    adoptToken: (token: string, onlyIfSignedOut = false) =>
+      serial(async () => {
+        if (onlyIfSignedOut && account) return snapshot
+        const user = await client.fetchMe(token)
+        const next = { token, user }
+        const persistent = await storage.save(next)
+        account = next
+        return publish(
+          persistent,
+          persistent ? null : '当前设备无法安全保存登录状态，关闭应用后需重新登录。'
+        )
+      }),
     getSession: async () => {
       await restored
       await queue
@@ -91,8 +105,10 @@ export function createAccountSession(
         )
       }),
     refresh: () => serial(check),
-    signOut: () =>
+    signOut: (expectedToken?: string) =>
       serial(async () => {
+        // A late 401 from the previous account must not sign out the new account.
+        if (expectedToken !== undefined && expectedToken !== account?.token) return snapshot
         await storage.clear()
         account = null
         return publish(false)
