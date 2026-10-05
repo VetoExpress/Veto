@@ -26,7 +26,7 @@ type ImportStep = "format" | "text" | "sheet" | "preview"
 
 interface SeatImportDialogProps {
   disabled?: boolean
-  targets?: Array<{ value: string; label: string }>
+  target?: { value: string; label: string }
   roleLabel: (roleName: string, target?: string) => string
   onImport: (seats: ImportedSeat[], target?: string) => void
 }
@@ -42,7 +42,7 @@ function errorMessage(error: unknown, fallback: string): string {
 
 export function SeatImportDialog({
   disabled = false,
-  targets,
+  target,
   roleLabel,
   onImport,
 }: SeatImportDialogProps): JSX.Element {
@@ -54,12 +54,7 @@ export function SeatImportDialog({
   const [workbook, setWorkbook] = useState<SeatWorkbook | null>(null)
   const [selectedSheet, setSelectedSheet] = useState("")
   const [rows, setRows] = useState<ImportedSeat[]>([])
-  const [target, setTarget] = useState("")
-
-  const activeTarget =
-    targets?.some((item) => item.value === target) && target
-      ? target
-      : targets?.[0]?.value
+  const activeTarget = target?.value
 
   const hasUnmatchedRole = rows.some(
     (row) =>
@@ -72,7 +67,6 @@ export function SeatImportDialog({
     setWorkbook(null)
     setSelectedSheet("")
     setRows([])
-    setTarget("")
   }
 
   function close(): void {
@@ -139,7 +133,7 @@ export function SeatImportDialog({
   }
 
   function confirmImport(): void {
-    if (rows.length === 0 || (targets?.length && !activeTarget)) return
+    if (rows.length === 0 || disabled) return
     onImport(rows, activeTarget)
     close()
   }
@@ -342,21 +336,10 @@ export function SeatImportDialog({
                   确认后将把以下 {rows.length} 条席位追加到当前委员会。
                 </DialogDescription>
               </DialogHeader>
-              {targets?.length ? (
-                <label className="flex flex-col gap-2 text-sm font-medium">
-                  导入到委员会
-                  <select
-                    className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                    value={activeTarget}
-                    onChange={(event) => setTarget(event.target.value)}
-                  >
-                    {targets.map((item) => (
-                      <option key={item.value} value={item.value}>
-                        {item.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+              {target ? (
+                <p className="text-sm text-muted-foreground">
+                  导入到：{target.label}
+                </p>
               ) : null}
               <div className="max-h-[50dvh] overflow-auto rounded-lg border">
                 <table className="w-full min-w-2xl text-left text-sm">
@@ -395,10 +378,7 @@ export function SeatImportDialog({
                 </Button>
                 <Button
                   type="button"
-                  disabled={
-                    rows.length === 0 ||
-                    Boolean(targets?.length && !activeTarget)
-                  }
+                  disabled={rows.length === 0 || disabled}
                   onClick={confirmImport}
                 >
                   确认导入

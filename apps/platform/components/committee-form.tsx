@@ -174,6 +174,7 @@ export function CommitteeForm({
           <div className="flex flex-wrap items-center gap-2">
             <SeatImportDialog
               disabled={disabled}
+              target={{ value: reference, label: value.name || "未命名委员会" }}
               roleLabel={importedRoleLabel}
               onImport={importSeats}
             />

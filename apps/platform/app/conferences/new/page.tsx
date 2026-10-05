@@ -206,6 +206,9 @@ export default function NewConferencePage() {
   const lastSubmission = useRef<{ payload: string; key: string }>(undefined)
   const [currentStep, setCurrentStep] = useState(0)
   const [attempted, setAttempted] = useState(false)
+  const [collapsedCommittees, setCollapsedCommittees] = useState<
+    Record<string, boolean>
+  >({})
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [organizer, setOrganizer] = useState("")
@@ -323,6 +326,10 @@ export default function NewConferencePage() {
   }
   function addSeat(committeeIndex: number): void {
     const committee = structure.committees[committeeIndex]
+    setCollapsedCommittees((current) => ({
+      ...current,
+      [committeeReference(committee, committeeIndex)]: false,
+    }))
     const defaultRole = structure.roleTemplates.find((role) =>
       roleAllowedInCommittee(role, committee.type)
     )
@@ -381,6 +388,10 @@ export default function NewConferencePage() {
     )
     if (committeeIndex < 0) return
     const committee = structure.committees[committeeIndex]
+    setCollapsedCommittees((current) => ({
+      ...current,
+      [committeeReference(committee, committeeIndex)]: false,
+    }))
     updateCommittee(committeeIndex, {
       seats: [
         ...committee.seats,
@@ -755,17 +766,6 @@ export default function NewConferencePage() {
 
               {currentStep === 3 ? (
                 <section className="flex flex-col gap-4">
-                  <div className="flex flex-wrap items-center justify-end gap-2">
-                    <SeatImportDialog
-                      disabled={isSaving || structure.committees.length === 0}
-                      targets={structure.committees.map((committee, index) => ({
-                        value: committeeReference(committee, index),
-                        label: committee.name || "未命名委员会",
-                      }))}
-                      roleLabel={importRoleLabel}
-                      onImport={importSeats}
-                    />
-                  </div>
                   {structure.committees.map((committee, committeeIndex) => {
                     const committeeRef = committeeReference(
                       committee,
@@ -776,144 +776,206 @@ export default function NewConferencePage() {
                     )
                     const noSeats = attempted && committee.seats.length === 0
                     return (
-                      <article
+                      <Collapsible
                         key={committeeRef}
                         className="rounded-lg border p-4"
+                        open={!collapsedCommittees[committeeRef]}
+                        onOpenChange={(open) =>
+                          setCollapsedCommittees((current) => ({
+                            ...current,
+                            [committeeRef]: !open,
+                          }))
+                        }
                       >
-                        <div className="flex items-center justify-between gap-3">
-                          <h2 className="truncate text-sm font-semibold">
-                            {committee.name || "未命名委员会"}
-                          </h2>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={isSaving}
-                            onClick={() => addSeat(committeeIndex)}
-                          >
-                            <Plus aria-hidden />
-                            添加席位
-                          </Button>
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <h2 className="truncate text-sm font-semibold">
+                              {committee.name || "未命名委员会"}
+                            </h2>
+                            <Badge variant="outline">
+                              {committee.seats.length} 个席位
+                            </Badge>
+                            <CollapsibleTrigger
+                              render={
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                />
+                              }
+                              aria-label={`${collapsedCommittees[committeeRef] ? "展开" : "折叠"}${committee.name || "未命名委员会"}席位`}
+                            >
+                              <ChevronDown
+                                className={cn(
+                                  "transition-transform",
+                                  !collapsedCommittees[committeeRef] &&
+                                    "rotate-180"
+                                )}
+                                aria-hidden
+                              />
+                            </CollapsibleTrigger>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <SeatImportDialog
+                              disabled={isSaving}
+                              target={{
+                                value: committeeRef,
+                                label: committee.name || "未命名委员会",
+                              }}
+                              roleLabel={importRoleLabel}
+                              onImport={importSeats}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={isSaving}
+                              onClick={() => addSeat(committeeIndex)}
+                            >
+                              <Plus aria-hidden />
+                              添加席位
+                            </Button>
+                          </div>
                         </div>
-                        <div className="mt-3 flex flex-col gap-2">
-                          {committee.seats.length ? (
-                            committee.seats.map((seat, seatIndex) => {
-                              const seatRef = seatReference(seat, seatIndex)
-                              const role = structure.roleTemplates.find(
-                                (item) =>
-                                  roleReference(item) === seat.roleTemplateId
-                              )
-                              const nameInvalid = attempted && !seat.name.trim()
-                              const roleInvalid =
-                                attempted &&
-                                (!role ||
-                                  !roleAllowedInCommittee(role, committee.type))
-                              return (
-                                <div
-                                  key={seatRef}
-                                  className="flex flex-col gap-1"
-                                >
-                                  <div className="grid items-center gap-2 md:grid-cols-[minmax(0,1fr)_minmax(0,12rem)_15rem_2.5rem]">
-                                    <Input
-                                      value={seat.name}
-                                      disabled={isSaving}
-                                      placeholder="席位名称"
-                                      aria-label="席位名称"
-                                      aria-invalid={nameInvalid || undefined}
-                                      onChange={(event) =>
-                                        updateSeat(committeeIndex, seatIndex, {
-                                          name: event.target.value,
-                                        })
-                                      }
-                                    />
-                                    <Input
-                                      value={seat.shortName ?? ""}
-                                      disabled={isSaving}
-                                      placeholder="席位简称（可选）"
-                                      aria-label="席位简称"
-                                      onChange={(event) =>
-                                        updateSeat(committeeIndex, seatIndex, {
-                                          shortName: event.target.value,
-                                        })
-                                      }
-                                    />
-                                    <Select
-                                      value={seat.roleTemplateId || null}
-                                      items={allowedRoles.map(
-                                        (allowedRole) => ({
-                                          value: roleReference(allowedRole),
-                                          label:
-                                            allowedRole.name || "未命名角色",
-                                        })
-                                      )}
-                                      disabled={isSaving}
-                                      onValueChange={(value) =>
-                                        updateSeat(committeeIndex, seatIndex, {
-                                          roleTemplateId: value ?? "",
-                                        })
-                                      }
-                                    >
-                                      <SelectTrigger
-                                        className="w-full"
-                                        aria-label="角色"
-                                        aria-invalid={roleInvalid || undefined}
-                                      >
-                                        <SelectValue placeholder="选择角色" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {allowedRoles.map((allowedRole) => (
-                                          <SelectItem
-                                            key={roleReference(allowedRole)}
-                                            value={roleReference(allowedRole)}
-                                          >
-                                            {allowedRole.name || "未命名角色"}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="icon"
-                                      title="删除席位"
-                                      disabled={isSaving}
-                                      onClick={() =>
-                                        updateCommittee(committeeIndex, {
-                                          seats: committee.seats.filter(
-                                            (_, index) => index !== seatIndex
-                                          ),
-                                        })
-                                      }
-                                    >
-                                      <Trash2
-                                        className="text-destructive"
-                                        aria-hidden
+                        <CollapsibleContent>
+                          <div className="mt-3 flex flex-col gap-2">
+                            {committee.seats.length ? (
+                              committee.seats.map((seat, seatIndex) => {
+                                const seatRef = seatReference(seat, seatIndex)
+                                const role = structure.roleTemplates.find(
+                                  (item) =>
+                                    roleReference(item) === seat.roleTemplateId
+                                )
+                                const nameInvalid =
+                                  attempted && !seat.name.trim()
+                                const roleInvalid =
+                                  attempted &&
+                                  (!role ||
+                                    !roleAllowedInCommittee(
+                                      role,
+                                      committee.type
+                                    ))
+                                return (
+                                  <div
+                                    key={seatRef}
+                                    className="flex flex-col gap-1"
+                                  >
+                                    <div className="grid items-center gap-2 md:grid-cols-[minmax(0,1fr)_minmax(0,12rem)_15rem_2.5rem]">
+                                      <Input
+                                        value={seat.name}
+                                        disabled={isSaving}
+                                        placeholder="席位名称"
+                                        aria-label="席位名称"
+                                        aria-invalid={nameInvalid || undefined}
+                                        onChange={(event) =>
+                                          updateSeat(
+                                            committeeIndex,
+                                            seatIndex,
+                                            {
+                                              name: event.target.value,
+                                            }
+                                          )
+                                        }
                                       />
-                                    </Button>
+                                      <Input
+                                        value={seat.shortName ?? ""}
+                                        disabled={isSaving}
+                                        placeholder="席位简称（可选）"
+                                        aria-label="席位简称"
+                                        onChange={(event) =>
+                                          updateSeat(
+                                            committeeIndex,
+                                            seatIndex,
+                                            {
+                                              shortName: event.target.value,
+                                            }
+                                          )
+                                        }
+                                      />
+                                      <Select
+                                        value={seat.roleTemplateId || null}
+                                        items={allowedRoles.map(
+                                          (allowedRole) => ({
+                                            value: roleReference(allowedRole),
+                                            label:
+                                              allowedRole.name || "未命名角色",
+                                          })
+                                        )}
+                                        disabled={isSaving}
+                                        onValueChange={(value) =>
+                                          updateSeat(
+                                            committeeIndex,
+                                            seatIndex,
+                                            {
+                                              roleTemplateId: value ?? "",
+                                            }
+                                          )
+                                        }
+                                      >
+                                        <SelectTrigger
+                                          className="w-full"
+                                          aria-label="角色"
+                                          aria-invalid={
+                                            roleInvalid || undefined
+                                          }
+                                        >
+                                          <SelectValue placeholder="选择角色" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {allowedRoles.map((allowedRole) => (
+                                            <SelectItem
+                                              key={roleReference(allowedRole)}
+                                              value={roleReference(allowedRole)}
+                                            >
+                                              {allowedRole.name || "未命名角色"}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        title="删除席位"
+                                        disabled={isSaving}
+                                        onClick={() =>
+                                          updateCommittee(committeeIndex, {
+                                            seats: committee.seats.filter(
+                                              (_, index) => index !== seatIndex
+                                            ),
+                                          })
+                                        }
+                                      >
+                                        <Trash2
+                                          className="text-destructive"
+                                          aria-hidden
+                                        />
+                                      </Button>
+                                    </div>
+                                    {nameInvalid ? (
+                                      <FieldError>请输入席位名称</FieldError>
+                                    ) : null}
+                                    {roleInvalid ? (
+                                      <FieldError>
+                                        当前席位的角色与会场类型不匹配，请重新选择角色
+                                      </FieldError>
+                                    ) : null}
                                   </div>
-                                  {nameInvalid ? (
-                                    <FieldError>请输入席位名称</FieldError>
-                                  ) : null}
-                                  {roleInvalid ? (
-                                    <FieldError>
-                                      当前席位的角色与会场类型不匹配，请重新选择角色
-                                    </FieldError>
-                                  ) : null}
-                                </div>
-                              )
-                            })
-                          ) : (
-                            <p className="rounded-md border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
-                              尚未分配席位
-                            </p>
-                          )}
-                        </div>
+                                )
+                              })
+                            ) : (
+                              <p className="rounded-md border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
+                                尚未分配席位
+                              </p>
+                            )}
+                          </div>
+                        </CollapsibleContent>
                         {noSeats ? (
                           <div className="mt-1">
                             <FieldError>每个委员会至少分配一个席位</FieldError>
                           </div>
                         ) : null}
-                      </article>
+                      </Collapsible>
                     )
                   })}
                 </section>

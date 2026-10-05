@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { FileSpreadsheet, FileText, Plus, Trash2, Upload } from '@lucide/svelte'
+  import { ChevronDown, FileSpreadsheet, FileText, Plus, Trash2, Upload } from '@lucide/svelte'
   import { cn } from '$lib/classes/utils'
   import { Button } from '$lib/components/ui/button'
   import * as Field from '$lib/components/ui/field'
@@ -7,6 +7,7 @@
   import * as Select from '$lib/components/ui/select'
   import { Checkbox } from '$lib/components/ui/checkbox'
   import * as Dialog from '$lib/components/ui/dialog'
+  import * as Collapsible from '$lib/components/ui/collapsible'
   import { Textarea } from '$lib/components/ui/textarea'
   import { wizard } from '$lib/classes/stores/runes/create-conference-event-wizard.svelte'
   import {
@@ -33,6 +34,7 @@
   let importedRows = $state<ImportedSeat[]>([])
   let workbook = $state<SeatWorkbook | null>(null)
   let fileInput = $state<HTMLInputElement | undefined>(undefined)
+  let collapsedCommittees = $state<Record<string, boolean>>({})
 
   const showInvalidRole = $derived(
     !isSingleton &&
@@ -47,9 +49,15 @@
     !isSingleton &&
       importedRows.some((row) => row.roleName && !roleIdForType(row.roleName, targetCommitteeId))
   )
-  const singletonCommitteeName = $derived(wizard.committees[0]?.name ?? '')
+  const targetCommittee = $derived(
+    wizard.committees.find((committee) => committee.id === targetCommitteeId)
+  )
 
-  function openFormatDialog(mode: ImportMode): void {
+  function openFormatDialog(mode: ImportMode, committeeId: string): void {
+    targetCommitteeId = committeeId
+    textValue = ''
+    importedRows = []
+    workbook = null
     importMode = mode
     importError = ''
     formatDialogOpen = true
@@ -111,9 +119,6 @@
   }
 
   function openPreview(): void {
-    if (!wizard.committees.some((committee) => committee.id === targetCommitteeId)) {
-      targetCommitteeId = wizard.committees[0]?.id ?? ''
-    }
     previewDialogOpen = true
   }
 
@@ -145,7 +150,7 @@
   }
 
   function confirmImport(): void {
-    if (!targetCommitteeId || importedRows.length === 0) return
+    if (!targetCommittee || importedRows.length === 0) return
     wizard.addImportedSeats(
       targetCommitteeId,
       importedRows.map((row) =>
@@ -163,31 +168,19 @@
       )
     )
     previewDialogOpen = false
+    collapsedCommittees[targetCommitteeId] = false
     importedRows = []
     importError = ''
   }
 </script>
 
-<div class="mb-4 flex flex-wrap items-center gap-2">
-  <div class="flex-auto"></div>
-  <div class="flex-none">
-    <input
-      bind:this={fileInput}
-      class="hidden"
-      type="file"
-      accept=".xlsx,.xls,.csv"
-      onchange={(event) => void handleExcelFile(event)}
-    />
-    <Button variant="outline" size="sm" onclick={() => openFormatDialog('excel')}>
-      <FileSpreadsheet data-icon="inline-start" />
-      从 Excel 导入
-    </Button>
-    <Button variant="outline" size="sm" onclick={() => openFormatDialog('text')}>
-      <FileText data-icon="inline-start" />
-      从文本导入
-    </Button>
-  </div>
-</div>
+<input
+  bind:this={fileInput}
+  class="hidden"
+  type="file"
+  accept=".xlsx,.xls,.csv"
+  onchange={(event) => void handleExcelFile(event)}
+/>
 
 <section class="flex flex-col gap-4">
   {#each wizard.committees as committee (committee.id)}
@@ -201,83 +194,133 @@
           !wizard.isRoleAllowedInCommittee(seat.roleId ?? '', committee.type)
       )}
     <article class="rounded-lg border p-4">
-      <div class="flex items-center justify-between gap-3">
-        <h2 class="truncate text-sm font-semibold">{committee.name || '未命名委员会'}</h2>
-        <Button variant="outline" size="sm" onclick={() => wizard.addSeat(committee.id)}>
-          <Plus data-icon="inline-start" />
-          添加席位
-        </Button>
-      </div>
-
-      <div class="mt-3 flex flex-col gap-2">
-        {#each committee.seats as seat (seat.id)}
-          {@const showSeatNameError = wizard.attempted && seat.name.trim().length === 0}
-          <div class="flex flex-col gap-1">
-            <div
-              class={cn(
-                'grid items-center gap-2',
-                isSingleton
-                  ? 'md:grid-cols-[minmax(0,1fr)_minmax(0,12rem)_9rem_2.5rem]'
-                  : committee.type === 'cabinet'
-                    ? 'md:grid-cols-[minmax(0,1fr)_minmax(0,12rem)_15rem_2.5rem]'
-                    : 'md:grid-cols-[minmax(0,1fr)_15rem_2.5rem]'
-              )}
-            >
-              <Input
-                bind:value={seat.name}
-                placeholder="席位名称"
-                aria-label="席位名称"
-                aria-invalid={showSeatNameError || undefined}
-              />
-              {#if committee.type === 'cabinet'}
-                <Input
-                  bind:value={seat.shortName}
-                  placeholder="席位简称（可选）"
-                  aria-label="席位简称"
-                />
-              {/if}
-              {#if isSingleton}
-                <label
-                  class="flex items-center justify-center gap-2 rounded-md border px-2 py-2 text-xs text-muted-foreground"
+      <Collapsible.Root
+        open={!collapsedCommittees[committee.id]}
+        onOpenChange={(open) => (collapsedCommittees[committee.id] = !open)}
+      >
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex min-w-0 items-center gap-2">
+            <h2 class="truncate text-sm font-semibold">{committee.name || '未命名委员会'}</h2>
+            <span class="text-sm text-muted-foreground">{committee.seats.length} 个席位</span>
+            <Collapsible.Trigger>
+              {#snippet child({ props })}
+                <Button
+                  {...props}
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`${collapsedCommittees[committee.id] ? '展开' : '折叠'}${committee.name || '未命名委员会'}席位`}
                 >
-                  <Checkbox bind:checked={seat.hasVotingRights} aria-label="投票权" />
-                  投票权
-                </label>
-              {:else}
-                <Select.Select type="single" bind:value={seat.roleId}>
-                  <Select.SelectTrigger class="w-full" aria-label="角色">
-                    {wizard.roleName(seat.roleId ?? '')}
-                  </Select.SelectTrigger>
-                  <Select.SelectContent>
-                    {#each wizard.roles as role (role.id)}
-                      {#if wizard.isRoleAllowedInCommittee(role.id, committee.type)}
-                        <Select.SelectItem value={role.id} label={role.name || '未命名角色'} />
-                      {/if}
-                    {/each}
-                  </Select.SelectContent>
-                </Select.Select>
-              {/if}
-              <Button
-                variant="ghost"
-                size="icon"
-                title="删除席位"
-                onclick={() => wizard.removeSeat(committee.id, seat.id)}
-              >
-                <Trash2 class="text-destructive" />
-              </Button>
-            </div>
-            {#if showSeatNameError}
-              <Field.FieldError>请输入席位名称</Field.FieldError>
-            {/if}
+                  <ChevronDown
+                    class={cn(
+                      'transition-transform',
+                      !collapsedCommittees[committee.id] && 'rotate-180'
+                    )}
+                  />
+                </Button>
+              {/snippet}
+            </Collapsible.Trigger>
           </div>
-        {:else}
-          <p
-            class="rounded-md border border-dashed px-3 py-6 text-center text-sm text-muted-foreground"
-          >
-            尚未分配席位
-          </p>
-        {/each}
-      </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onclick={() => openFormatDialog('excel', committee.id)}
+            >
+              <FileSpreadsheet data-icon="inline-start" />从 Excel 导入
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onclick={() => openFormatDialog('text', committee.id)}
+            >
+              <FileText data-icon="inline-start" />从文本导入
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onclick={() => {
+                wizard.addSeat(committee.id)
+                collapsedCommittees[committee.id] = false
+              }}
+            >
+              <Plus data-icon="inline-start" />
+              添加席位
+            </Button>
+          </div>
+        </div>
+
+        <Collapsible.Content>
+          <div class="mt-3 flex flex-col gap-2">
+            {#each committee.seats as seat (seat.id)}
+              {@const showSeatNameError = wizard.attempted && seat.name.trim().length === 0}
+              <div class="flex flex-col gap-1">
+                <div
+                  class={cn(
+                    'grid items-center gap-2',
+                    isSingleton
+                      ? 'md:grid-cols-[minmax(0,1fr)_minmax(0,12rem)_9rem_2.5rem]'
+                      : committee.type === 'cabinet'
+                        ? 'md:grid-cols-[minmax(0,1fr)_minmax(0,12rem)_15rem_2.5rem]'
+                        : 'md:grid-cols-[minmax(0,1fr)_15rem_2.5rem]'
+                  )}
+                >
+                  <Input
+                    bind:value={seat.name}
+                    placeholder="席位名称"
+                    aria-label="席位名称"
+                    aria-invalid={showSeatNameError || undefined}
+                  />
+                  {#if committee.type === 'cabinet'}
+                    <Input
+                      bind:value={seat.shortName}
+                      placeholder="席位简称（可选）"
+                      aria-label="席位简称"
+                    />
+                  {/if}
+                  {#if isSingleton}
+                    <label
+                      class="flex items-center justify-center gap-2 rounded-md border px-2 py-2 text-xs text-muted-foreground"
+                    >
+                      <Checkbox bind:checked={seat.hasVotingRights} aria-label="投票权" />
+                      投票权
+                    </label>
+                  {:else}
+                    <Select.Select type="single" bind:value={seat.roleId}>
+                      <Select.SelectTrigger class="w-full" aria-label="角色">
+                        {wizard.roleName(seat.roleId ?? '')}
+                      </Select.SelectTrigger>
+                      <Select.SelectContent>
+                        {#each wizard.roles as role (role.id)}
+                          {#if wizard.isRoleAllowedInCommittee(role.id, committee.type)}
+                            <Select.SelectItem value={role.id} label={role.name || '未命名角色'} />
+                          {/if}
+                        {/each}
+                      </Select.SelectContent>
+                    </Select.Select>
+                  {/if}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title="删除席位"
+                    onclick={() => wizard.removeSeat(committee.id, seat.id)}
+                  >
+                    <Trash2 class="text-destructive" />
+                  </Button>
+                </div>
+                {#if showSeatNameError}
+                  <Field.FieldError>请输入席位名称</Field.FieldError>
+                {/if}
+              </div>
+            {:else}
+              <p
+                class="rounded-md border border-dashed px-3 py-6 text-center text-sm text-muted-foreground"
+              >
+                尚未分配席位
+              </p>
+            {/each}
+          </div>
+        </Collapsible.Content>
+      </Collapsible.Root>
 
       {#if showNoSeats}
         <Field.FieldError class="mt-1">每个委员会至少分配一个席位</Field.FieldError>
@@ -399,32 +442,10 @@
     <Dialog.Header>
       <Dialog.Title>导入数据预览</Dialog.Title>
       <Dialog.Description>
-        确认后将把以下 {importedRows.length} 条席位追加到选定委员会。
+        确认后将把以下 {importedRows.length} 条席位追加到当前会场。
       </Dialog.Description>
     </Dialog.Header>
-    <Field.FieldGroup>
-      <Field.Field>
-        <Field.FieldLabel for="import-target-committee">导入到委员会</Field.FieldLabel>
-        {#if isSingleton}
-          <p class="text-sm text-muted-foreground">
-            导入到：{singletonCommitteeName || '单例会场'}
-          </p>
-        {:else}
-          <Select.Select type="single" bind:value={targetCommitteeId}>
-            <Select.SelectTrigger id="import-target-committee" class="w-full">
-              {wizard.committees.find((committee) => committee.id === targetCommitteeId)?.name ||
-                '选择委员会'}
-            </Select.SelectTrigger>
-            <Select.SelectContent>
-              {#each wizard.committees as committee (committee.id)}<Select.SelectItem
-                  value={committee.id}
-                  label={committee.name || '未命名委员会'}
-                />{/each}
-            </Select.SelectContent>
-          </Select.Select>
-        {/if}
-      </Field.Field>
-    </Field.FieldGroup>
+    <p class="text-sm text-muted-foreground">导入到：{targetCommittee?.name || '未命名委员会'}</p>
     <div class="max-h-[50vh] overflow-auto rounded-md border">
       <table class="w-full text-sm">
         <thead class="sticky top-0 bg-muted/90 text-left text-xs text-muted-foreground">
@@ -460,7 +481,7 @@
     {/if}
     <Dialog.Footer>
       <Button variant="outline" onclick={() => (previewDialogOpen = false)}>取消</Button>
-      <Button disabled={!targetCommitteeId} onclick={confirmImport}>确认导入</Button>
+      <Button disabled={!targetCommittee} onclick={confirmImport}>确认导入</Button>
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>
