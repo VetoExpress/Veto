@@ -8,6 +8,8 @@
   import * as Card from '$lib/components/ui/card'
   import * as Field from '$lib/components/ui/field'
   import * as Alert from '$lib/components/ui/alert'
+  import { Switch } from '$lib/components/ui/switch'
+  import { conferenceSync } from '$lib/classes/stores/conference/conference-sync-store'
 
   let email = $state('')
   let password = $state('')
@@ -29,6 +31,36 @@
     <h2 class="text-2xl font-semibold">账号</h2>
     <p class="mt-2 text-sm text-muted-foreground">在这里管理个人资料、账号安全与登录状态。</p>
   </div>
+
+  {#if $accountStore.available}
+    <Card.Root>
+      <Card.Header>
+        <div class="flex items-center justify-between gap-4">
+          <Card.Title>大会云同步</Card.Title>
+          <Switch aria-label="大会云同步" checked={$conferenceSync.enabled} onCheckedChange={(enabled) => conferenceSync.setEnabled(enabled)} />
+        </div>
+        <Card.Description>默认开启。登录后自动同步本机已有和新建大会，并在其他设备恢复；关闭后继续保存到本机。</Card.Description>
+      </Card.Header>
+      <Card.Content class="space-y-3 text-sm">
+        <p role="status" class="text-muted-foreground">
+          {!$conferenceSync.enabled ? '云同步已关闭' : !$accountStore.user ? '登录后自动同步，当前大会保存在本机' : $conferenceSync.syncing ? '正在同步…' : $conferenceSync.syncedAt ? `上次同步：${new Date($conferenceSync.syncedAt).toLocaleString('zh-CN')}` : '等待同步'}
+        </p>
+        {#if $conferenceSync.error}<p role="alert" class="text-destructive">{$conferenceSync.error}</p>{/if}
+        {#each $conferenceSync.conflicts as conflict (conflict.id)}
+          <div class="space-y-2 rounded-lg border p-3">
+            <p>「{conflict.name}」存在存档冲突。请退出该大会后选择要保留的内容。</p>
+            <div class="flex gap-2">
+              <Button size="sm" variant="outline" onclick={() => conferenceSync.resolve(conflict.id, 'local')}>保留本机</Button>
+              <Button size="sm" variant="outline" onclick={() => conferenceSync.resolve(conflict.id, 'cloud')}>使用云端</Button>
+            </div>
+          </div>
+        {/each}
+      </Card.Content>
+      <Card.Footer>
+        <Button variant="outline" disabled={!$accountStore.user || !$conferenceSync.enabled || $conferenceSync.syncing} onclick={() => void conferenceSync.sync()}>立即同步</Button>
+      </Card.Footer>
+    </Card.Root>
+  {/if}
 
   {#if $accountStore.error}
     <Alert.Root variant="destructive">

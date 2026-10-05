@@ -17,6 +17,7 @@ test('桌面账号设置：登录、恢复、刷新与退出同步用户卡片',
       veto: {
         account: {
           getSession: async () => ({ ok: true as const, session }),
+          getAccessToken: async () => ({ ok: true as const, session, token: session.user ? 'test-account-token' : null }),
           login: async (_email: string, password: string) =>
             password === 'wrong'
               ? { ok: false as const, error: '邮箱或密码错误', status: 401 }
@@ -61,6 +62,8 @@ test('桌面账号设置：登录、恢复、刷新与退出同步用户卡片',
       }
     })
   })
+  await page.route('**/v1/conferences?**', (route) => route.fulfill({ json: { conferences: [], nextCursor: null } }))
+  await page.route('**/v1/app-conferences**', (route) => route.fulfill({ json: { archives: [], nextCursor: null } }))
   await page.goto('http://localhost:4173/conference')
   await page.getByRole('button', { name: '设置', exact: true }).click()
   const dialog = page.getByRole('dialog')

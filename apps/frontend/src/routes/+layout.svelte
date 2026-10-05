@@ -2,6 +2,7 @@
   import { VETO_NAME } from '$lib/classes/const'
   import { onMount } from 'svelte'
   import { scheduleWebLaunchTelemetry } from '$lib/classes/services/web-telemetry'
+  import { conferenceSync } from '$lib/classes/stores/conference/conference-sync-store'
   import { ModeWatcher } from 'mode-watcher'
   import { createConferenceDialogOpen } from '$lib/classes/stores/app/global-ui-store'
   import MyAlertDialog from '$lib/components/dialog/my-alert-dialog.svelte'
@@ -16,6 +17,7 @@
 
   onMount(() => {
     scheduleWebLaunchTelemetry(__APP_VERSION__)
+    return conferenceSync.start()
   })
 </script>
 

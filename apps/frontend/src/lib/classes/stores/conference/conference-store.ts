@@ -413,6 +413,19 @@ export function getConferenceById(id: string): Conference | null {
   return get(conferences).find((c) => c.id === id) ?? null
 }
 
+/** Replace an inactive local archive and register its committee engines. */
+export function restoreSyncedConference(data: ConferenceDTO): void {
+  if (get(currentConferenceId) === data.id) throw new Error('请先退出大会再恢复云端存档')
+  const restored = Conference.fromJSON(data)
+  const existing = getConferenceById(data.id)
+  for (const committee of existing?.committees ?? []) unregisterEngine(committee.id)
+  for (const committee of restored.committees) {
+    registerEngine(committee)
+    savedPhases.set(committee.id, committee.phase)
+  }
+  conferences.update((list) => [...list.filter((conference) => conference.id !== data.id), restored])
+}
+
 /** Reconcile a cloud Chair projection into the local procedure aggregate. */
 export function reconcileCommitteeSeats(
   conferenceId: string,
