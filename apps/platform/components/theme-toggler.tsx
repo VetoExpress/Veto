@@ -26,6 +26,7 @@ export function ThemeToggler({ className }: { className?: string }) {
 
   return (
     <AnimatedThemeToggler
+      aria-label="切换主题"
       className={className}
       theme={resolvedTheme === "dark" ? "dark" : "light"}
       onThemeChange={setTheme}

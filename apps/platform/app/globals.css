@@ -146,6 +146,18 @@
   font-family: var(--font-platform-body);
 }
 
+.platform-desktop .min-h-svh {
+  min-height: calc(100svh - 2.25rem);
+}
+
+.platform-titlebar {
+  -webkit-app-region: drag;
+}
+
+.platform-window-actions {
+  -webkit-app-region: no-drag;
+}
+
 .platform-title {
   min-width: 0;
   overflow-wrap: anywhere;

@@ -36,6 +36,7 @@ import {
   verifyCode,
 } from "@/lib/auth-client"
 import { ThemeToggler } from "@/components/theme-toggler"
+import { useAppEnvironment } from "@/components/app-environment"
 import { BubbleBackground } from "@/components/animate-ui/components/backgrounds/bubble"
 import { PasswordResetForm } from "@/components/password-reset-form"
 
@@ -45,6 +46,7 @@ type RegisterStage = "email" | "code" | "password"
 const RESEND_COOLDOWN_SECONDS = 60
 
 export default function Page() {
+  const { isDesktop } = useAppEnvironment()
   const [tab, setTab] = useState<AuthTab>("login")
   const [resettingPassword, setResettingPassword] = useState(false)
   const [resetEmail, setResetEmail] = useState("")
@@ -67,9 +69,11 @@ export default function Page() {
         <span className="text-lg font-medium">Veto</span>
       </a>
 
-      <div className="absolute top-6 right-6 z-20">
-        <ThemeToggler className="flex size-10 cursor-pointer items-center justify-center rounded-full border bg-card/80 shadow-sm backdrop-blur [&_svg]:size-5" />
-      </div>
+      {!isDesktop && (
+        <div className="absolute top-6 right-6 z-20">
+          <ThemeToggler className="flex size-10 cursor-pointer items-center justify-center rounded-full border bg-card/80 shadow-sm backdrop-blur [&_svg]:size-5" />
+        </div>
+      )}
 
       <BubbleBackground
         interactive

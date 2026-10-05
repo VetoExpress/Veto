@@ -70,7 +70,7 @@
           官网
         </DropdownMenu.Item>
         <DropdownMenu.Item
-          onclick={() => window.location.replace('https://platform.miaoyww.top')}
+          onclick={() => window.location.replace('https://platform.miaoyww.top/?from=app')}
           class="gap-2 p-2"
         >
           <LayoutGrid size={16} />

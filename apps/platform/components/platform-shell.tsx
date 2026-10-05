@@ -2,11 +2,12 @@
 
 import type { ReactNode } from "react"
 import { useEffect, useState } from "react"
-import { ArrowLeft, Loader2, LogOut, Monitor } from "lucide-react"
+import { ArrowLeft, Loader2, LogOut } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 import { ThemeToggler } from "@/components/theme-toggler"
+import { useAppEnvironment } from "@/components/app-environment"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { UserAvatar } from "@/components/user-avatar"
 import { ConferenceApiError, getConference } from "@/lib/conference-client"
@@ -14,8 +15,6 @@ import { committeeReference } from "@/lib/conference-structure"
 import { usePlatformAuth } from "@/lib/use-platform-auth"
 import { usePlatformUser } from "@/lib/use-platform-user"
 import { cn } from "@/lib/utils"
-
-const APP_URL = "https://app.miaoyww.top"
 
 const CONFERENCE_ROUTE = /^\/conferences\/([^/]+)(?:\/committees\/([^/]+))?$/
 
@@ -92,6 +91,7 @@ export function PlatformShell({
   const { user } = usePlatformUser(token, signOut)
   const subtitle = usePlatformSubtitle(token, signOut)
   const onAccountPage = pathname === "/account"
+  const { isAppEntry, isDesktop } = useAppEnvironment()
   return (
     <div className="platform-shell relative flex min-h-svh flex-col overflow-clip bg-background">
       <header className="relative z-10 flex h-20 shrink-0 items-center justify-between border-b bg-background/85 px-4 backdrop-blur-md sm:px-8 lg:px-12">
@@ -147,7 +147,9 @@ export function PlatformShell({
           >
             <LogOut aria-hidden="true" />
           </Button>
-          <ThemeToggler className="flex size-11 cursor-pointer items-center justify-center rounded-full bg-background transition-colors hover:bg-muted [&_svg]:size-4" />
+          {!isDesktop && (
+            <ThemeToggler className="flex size-11 cursor-pointer items-center justify-center rounded-full bg-background transition-colors hover:bg-muted [&_svg]:size-4" />
+          )}
         </div>
       </header>
 
@@ -155,26 +157,28 @@ export function PlatformShell({
         {children}
       </main>
 
-      <footer className="relative z-10 flex flex-col items-start justify-between gap-4 border-t bg-muted/50 px-[clamp(1.25rem,4vw,4rem)] py-8 text-[0.625rem] tracking-[0.15em] text-muted-foreground sm:flex-row sm:items-center">
-        <span>© VETO / 2026</span>
-        <span>QUIET TOOLS FOR LOUD MOMENTS</span>
-        <span className="flex items-center gap-[1.375rem]">
-          <a
-            href="https://github.com/Miaoyww/Veto"
-            target="_blank"
-            rel="noreferrer"
-            className="whitespace-nowrap text-foreground transition-colors hover:text-muted-foreground"
-          >
-            GITHUB
-          </a>
-          <a
-            href="https://veto.miaoyww.top/#contact"
-            className="whitespace-nowrap text-foreground transition-colors hover:text-muted-foreground"
-          >
-            CONTACT
-          </a>
-        </span>
-      </footer>
+      {!isAppEntry && (
+        <footer className="relative z-10 flex flex-col items-start justify-between gap-4 border-t bg-muted/50 px-[clamp(1.25rem,4vw,4rem)] py-8 text-[0.625rem] tracking-[0.15em] text-muted-foreground sm:flex-row sm:items-center">
+          <span>© VETO / 2026</span>
+          <span>QUIET TOOLS FOR LOUD MOMENTS</span>
+          <span className="flex items-center gap-[1.375rem]">
+            <a
+              href="https://github.com/Miaoyww/Veto"
+              target="_blank"
+              rel="noreferrer"
+              className="whitespace-nowrap text-foreground transition-colors hover:text-muted-foreground"
+            >
+              GITHUB
+            </a>
+            <a
+              href="https://veto.miaoyww.top/#contact"
+              className="whitespace-nowrap text-foreground transition-colors hover:text-muted-foreground"
+            >
+              CONTACT
+            </a>
+          </span>
+        </footer>
+      )}
     </div>
   )
 }
