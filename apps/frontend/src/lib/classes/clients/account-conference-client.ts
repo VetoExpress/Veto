@@ -8,6 +8,8 @@ export interface PlatformConference {
   lifecycle: 'draft' | 'active' | 'closed'
   createdAt: string
   updatedAt: string
+  committeeCount?: number
+  seatCount?: number
 }
 
 export async function accountRequest<T>(path: string, init: RequestInit = {}, expectedEmail?: string): Promise<T> {

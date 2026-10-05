@@ -15,7 +15,7 @@ test('账号大会列表展示平台分页并同步和恢复本地存档，开�
       committees: [{ id: 'local-committee', name: '安理会', seats: [], minutes: [] }]
     }]))
   })
-  const platform = (id: string) => ({ id, name: `平台大会 ${id}`, lifecycle: 'draft', createdAt: '2026-10-05', updatedAt: '2026-10-05' })
+  const platform = (id: string) => ({ id, name: `平台大会 ${id}`, lifecycle: 'draft', createdAt: '2026-10-05T11:49:00+08:00', updatedAt: '2026-10-05', committeeCount: 2, seatCount: 12 })
   const archives = new Map<string, { conferenceId: string; snapshot: unknown; version: number }>([['remote', {
     conferenceId: 'remote', version: 1, snapshot: { id: 'remote', name: '另一设备的大会', mode: 'singleton', createdAt: 1, updatedAt: 2, committees: [{ id: 'remote-committee', name: '测试会场', seats: [] }] }
   }]])
@@ -36,6 +36,10 @@ test('账号大会列表展示平台分页并同步和恢复本地存档，开�
   await page.goto('http://localhost:4173/conference')
   await expect(page.getByRole('heading', { name: '平台大会 first' })).toBeVisible()
   await expect(page.getByRole('heading', { name: '平台大会 second' })).toBeVisible()
+  const platformCard = page.getByRole('link').filter({ has: page.getByRole('heading', { name: '平台大会 first' }) })
+  await expect(platformCard).toContainText('2 个会场')
+  await expect(platformCard).toContainText('12 个席位')
+  await expect(platformCard).toContainText('2026/10/5')
   await expect(page.getByRole('button', { name: '另一设备的大会', exact: true })).toBeVisible()
   await expect.poll(() => localUploads).toBe(1)
   await page.getByRole('button', { name: '另一设备的大会', exact: true }).click()

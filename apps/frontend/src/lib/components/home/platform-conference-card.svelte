@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ExternalLink } from '@lucide/svelte'
+  import { Building2, CalendarDays, ExternalLink, Users } from '@lucide/svelte'
   import type { PlatformConference } from '$lib/classes/clients/account-conference-client'
   import { openPlatformConference } from '$lib/classes/stores/conference/platform-conference-store'
   import { Badge } from '$lib/components/ui/badge'
@@ -29,6 +29,15 @@
       </div>
       {#if conference.organizer}<p class="mt-2 text-sm text-muted-foreground">{conference.organizer}</p>{/if}
       {#if conference.description}<p class="mt-1 text-sm text-muted-foreground">{conference.description}</p>{/if}
+      <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+        {#if conference.committeeCount !== undefined}
+          <span class="flex items-center gap-1.5"><Building2 class="size-3" />{conference.committeeCount} 个会场</span>
+        {/if}
+        <span class="flex items-center gap-1.5"><CalendarDays class="size-3" />{new Date(conference.createdAt).toLocaleString('zh-CN', { dateStyle: 'short', timeStyle: 'short' })}</span>
+        {#if conference.seatCount !== undefined}
+          <span class="flex items-center gap-1.5"><Users class="size-3" />{conference.seatCount} 个席位</span>
+        {/if}
+      </div>
     </div>
     <Button variant="outline" onclick={(event) => { event.stopPropagation(); openPlatformConference(conference) }}>打开云平台<ExternalLink data-icon="inline-end" /></Button>
   </Card.Content>
