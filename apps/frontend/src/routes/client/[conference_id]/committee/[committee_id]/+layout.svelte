@@ -156,7 +156,7 @@
       ? cloudSession.chairProjection
       : null
   )
-  const isChair = $derived(!isCloudSession || cloudProjection !== null)
+  const isChair = $derived(canControlConference)
   const rosterEntries = $derived(
     getChairRosterEntries(participantSeats, cloudProjection?.chairSeat.id)
   )
@@ -193,7 +193,7 @@
     </Sidebar.Header>
 
     <Sidebar.Content>
-      {#if inCommittee && activeConference && activeCommittee}
+      {#if inCommittee && (isCloudSession || (activeConference && activeCommittee))}
         <Sidebar.Menu class="p-3">
           <Sidebar.MenuItem>
             <Sidebar.MenuButton onclick={() => goto(resolve('/conference'))}>

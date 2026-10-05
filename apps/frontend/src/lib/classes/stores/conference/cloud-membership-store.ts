@@ -257,10 +257,36 @@ function toConferenceDTO(membership: CloudMembership): ConferenceDTO {
 }
 
 function ensureCloudConference(membership: CloudMembership): void {
-  const exists = get(conferences).some((conference) => conference.id === membership.conferenceId)
-  if (exists) return
+  conferences.update((list) => {
+    const existing = list.find((conference) => conference.id === membership.conferenceId)
+    const data = toConferenceDTO(membership)
+    if (!existing) return [...list, Conference.fromJSON(data)]
+    if (existing.getCommittee(membership.committeeId)) return list
 
-  conferences.update((list) => [...list, Conference.fromJSON(toConferenceDTO(membership))])
+    // One conference can be entered through seats in different committees.
+    // Add the missing context without replacing any local procedure state.
+    existing.addCommittee(data.committees[0])
+    for (const group of data.seatGroups ?? []) {
+      if (!existing.seatGroups.some((item) => item.id === group.id)) existing.addSeatGroup(group)
+    }
+    existing.setRoleTemplates([
+      ...existing.roleTemplates,
+      ...(data.roleTemplates ?? []).filter(
+        (role) => !existing.roleTemplates.some((item) => item.id === role.id)
+      )
+    ])
+    existing.setUsers([
+      ...existing.users,
+      ...(data.users ?? []).filter((user) => !existing.users.some((item) => item.id === user.id))
+    ])
+    existing.setSeatAccesses([
+      ...existing.seatAccesses,
+      ...(data.seatAccesses ?? []).filter(
+        (access) => !existing.seatAccesses.some((item) => item.seatId === access.seatId)
+      )
+    ])
+    return [...list]
+  })
 }
 
 /** Apply the authorized Chair roster while keeping procedure runtime state local. */

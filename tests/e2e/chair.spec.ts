@@ -4,7 +4,7 @@ const base = 'http://localhost:4173'
 
 async function openCommitteeSettings(page: Page): Promise<void> {
   await page.getByRole('button', { name: '设置', exact: true }).click()
-  await page.getByRole('button', { name: '会议设置' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: '会议设置', exact: true }).click()
 }
 
 async function expectSnapshotOptions(page: Page, count: number): Promise<void> {
@@ -14,6 +14,14 @@ async function expectSnapshotOptions(page: Page, count: number): Promise<void> {
 }
 
 test('首次认领席位后进入主席台，保存快照，刷新后仍可预览和恢复', async ({ page }) => {
+  // The conference already exists from a different committee identity.
+  await page.addInitScript(() => {
+    if (localStorage.getItem('veto_conferences')) return
+    localStorage.setItem('veto_conferences', JSON.stringify([{
+      id: 'c', name: '浏览器测试大会', source: 'cloud',
+      committees: [{ id: 'previous-committee', name: 'AAA', seats: [] }]
+    }]))
+  })
   await page.route('https://api.miaoyww.top/**', (route): Promise<Response> => route.fulfill({ json: { ok: true } }))
   const target = {
     inviteCode: 'ABCD-EFGH-JK23', conferenceId: 'c', conferenceName: '浏览器测试大会', organizer: '测试学校',
@@ -44,15 +52,15 @@ test('首次认领席位后进入主席台，保存快照，刷新后仍可预�
   await page.getByRole('button', { name: '继续', exact: true }).click()
   await expect(page).toHaveURL(/\/client\/c\/committee\/cm$/)
   await page.getByRole('button', { name: '主席', exact: true }).click()
-  await expect(page.getByRole('button', { name: '立即保存', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '开始点名', exact: true })).toBeVisible()
 
   await openCommitteeSettings(page)
   await page.getByRole('button', { name: '保存当前快照' }).click()
-  await expectSnapshotOptions(page, 2)
+  await expectSnapshotOptions(page, 1)
 
   await page.reload()
   await openCommitteeSettings(page)
-  await expectSnapshotOptions(page, 2)
+  await expectSnapshotOptions(page, 1)
 
   await page.getByLabel('选择会议快照').click()
   await page.getByRole('option').first().click()
@@ -63,6 +71,6 @@ test('首次认领席位后进入主席台，保存快照，刷新后仍可预�
   await expect(page.getByRole('button', { name: '恢复这份快照' })).toBeHidden()
 
   await openCommitteeSettings(page)
-  await expectSnapshotOptions(page, 3)
+  await expectSnapshotOptions(page, 2)
   await expect(page.getByRole('alert')).toHaveCount(0)
 })
