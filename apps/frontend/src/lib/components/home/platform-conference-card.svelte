@@ -9,7 +9,7 @@
 </script>
 
 <Card.Root
-  class="w-full max-w-xl cursor-pointer gap-0 bg-card/70 py-0 transition-colors hover:border-primary/50"
+  class="w-full cursor-pointer gap-0 bg-card/70 py-0 transition-colors hover:border-primary/50"
   role="link"
   tabindex={0}
   onclick={() => openPlatformConference(conference)}
