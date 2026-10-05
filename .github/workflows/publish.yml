@@ -176,6 +176,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate release notes from changelog
+        run: node scripts/release-notes.mjs "${{ github.ref_name }}" release-notes.md
+
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
@@ -201,12 +207,16 @@ jobs:
           # Release 不存在就创建
           if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
             echo "Release $TAG already exists"
+            gh release edit "$TAG" \
+              --repo "$REPO" \
+              --notes-file release-notes.md
           else
             echo "Creating release $TAG"
             gh release create "$TAG" \
               --repo "$REPO" \
               --title "$TAG" \
-              --generate-notes
+              --verify-tag \
+              --notes-file release-notes.md
           fi
 
           echo "Files to upload:"
