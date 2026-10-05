@@ -33,6 +33,15 @@ import { PlatformLoading, PlatformShell } from "@/components/platform-shell"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -80,6 +89,7 @@ export default function ConferenceDetailPage(): JSX.Element {
     committees: [],
   })
   const [saving, setSaving] = useState<SavingSection>()
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
   const [fieldErrors, setFieldErrors] = useState<string[]>([])
@@ -268,13 +278,7 @@ export default function ConferenceDetailPage(): JSX.Element {
 
   async function removeConference(): Promise<void> {
     if (!token || !conference || saving) return
-    if (
-      !window.confirm(
-        `确定删除“${conference.name}”吗？删除后可从大会列表恢复。`
-      )
-    ) {
-      return
-    }
+    setDeleteConfirmOpen(false)
     setSaving("delete")
     setError("")
     try {
@@ -333,19 +337,45 @@ export default function ConferenceDetailPage(): JSX.Element {
                 {new Date(conference.updatedAt).toLocaleString("zh-CN")}
               </p>
             </div>
-            <Button
-              type="button"
-              variant="destructive"
-              disabled={Boolean(saving)}
-              onClick={() => void removeConference()}
-            >
-              {saving === "delete" ? (
-                <Loader2 className="animate-spin" aria-hidden="true" />
-              ) : (
-                <Trash2 aria-hidden="true" />
-              )}
-              删除大会
-            </Button>
+            <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+              <DialogTrigger
+                render={
+                  <Button type="button" variant="destructive" disabled={Boolean(saving)} />
+                }
+              >
+                {saving === "delete" ? (
+                  <Loader2 className="animate-spin" aria-hidden="true" />
+                ) : (
+                  <Trash2 aria-hidden="true" />
+                )}
+                删除大会
+              </DialogTrigger>
+              <DialogContent showCloseButton={false}>
+                <DialogHeader>
+                  <DialogTitle>确认删除大会？</DialogTitle>
+                  <DialogDescription>
+                    确定删除“{conference.name}”吗？删除后可从大会列表恢复。
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setDeleteConfirmOpen(false)}
+                  >
+                    取消
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    disabled={Boolean(saving)}
+                    onClick={() => void removeConference()}
+                  >
+                    确认删除
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </section>
 
           {error ? (
