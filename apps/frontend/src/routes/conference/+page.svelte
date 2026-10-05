@@ -75,20 +75,6 @@
       : null
   )
 
-  const conferenceStats = $derived({
-    total: $conferences.length,
-    committees: $conferences.reduce((count, conference) => count + conference.committees.length, 0),
-    seats: $conferences.reduce(
-      (count, conference) =>
-        count +
-        conference.committees.reduce(
-          (committeeCount, committee) => committeeCount + committee.seats.length,
-          0
-        ),
-      0
-    )
-  })
-
   onMount(() => {
     unloadConference()
   })
@@ -243,7 +229,7 @@
           />
         </InputGroup.Root>
         <Badge variant="secondary" class="self-start px-3 py-1 sm:self-auto">
-          {filteredConferences.length} / {conferenceStats.total} 场大会
+          {filteredConferences.length} / {$conferences.length} 场大会
         </Badge>
       </div>
     </div>
@@ -251,31 +237,6 @@
 
   <ScrollArea class="relative z-10 min-h-0 flex-1">
     <main class="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-8 sm:px-8 lg:px-10 lg:py-10">
-      <section aria-labelledby="overview-heading" class="grid gap-3 sm:grid-cols-3">
-        <h2 id="overview-heading" class="sr-only">大会概览</h2>
-        <Card.Root class="bg-card/70 shadow-sm backdrop-blur-sm">
-          <Card.Header class="pb-2">
-            <Card.Description>大会</Card.Description>
-            <Card.Title class="text-3xl tracking-tight">{conferenceStats.total}</Card.Title>
-          </Card.Header>
-          <Card.Content class="pt-0 text-xs text-muted-foreground">你的会议总数</Card.Content>
-        </Card.Root>
-        <Card.Root class="bg-card/70 shadow-sm backdrop-blur-sm">
-          <Card.Header class="pb-2">
-            <Card.Description>委员会</Card.Description>
-            <Card.Title class="text-3xl tracking-tight">{conferenceStats.committees}</Card.Title>
-          </Card.Header>
-          <Card.Content class="pt-0 text-xs text-muted-foreground">已配置的讨论空间</Card.Content>
-        </Card.Root>
-        <Card.Root class="bg-card/70 shadow-sm backdrop-blur-sm">
-          <Card.Header class="pb-2">
-            <Card.Description>席位</Card.Description>
-            <Card.Title class="text-3xl tracking-tight">{conferenceStats.seats}</Card.Title>
-          </Card.Header>
-          <Card.Content class="pt-0 text-xs text-muted-foreground">等待参与者入场</Card.Content>
-        </Card.Root>
-      </section>
-
       {#if lastOpened && !query.trim()}
         <section aria-labelledby="continue-heading">
           <div class="mb-3 flex items-end justify-between gap-4">
