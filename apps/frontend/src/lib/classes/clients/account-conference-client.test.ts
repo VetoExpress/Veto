@@ -9,15 +9,26 @@ function session(email = 'owner@example.test') {
   return signOut
 }
 describe('account conference client', () => {
+  it('fills missing summary counts from conference details on older APIs', async () => {
+    session()
+    const fetch = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ conferences: [{ id: 'one' }], nextCursor: null })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ conference: { committees: [{ seats: [{ id: 'seat' }] }, { seats: [] }] } })))
+    vi.stubGlobal('fetch', fetch)
+    const { listAccountConferences } = await import('./account-conference-client')
+    expect(await listAccountConferences('owner@example.test')).toEqual([{ id: 'one', committeeCount: 2, seatCount: 1 }])
+    expect(fetch.mock.calls[1][0]).toMatch(/\/conferences\/one$/)
+  })
   it('loads every page using the desktop account and opens the exact platform conference', async () => {
     session()
     vi.stubEnv('VITE_CLOUD_API_URL', 'https://api.example.test/v1')
     const fetch = vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ conferences: [{ id: 'one' }], nextCursor: 'next' })))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ conferences: [{ id: 'two' }], nextCursor: null })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ conferences: [{ id: 'one', committeeCount: 1, seatCount: 3 }], nextCursor: 'next' })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ conferences: [{ id: 'two', committeeCount: 0, seatCount: 0 }], nextCursor: null })))
     vi.stubGlobal('fetch', fetch)
     const { listAccountConferences, platformConferenceUrl } = await import('./account-conference-client')
-    expect(await listAccountConferences('owner@example.test')).toEqual([{ id: 'one' }, { id: 'two' }])
+    expect(await listAccountConferences('owner@example.test')).toEqual([{ id: 'one', committeeCount: 1, seatCount: 3 }, { id: 'two', committeeCount: 0, seatCount: 0 }])
+    expect(fetch).toHaveBeenCalledTimes(2)
     expect(fetch.mock.calls[1][0]).toContain('cursor=next')
     expect(fetch.mock.calls[0][1].headers.get('Authorization')).toBe('Bearer secret')
     expect(platformConferenceUrl('a/b')).toBe('https://platform.miaoyww.top/conferences/a%2Fb?from=app')

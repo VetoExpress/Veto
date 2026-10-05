@@ -41,6 +41,21 @@ export async function listAccountConferences(email: string): Promise<PlatformCon
     conferences.push(...page.conferences)
     cursor = page.nextCursor
   } while (cursor)
+  // Older deployments omit summary counts; use their existing detail endpoint.
+  for (let offset = 0; offset < conferences.length; offset += 4) {
+    await Promise.all(conferences.slice(offset, offset + 4).map(async (conference) => {
+      if (conference.committeeCount !== undefined && conference.seatCount !== undefined) return
+      try {
+        const detail = await accountRequest<{ conference: { committees: { seats: unknown[] }[] } }>(
+          `conferences/${encodeURIComponent(conference.id)}`, {}, email
+        )
+        conference.committeeCount = detail.conference.committees.length
+        conference.seatCount = detail.conference.committees.reduce((count, committee) => count + committee.seats.length, 0)
+      } catch {
+        // Keep accessible conferences listed even when an individual detail request fails.
+      }
+    }))
+  }
   return conferences
 }
 
