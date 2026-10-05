@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
+import type { AccountSnapshot, DesktopAccountAPI } from '@vetoexpress/auth/desktop'
 
 // Custom APIs for renderer
 const api = {}
@@ -7,6 +8,19 @@ const api = {}
 // ── Veto Plugin API ────────────────────────────────────────────────────
 
 const veto = {
+  account: {
+    getSession: () => ipcRenderer.invoke('veto:account:get-session'),
+    login: (email: string, password: string) =>
+      ipcRenderer.invoke('veto:account:login', email, password),
+    refresh: () => ipcRenderer.invoke('veto:account:refresh'),
+    signOut: () => ipcRenderer.invoke('veto:account:sign-out'),
+    onChanged: (callback: (session: AccountSnapshot) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, session: AccountSnapshot) =>
+        callback(session)
+      ipcRenderer.on('veto:account:changed', listener)
+      return () => ipcRenderer.removeListener('veto:account:changed', listener)
+    }
+  } satisfies DesktopAccountAPI,
   openExternal: (url: string) => {
     return ipcRenderer.invoke('veto:open-external', url)
   },
@@ -208,8 +222,6 @@ const veto = {
     }
   }
 }
-
-contextBridge.exposeInMainWorld('veto', veto)
 
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise

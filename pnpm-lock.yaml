@@ -29,6 +29,9 @@ importers:
       '@electron-toolkit/utils':
         specifier: ^4.0.0
         version: 4.0.0(electron@43.2.0(supports-color@10.2.2))
+      '@vetoexpress/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       electron-log:
         specifier: ^5.4.4
         version: 5.4.4
@@ -78,6 +81,9 @@ importers:
 
   apps/frontend:
     dependencies:
+      '@vetoexpress/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@vetoexpress/types':
         specifier: workspace:*
         version: link:../../packages/types

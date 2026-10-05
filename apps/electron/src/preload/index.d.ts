@@ -1,4 +1,5 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
+import type { DesktopAccountAPI } from '@vetoexpress/auth/desktop'
 
 // global.d.ts
 export {}
@@ -12,6 +13,7 @@ declare global {
 }
 
 export interface VetoAPI {
+  account: DesktopAccountAPI
   openExternal: (url: string) => Promise<void>
   plugins: {
     list: () => Promise<

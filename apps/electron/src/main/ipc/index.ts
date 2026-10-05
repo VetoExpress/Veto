@@ -20,6 +20,7 @@ import { registerPluginsIpc } from './plugins'
 import { registerAssetsIpc } from './assets'
 import { registerConferenceIpc } from './conference'
 import { registerUpdaterIpc } from './updater'
+import { registerAccountIpc } from './account'
 
 /** IPC 模块所需的运行时依赖 */
 export interface IpcDependencies {
@@ -40,6 +41,7 @@ export function registerAllIpcHandlers(deps: IpcDependencies): void {
   registerStoreIpc()
   registerEventBusIpc()
   registerUpdaterIpc()
+  registerAccountIpc()
 
   // 有依赖模块
   registerDisplayIpc()

@@ -22,8 +22,8 @@ export interface AuthClientOptions {
 
 export function createAuthClient(options: AuthClientOptions) {
   const apiBaseUrl = options.apiBaseUrl.replace(/\/$/, '')
-  const fetchImpl: typeof globalThis.fetch = (...args) =>
-    (options.fetch ?? globalThis.fetch)(...args)
+  const fetchImpl: typeof globalThis.fetch = (input, init) =>
+    (options.fetch ?? globalThis.fetch)(input, init)
   async function request<T>(path: string, body: unknown): Promise<T> {
     if (!apiBaseUrl) {
       throw new AuthError('API 服务暂未配置')

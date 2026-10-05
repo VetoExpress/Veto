@@ -13,6 +13,7 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
 	},
 	"dependencies": {
+		"@vetoexpress/auth": "workspace:*",
 		"@vetoexpress/types": "workspace:*",
 		"@vetoexpress/utils": "workspace:*",
 		"dompurify": "^3.4.15",

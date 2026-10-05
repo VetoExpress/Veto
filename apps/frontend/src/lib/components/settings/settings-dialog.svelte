@@ -1,12 +1,15 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { Settings, Info, X, Puzzle, Map } from '@lucide/svelte'
+  import { Settings, Info, X, Puzzle, Map, User, ChevronRight } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import * as Separator from '$lib/components/ui/separator/index.js'
   import GeneralPage from './pages/common/general.svelte'
   import ModsPage from './pages/common/mods.svelte'
   import AboutPage from '../settings/pages/common/about.svelte'
   import CommitteePage from './pages/common/committee.svelte'
+  import AccountPage from './pages/common/account.svelte'
+  import * as Avatar from '$lib/components/ui/avatar'
+  import { accountStore } from '$lib/classes/stores/app/account-store'
 
   import ScrollArea from '$lib/components/ui/scroll-area/scroll-area.svelte'
   import * as Dialog from '$lib/components/ui/dialog'
@@ -19,7 +22,7 @@
 
   let activeSection = $state<Section>('general')
   let electronEnvironment = $state(false)
-  type Section = 'general' | 'mods' | 'committee' | 'about'
+  type Section = 'general' | 'mods' | 'committee' | 'about' | 'account'
 
   interface NavItem {
     key: Section
@@ -42,6 +45,7 @@
     if (!electronEnvironment && activeSection === 'mods') {
       activeSection = 'general'
     }
+    return accountStore.connect(window.veto?.account)
   })
 
   settingsDialogOpen.subscribe((v) => {
@@ -53,7 +57,7 @@
       if (target === 'mods' && !electronEnvironment) {
         activeSection = 'general'
         activeSettingsSection.set(null)
-      } else if (target && target !== 'account') {
+      } else if (target) {
         activeSection = target
         activeSettingsSection.set(null)
       } else {
@@ -75,6 +79,8 @@
       showCloseButton={false}
     >
       <!-- 关闭按钮 -->
+      <Dialog.Title class="sr-only">设置</Dialog.Title>
+      <Dialog.Description class="sr-only">管理账号、应用偏好与会议设置。</Dialog.Description>
       <Button
         class="absolute end-4 top-4 z-10 opacity-70 transition-opacity hover:opacity-100"
         variant="ghost"
@@ -92,29 +98,33 @@
           </div>
 
           <!-- 用户卡片 -->
-          <!-- <div class="px-3 pt-1 pb-1">
-            <button
-              class="w-full cursor-pointer rounded-lg px-3 py-2.5 text-start transition-colors hover:bg-accent"
-              class:bg-accent={activeSection === 'account'}
+          <div class="px-3 pt-1 pb-1">
+            <Button
+              class="h-auto w-full justify-start gap-3 px-3 py-2.5 text-start"
+              variant={activeSection === 'account' ? 'secondary' : 'ghost'}
+              aria-label="账号设置"
+              aria-current={activeSection === 'account' ? 'page' : undefined}
               onclick={() => (activeSection = 'account')}
             >
-              <div class="flex items-center gap-3">
-                <Avatar.Root class="size-9 rounded-full shrink-0">
-                  {#if user?.avatar}
-                    <Avatar.Image src={user.avatar} alt={user.name ?? ''} />
-                  {/if}
-                  <Avatar.Fallback class="rounded-full bg-muted">
-                    <User size={16} />
-                  </Avatar.Fallback>
-                </Avatar.Root>
-                <div class="min-w-0 flex-1">
-                  <div class="truncate text-sm font-medium">{user?.name ?? '未登录'}</div>
-                  <div class="truncate text-xs text-muted-foreground">{user?.email ?? ''}</div>
+              <Avatar.Root class="size-9">
+                {#if $accountStore.user?.avatar}
+                  <Avatar.Image src={$accountStore.user.avatar} alt={$accountStore.user.name} />
+                {/if}
+                <Avatar.Fallback>
+                  <User />
+                </Avatar.Fallback>
+              </Avatar.Root>
+              <div class="min-w-0 flex-1">
+                <div class="truncate text-sm font-medium">
+                  {$accountStore.user?.name ?? ($accountStore.ready ? '未登录' : '正在恢复账号…')}
                 </div>
-                <BadgeCheck size={16} class="shrink-0 text-muted-foreground" />
+                <div class="truncate text-xs text-muted-foreground">
+                  {$accountStore.user?.email ?? '登录与账号管理'}
+                </div>
               </div>
-            </button>
-          </div> -->
+              <ChevronRight data-icon="inline-end" />
+            </Button>
+          </div>
 
           <div class="px-3 pb-1">
             <Separator.Root />
@@ -160,6 +170,7 @@
           <ScrollArea class="h-full w-full">
             <div class="p-10">
               {#if activeSection === 'general'}<GeneralPage />{/if}
+              {#if activeSection === 'account'}<AccountPage />{/if}
               {#if activeSection === 'mods' && electronEnvironment}<ModsPage />{/if}
               {#if activeSection === 'committee'}<CommitteePage />{/if}
               {#if activeSection === 'about'}<AboutPage />{/if}
