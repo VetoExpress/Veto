@@ -12,6 +12,39 @@ async function login(page: Page) {
   await page.route('**/v1/auth/me', (route) => route.fulfill({ json: { ok: true, user: { name: '测试组织者', email: 'test@example.test' } } }))
 }
 
+test('删除大会使用应用内确认弹窗，取消不删除，确认后返回列表', async ({ page }) => {
+  await login(page)
+  let deleted = false
+  let nativeDialogs = 0
+  page.on('dialog', async (dialog) => {
+    nativeDialogs++
+    await dialog.dismiss()
+  })
+  await page.route('**/v1/conferences/c', (route) => {
+    if (route.request().method() === 'DELETE') {
+      deleted = true
+      return route.fulfill({ json: { ok: true } })
+    }
+    return route.fulfill({ json: { ok: true, conference } })
+  })
+  await page.route('**/v1/conferences', (route) => route.fulfill({ json: { ok: true, conferences: [] } }))
+  await page.goto(`${base}/conferences/c`)
+  await page.getByRole('button', { name: '删除大会', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: '确认删除大会？' })
+  await expect(dialog).toBeVisible()
+  await expect(dialog).toContainText('测试大会')
+  expect(nativeDialogs).toBe(0)
+  expect(deleted).toBe(false)
+  await dialog.getByRole('button', { name: '取消', exact: true }).click()
+  await expect(dialog).toBeHidden()
+  expect(deleted).toBe(false)
+  await page.getByRole('button', { name: '删除大会', exact: true }).click()
+  await dialog.getByRole('button', { name: '确认删除', exact: true }).click()
+  await expect(page).toHaveURL(`${base}/`)
+  expect(deleted).toBe(true)
+  expect(nativeDialogs).toBe(0)
+})
+
 test('找回密码：发送验证码、校验重复密码、提交后返回登录', async ({ page }) => {
   let submitted: unknown
   await page.route('**/v1/auth/forgot-password', (route) => route.fulfill({ json: { ok: true } }))

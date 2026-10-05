@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Building2,
+  CalendarDays,
   Check,
   ChevronDown,
   ClipboardList,
@@ -60,7 +61,7 @@ import {
 import { usePlatformAuth } from "@/lib/use-platform-auth"
 import { cn } from "@/lib/utils"
 
-type StepId = "event" | "meeting" | "roles" | "seats" | "review"
+type StepId = "event" | "schedule" | "meeting" | "roles" | "seats" | "review"
 interface WizardStep {
   id: StepId
   title: string
@@ -69,6 +70,7 @@ interface WizardStep {
 
 const steps: WizardStep[] = [
   { id: "event", title: "大会信息", icon: Building2 },
+  { id: "schedule", title: "大会时间", icon: CalendarDays },
   { id: "meeting", title: "会场规划", icon: ClipboardList },
   { id: "roles", title: "角色权限", icon: ShieldCheck },
   { id: "seats", title: "席位分配", icon: Users },
@@ -220,7 +222,8 @@ export default function NewConferencePage() {
   const [error, setError] = useState("")
   const [fieldErrors, setFieldErrors] = useState<string[]>([])
 
-  const eventValid = name.trim().length > 0 && !scheduleError(startsAt, endsAt)
+  const eventValid = name.trim().length > 0
+  const scheduleValid = !scheduleError(startsAt, endsAt)
   const meetingValid =
     structure.committees.length > 0 &&
     structure.committees.every((committee) => committee.name.trim().length > 0)
@@ -248,6 +251,7 @@ export default function NewConferencePage() {
 
   function isStepValid(id: StepId): boolean {
     if (id === "event") return eventValid
+    if (id === "schedule") return scheduleValid
     if (id === "meeting") return meetingValid
     if (id === "roles") return rolesValid
     if (id === "seats") return seatsValid
@@ -409,7 +413,13 @@ export default function NewConferencePage() {
   async function submit(event?: FormEvent): Promise<void> {
     event?.preventDefault()
     if (!token || isSaving) return
-    if (!eventValid || !meetingValid || !rolesValid || !seatsValid) {
+    if (
+      !eventValid ||
+      !scheduleValid ||
+      !meetingValid ||
+      !rolesValid ||
+      !seatsValid
+    ) {
       const firstInvalid = steps.findIndex((step) => !isStepValid(step.id))
       setCurrentStep(Math.max(firstInvalid, 0))
       setAttempted(true)
@@ -535,7 +545,7 @@ export default function NewConferencePage() {
               ref={contentRef}
               className="min-h-52 rounded-2xl border bg-card/80 p-5 shadow-[0_1.5rem_4rem_color-mix(in_oklch,var(--primary)_6%,transparent)] backdrop-blur-xl sm:p-6"
             >
-              {currentStep === 0 ? (
+              {steps[currentStep].id === "event" ? (
                 <div className="flex flex-col gap-6">
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="event-name">
@@ -566,13 +576,6 @@ export default function NewConferencePage() {
                       onChange={(event) => setOrganizer(event.target.value)}
                     />
                   </div>
-                  <ConferenceScheduleFields
-                    startsAt={startsAt}
-                    endsAt={endsAt}
-                    onStartChange={setStartsAt}
-                    onEndChange={setEndsAt}
-                    disabled={isSaving}
-                  />
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="event-description">大会说明</Label>
                     <textarea
@@ -588,7 +591,17 @@ export default function NewConferencePage() {
                 </div>
               ) : null}
 
-              {currentStep === 1 ? (
+              {steps[currentStep].id === "schedule" ? (
+                <ConferenceScheduleFields
+                  startsAt={startsAt}
+                  endsAt={endsAt}
+                  onStartChange={setStartsAt}
+                  onEndChange={setEndsAt}
+                  disabled={isSaving}
+                />
+              ) : null}
+
+              {steps[currentStep].id === "meeting" ? (
                 <section className="flex flex-col gap-4">
                   {attempted && structure.committees.length === 0 ? (
                     <FieldError>至少添加一个会场</FieldError>
@@ -705,7 +718,7 @@ export default function NewConferencePage() {
                 </section>
               ) : null}
 
-              {currentStep === 2 ? (
+              {steps[currentStep].id === "roles" ? (
                 <section className="flex flex-col gap-4">
                   {attempted && structure.roleTemplates.length === 0 ? (
                     <FieldError>至少添加一个角色</FieldError>
@@ -764,7 +777,7 @@ export default function NewConferencePage() {
                 </section>
               ) : null}
 
-              {currentStep === 3 ? (
+              {steps[currentStep].id === "seats" ? (
                 <section className="flex flex-col gap-4">
                   {structure.committees.map((committee, committeeIndex) => {
                     const committeeRef = committeeReference(
@@ -981,7 +994,7 @@ export default function NewConferencePage() {
                 </section>
               ) : null}
 
-              {currentStep === 4 ? (
+              {steps[currentStep].id === "review" ? (
                 <div className="space-y-4">
                   <p className="text-sm">
                     开始：{formatSchedule(scheduleInstant(startsAt))}
