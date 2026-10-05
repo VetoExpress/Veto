@@ -103,13 +103,13 @@ export function AppEnvironment({ children }: { children: ReactNode }) {
       <div
         className={
           desktop
-            ? "platform-desktop m-2 overflow-clip rounded-xl bg-background shadow-sm"
+            ? "platform-desktop m-2 flex h-[calc(100svh-1rem)] flex-col overflow-hidden rounded-xl bg-background shadow-sm"
             : undefined
         }
       >
         {desktop && (
           <header
-            className="platform-titlebar sticky top-0 z-50 flex h-9 items-center gap-2 bg-background select-none"
+            className="platform-titlebar relative z-50 flex h-9 shrink-0 items-center gap-2 bg-background select-none"
             aria-label="窗口标题栏"
           >
             <nav
@@ -195,7 +195,15 @@ export function AppEnvironment({ children }: { children: ReactNode }) {
             </div>
           </header>
         )}
-        {children}
+        <div
+          className={
+            desktop
+              ? "platform-desktop-content min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain"
+              : undefined
+          }
+        >
+          {children}
+        </div>
       </div>
     </AppEnvironmentContext.Provider>
   )

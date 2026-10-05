@@ -88,6 +88,24 @@ test('浏览器直接访问：保留页脚且不显示窗口控件', async ({ pa
   await expect(page.getByRole('button', { name: '最小化', exact: true })).toHaveCount(0)
 })
 
+test('App 窗口：创建大会滚动内容时标题栏保持原位', async ({ page }) => {
+  await desktop(page)
+  await login(page)
+  await page.goto(`${base}/conferences/new`)
+  const name = page.getByLabel(/大会名称/)
+  await expect(name).toBeVisible()
+  const titlebar = page.locator('.platform-titlebar')
+  const before = await titlebar.boundingBox()
+  const nameBefore = await name.boundingBox()
+  await page.mouse.move(900, 500)
+  await page.mouse.wheel(0, 500)
+  await expect.poll(async () => (await name.boundingBox())!.y).toBeLessThan(nameBefore!.y)
+  expect((await titlebar.boundingBox())!.y).toBe(before!.y)
+  expect(await page.evaluate(() => window.scrollY)).toBe(0)
+  await expect(page.getByRole('button', { name: '最小化', exact: true })).toBeVisible()
+  await page.screenshot({ path: test.info().outputPath('desktop-scrolled.png') })
+})
+
 test('网页版 App 入口：登录跳转与刷新后隐藏页脚，不显示原生控件', async ({ page }) => {
   await page.goto(`${base}/?from=app`)
   await expect(page).toHaveURL(`${base}/login`)

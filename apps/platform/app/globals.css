@@ -152,6 +152,12 @@
 
 body:has(.platform-desktop) {
   background: var(--sidebar);
+  height: 100svh;
+  overflow: hidden;
+}
+
+html:has(.platform-desktop) {
+  overflow: hidden;
 }
 
 .platform-titlebar {
