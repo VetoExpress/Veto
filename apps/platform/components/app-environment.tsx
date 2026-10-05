@@ -120,7 +120,7 @@ export function AppEnvironment({ children }: { children: ReactNode }) {
           >
             <div
               ref={setTitlebarContent}
-              className="ml-2 flex h-full max-w-[40%] min-w-0 items-center"
+              className="ml-[10px] flex h-full max-w-[40%] min-w-0 items-center"
             />
             <nav
               className="flex h-full shrink-0 items-center gap-1"
