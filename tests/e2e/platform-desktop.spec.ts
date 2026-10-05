@@ -69,7 +69,8 @@ test('App 窗口：隐藏页脚，导航与刷新后仍保留窗口控件', asyn
   await expect(page).toHaveURL(`${base}/`)
   await page.locator('.platform-titlebar').getByRole('button', { name: '前进', exact: true }).click()
   await expect(page).toHaveURL(`${base}/account`)
-  await page.getByRole('link', { name: '返回大会列表' }).click()
+  await expect(page.getByRole('link', { name: '返回大会列表' })).toHaveCount(0)
+  await page.locator('.platform-titlebar').getByRole('button', { name: '后退', exact: true }).click()
   await expect(page).toHaveURL(`${base}/`)
   await page.getByRole('link', { name: '用户 测试组织者' }).click()
   await expect(page).toHaveURL(`${base}/account`)
@@ -86,6 +87,8 @@ test('浏览器直接访问：保留页脚且不显示窗口控件', async ({ pa
   await page.goto(base)
   await expect(page.locator('footer')).toBeVisible()
   await expect(page.getByRole('button', { name: '最小化', exact: true })).toHaveCount(0)
+  await page.getByRole('link', { name: '用户 测试组织者' }).click()
+  await expect(page.getByRole('link', { name: '返回大会列表' })).toBeVisible()
 })
 
 test('App 窗口：创建大会滚动内容时标题栏保持原位', async ({ page }) => {
@@ -94,6 +97,7 @@ test('App 窗口：创建大会滚动内容时标题栏保持原位', async ({ p
   await page.goto(`${base}/conferences/new`)
   const name = page.getByLabel(/大会名称/)
   await expect(name).toBeVisible()
+  await expect(page.getByRole('link', { name: '返回大会列表' })).toHaveCount(0)
   const titlebar = page.locator('.platform-titlebar')
   const before = await titlebar.boundingBox()
   const nameBefore = await name.boundingBox()

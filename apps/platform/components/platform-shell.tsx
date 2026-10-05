@@ -169,10 +169,7 @@ export function PlatformShell({
   return (
     <div className="platform-shell relative flex min-h-svh flex-col overflow-clip bg-background">
       {isDesktop ? (
-        <>
-          {titlebarActions && createPortal(accountActions, titlebarActions)}
-          {backHref && <div className="px-3 pt-4">{brand}</div>}
-        </>
+        titlebarActions && createPortal(accountActions, titlebarActions)
       ) : (
         <header className="relative z-10 flex h-20 shrink-0 items-center justify-between border-b bg-background/85 px-4 backdrop-blur-md sm:px-8 lg:px-12">
           <div className="flex w-full min-w-0 items-center justify-between gap-4">
