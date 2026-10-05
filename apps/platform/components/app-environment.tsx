@@ -3,24 +3,36 @@
 import {
   createContext,
   useContext,
+  useState,
   useSyncExternalStore,
   type ReactNode,
 } from "react"
-import { Minus, Square, X } from "lucide-react"
+import { ArrowLeft, ArrowRight, Minus, Monitor, Square, X } from "lucide-react"
 
 import { ThemeToggler } from "@/components/theme-toggler"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-type WindowChannel = "window:minimize" | "window:maximize" | "window:close"
+type WindowChannel =
+  | "window:minimize"
+  | "window:maximize"
+  | "window:close"
+  | "window:return-to-app"
 type DesktopWindow = Window & {
   electron?: { ipcRenderer?: { send?: (channel: WindowChannel) => void } }
 }
 
 const APP_ENTRY_KEY = "veto_platform_app_entry"
-const AppEnvironmentContext = createContext({
+const AppEnvironmentContext = createContext<{
+  isAppEntry: boolean
+  isDesktop: boolean
+  titlebarContent: HTMLDivElement | null
+  titlebarActions: HTMLDivElement | null
+}>({
   isAppEntry: false,
   isDesktop: false,
+  titlebarContent: null,
+  titlebarActions: null,
 })
 
 function isDesktop() {
@@ -61,9 +73,25 @@ export function useAppEnvironment() {
   return useContext(AppEnvironmentContext)
 }
 
+export function returnToApp() {
+  if (isDesktop()) {
+    ;(window as DesktopWindow).electron?.ipcRenderer?.send?.(
+      "window:return-to-app"
+    )
+  } else {
+    window.location.assign("https://app.miaoyww.top")
+  }
+}
+
 export function AppEnvironment({ children }: { children: ReactNode }) {
   const desktop = useSyncExternalStore(subscribe, isDesktop, serverSnapshot)
   const appEntry = useSyncExternalStore(subscribe, isAppEntry, serverSnapshot)
+  const [titlebarContent, setTitlebarContent] = useState<HTMLDivElement | null>(
+    null
+  )
+  const [titlebarActions, setTitlebarActions] = useState<HTMLDivElement | null>(
+    null
+  )
 
   function sendWindowCommand(channel: WindowChannel) {
     ;(window as DesktopWindow).electron?.ipcRenderer?.send?.(channel)
@@ -71,14 +99,65 @@ export function AppEnvironment({ children }: { children: ReactNode }) {
 
   return (
     <AppEnvironmentContext.Provider
-      value={{ isAppEntry: appEntry, isDesktop: desktop }}
+      value={{
+        isAppEntry: appEntry,
+        isDesktop: desktop,
+        titlebarContent,
+        titlebarActions,
+      }}
     >
       <div className={desktop ? "platform-desktop" : undefined}>
         {desktop && (
-          <div
+          <header
             className="platform-titlebar sticky top-0 z-50 flex items-center justify-end border-b bg-background select-none"
             aria-label="窗口标题栏"
           >
+            <div
+              ref={setTitlebarContent}
+              className="m-2 mr-0 flex h-9 max-w-[40%] min-w-0 items-center"
+            />
+            <nav
+              className="m-2 mr-0 flex h-9 shrink-0 items-center gap-1"
+              aria-label="应用导航"
+            >
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-lg"
+                className="text-muted-foreground hover:bg-accent hover:text-foreground"
+                aria-label="后退"
+                title="后退"
+                onClick={() => window.history.back()}
+              >
+                <ArrowLeft className="size-4" aria-hidden="true" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-lg"
+                className="text-muted-foreground hover:bg-accent hover:text-foreground"
+                aria-label="前进"
+                title="前进"
+                onClick={() => window.history.forward()}
+              >
+                <ArrowRight className="size-4" aria-hidden="true" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-full gap-2 text-muted-foreground hover:bg-accent hover:text-foreground"
+                onClick={returnToApp}
+                title="返回应用"
+              >
+                <Monitor className="size-4" aria-hidden="true" />
+                返回应用
+              </Button>
+              <span className="mx-1 h-5 w-px bg-border/40" aria-hidden="true" />
+            </nav>
+            <div
+              ref={setTitlebarActions}
+              className="m-2 mr-0 ml-auto flex h-9 shrink-0 items-center"
+            />
             <div className="platform-window-actions m-2 flex h-9 shrink-0 items-center">
               <ThemeToggler
                 className={cn(
@@ -118,7 +197,7 @@ export function AppEnvironment({ children }: { children: ReactNode }) {
                 <X className="size-[14px]" aria-hidden="true" />
               </Button>
             </div>
-          </div>
+          </header>
         )}
         {children}
       </div>

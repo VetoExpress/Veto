@@ -36,7 +36,7 @@ import {
   verifyCode,
 } from "@/lib/auth-client"
 import { ThemeToggler } from "@/components/theme-toggler"
-import { useAppEnvironment } from "@/components/app-environment"
+import { returnToApp, useAppEnvironment } from "@/components/app-environment"
 import { BubbleBackground } from "@/components/animate-ui/components/backgrounds/bubble"
 import { PasswordResetForm } from "@/components/password-reset-form"
 
@@ -143,9 +143,7 @@ export default function Page() {
                     variant="outline"
                     type="button"
                     className="h-12 flex-1 justify-center gap-2 rounded-lg shadow-sm"
-                    onClick={() => {
-                      window.location.href = "https://app.miaoyww.top"
-                    }}
+                    onClick={returnToApp}
                   >
                     <Monitor className="size-5" />
                     返回应用

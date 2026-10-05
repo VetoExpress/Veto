@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react"
 import { useEffect, useState } from "react"
+import { createPortal } from "react-dom"
 import { ArrowLeft, Loader2, LogOut } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -91,67 +92,94 @@ export function PlatformShell({
   const { user } = usePlatformUser(token, signOut)
   const subtitle = usePlatformSubtitle(token, signOut)
   const onAccountPage = pathname === "/account"
-  const { isAppEntry, isDesktop } = useAppEnvironment()
+  const { isAppEntry, isDesktop, titlebarContent, titlebarActions } =
+    useAppEnvironment()
+  const brand = (
+    <div className="flex min-w-0 items-center gap-3">
+      {backHref ? (
+        <Link
+          href={backHref}
+          className={cn(
+            buttonVariants({ variant: "ghost", size: "icon-lg" }),
+            isDesktop
+              ? "size-9 shrink-0 rounded-lg"
+              : "size-11 shrink-0 rounded-full"
+          )}
+          aria-label={backLabel}
+        >
+          <ArrowLeft aria-hidden="true" />
+        </Link>
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src="/favicon.png"
+          alt=""
+          className={isDesktop ? "size-7 shrink-0" : "size-9 shrink-0"}
+        />
+      )}
+      <div className="min-w-0 leading-tight">
+        <p className="truncate font-semibold tracking-tight">云Veto</p>
+        <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
+      </div>
+    </div>
+  )
+  const accountActions = (
+    <div className="flex shrink-0 items-center gap-2">
+      <Link
+        href="/account"
+        className={cn(
+          buttonVariants({
+            variant: onAccountPage ? "secondary" : "ghost",
+            size: "lg",
+          }),
+          isDesktop
+            ? "h-9 max-w-40 rounded-full pl-1.5"
+            : "h-11 max-w-40 rounded-full pl-1.5",
+          onAccountPage ? "shadow-sm" : "hover:bg-muted"
+        )}
+        aria-label={user?.name ? `用户 ${user.name}` : "用户中心"}
+      >
+        <UserAvatar
+          name={user?.name ?? "?"}
+          avatar={user?.avatar || undefined}
+          className={cn(
+            isDesktop ? "size-6" : "size-8",
+            "bg-muted text-foreground"
+          )}
+        />
+        <span className="truncate font-medium">{user?.name || "用户"}</span>
+      </Link>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-lg"
+        className={isDesktop ? "size-9 rounded-lg" : "size-11 rounded-full"}
+        onClick={signOut}
+        aria-label="退出登录"
+      >
+        <LogOut aria-hidden="true" />
+      </Button>
+      {!isDesktop && (
+        <ThemeToggler className="flex size-11 cursor-pointer items-center justify-center rounded-full bg-background transition-colors hover:bg-muted [&_svg]:size-4" />
+      )}
+    </div>
+  )
+
   return (
     <div className="platform-shell relative flex min-h-svh flex-col overflow-clip bg-background">
-      <header className="relative z-10 flex h-20 shrink-0 items-center justify-between border-b bg-background/85 px-4 backdrop-blur-md sm:px-8 lg:px-12">
-        <div className="flex min-w-0 items-center gap-3">
-          {backHref ? (
-            <Link
-              href={backHref}
-              className={cn(
-                buttonVariants({ variant: "ghost", size: "icon-lg" }),
-                "size-11 shrink-0 rounded-full"
-              )}
-              aria-label={backLabel}
-            >
-              <ArrowLeft aria-hidden="true" />
-            </Link>
-          ) : (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src="/favicon.png" alt="" className="size-9 shrink-0" />
-          )}
-          <div className="min-w-0 leading-tight">
-            <p className="truncate font-semibold tracking-tight">云Veto</p>
-            <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
+      {isDesktop ? (
+        <>
+          {titlebarContent && createPortal(brand, titlebarContent)}
+          {titlebarActions && createPortal(accountActions, titlebarActions)}
+        </>
+      ) : (
+        <header className="relative z-10 flex h-20 shrink-0 items-center justify-between border-b bg-background/85 px-4 backdrop-blur-md sm:px-8 lg:px-12">
+          <div className="flex w-full min-w-0 items-center justify-between gap-4">
+            {brand}
+            {accountActions}
           </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Link
-            href="/account"
-            className={cn(
-              buttonVariants({
-                variant: onAccountPage ? "secondary" : "ghost",
-                size: "lg",
-              }),
-              "h-11 max-w-40 rounded-full pl-1.5",
-              onAccountPage ? "shadow-sm" : "hover:bg-muted"
-            )}
-            aria-label={user?.name ? `用户 ${user.name}` : "用户中心"}
-          >
-            <UserAvatar
-              name={user?.name ?? "?"}
-              avatar={user?.avatar || undefined}
-              className="size-8 bg-muted text-foreground"
-            />
-            <span className="truncate font-medium">{user?.name || "用户"}</span>
-          </Link>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-lg"
-            className="size-11 rounded-full"
-            onClick={signOut}
-            aria-label="退出登录"
-          >
-            <LogOut aria-hidden="true" />
-          </Button>
-          {!isDesktop && (
-            <ThemeToggler className="flex size-11 cursor-pointer items-center justify-center rounded-full bg-background transition-colors hover:bg-muted [&_svg]:size-4" />
-          )}
-        </div>
-      </header>
+        </header>
+      )}
 
       <main className="relative z-10 mx-auto w-full max-w-6xl flex-1 px-4 py-12 sm:px-8 sm:py-16 lg:px-12 lg:py-20">
         {children}

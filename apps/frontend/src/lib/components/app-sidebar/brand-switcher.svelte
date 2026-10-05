@@ -6,6 +6,7 @@
   import { resolve } from '$app/paths'
   import favicon from '$lib/assets/favicon.png'
   import { VETO_NAME } from '$lib/classes/const'
+  import { isElectron } from '$lib/classes/utils/runtime'
   import {
     currentCommittee,
     currentConferenceRecord
@@ -62,13 +63,15 @@
           <House size={16} />
           首页
         </DropdownMenu.Item>
-        <DropdownMenu.Item
-          onclick={() => window.location.replace('https://veto.miaoyww.top')}
-          class="gap-2 p-2"
-        >
-          <Grip size={16} />
-          官网
-        </DropdownMenu.Item>
+        {#if !isElectron()}
+          <DropdownMenu.Item
+            onclick={() => window.location.replace('https://veto.miaoyww.top')}
+            class="gap-2 p-2"
+          >
+            <Grip size={16} />
+            官网
+          </DropdownMenu.Item>
+        {/if}
         <DropdownMenu.Item
           onclick={() => window.location.replace('https://platform.miaoyww.top/?from=app')}
           class="gap-2 p-2"

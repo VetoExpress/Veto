@@ -154,7 +154,9 @@
   -webkit-app-region: drag;
 }
 
-.platform-window-actions {
+.platform-window-actions,
+.platform-titlebar a,
+.platform-titlebar button {
   -webkit-app-region: no-drag;
 }
 
