@@ -374,9 +374,13 @@
           </Empty.Root>
         {:else}
           <div class="flex flex-col gap-3">
+            {#if filteredPlatformConferences.length > 0}
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {#each filteredPlatformConferences as conference (conference.id)}
               <PlatformConferenceCard {conference} />
             {/each}
+            </div>
+            {/if}
             {#each filteredConferences as conference (conference.id)}
               <ConferenceCard
                 {conference}

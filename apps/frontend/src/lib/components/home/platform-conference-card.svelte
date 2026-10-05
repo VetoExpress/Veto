@@ -9,7 +9,7 @@
 </script>
 
 <Card.Root
-  class="cursor-pointer bg-card/70 transition-colors hover:border-primary/50"
+  class="w-full max-w-xl cursor-pointer gap-0 bg-card/70 py-0 transition-colors hover:border-primary/50"
   role="link"
   tabindex={0}
   onclick={() => openPlatformConference(conference)}
@@ -20,25 +20,21 @@
     }
   }}
 >
-  <Card.Content class="flex items-center justify-between gap-4 p-5">
-    <div class="min-w-0">
-      <div class="flex flex-wrap items-center gap-2">
+  <Card.Content class="flex flex-col gap-3 p-4">
+    <div class="flex items-start justify-between gap-3">
+      <div class="flex min-w-0 flex-wrap items-center gap-2">
         <h3 class="truncate font-semibold">{conference.name}</h3>
         <Badge variant="secondary">云平台</Badge>
         <Badge variant="outline">{({ draft: '草稿', active: '进行中', closed: '已结束' })[conference.lifecycle]}</Badge>
       </div>
-      {#if conference.organizer}<p class="mt-2 text-sm text-muted-foreground">{conference.organizer}</p>{/if}
-      {#if conference.description}<p class="mt-1 text-sm text-muted-foreground">{conference.description}</p>{/if}
-      <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-        {#if conference.committeeCount !== undefined}
-          <span class="flex items-center gap-1.5"><Building2 class="size-3" />{conference.committeeCount} 个会场</span>
-        {/if}
-        <span class="flex items-center gap-1.5"><CalendarDays class="size-3" />{new Date(conference.createdAt).toLocaleString('zh-CN', { dateStyle: 'short', timeStyle: 'short' })}</span>
-        {#if conference.seatCount !== undefined}
-          <span class="flex items-center gap-1.5"><Users class="size-3" />{conference.seatCount} 个席位</span>
-        {/if}
-      </div>
+      <Button size="sm" variant="outline" class="shrink-0" onclick={(event) => { event.stopPropagation(); openPlatformConference(conference) }}>打开云平台<ExternalLink data-icon="inline-end" /></Button>
     </div>
-    <Button variant="outline" onclick={(event) => { event.stopPropagation(); openPlatformConference(conference) }}>打开云平台<ExternalLink data-icon="inline-end" /></Button>
+    {#if conference.organizer}<p class="text-sm text-muted-foreground">{conference.organizer}</p>{/if}
+    {#if conference.description}<p class="text-sm text-muted-foreground">{conference.description}</p>{/if}
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+        <span class="flex items-center gap-1"><Building2 class="size-3" />{conference.committeeCount !== undefined ? `${conference.committeeCount} 个会场` : '会场数暂不可用'}</span>
+        <span class="flex items-center gap-1.5"><CalendarDays class="size-3" />{new Date(conference.createdAt).toLocaleString('zh-CN', { dateStyle: 'short', timeStyle: 'short' })}</span>
+        <span class="flex items-center gap-1"><Users class="size-3" />{conference.seatCount !== undefined ? `${conference.seatCount} 个席位` : '席位数暂不可用'}</span>
+    </div>
   </Card.Content>
 </Card.Root>

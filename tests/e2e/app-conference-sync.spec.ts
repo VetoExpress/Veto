@@ -15,7 +15,7 @@ test('账号大会列表展示平台分页并同步和恢复本地存档，开�
       committees: [{ id: 'local-committee', name: '安理会', seats: [], minutes: [] }]
     }]))
   })
-  const platform = (id: string) => ({ id, name: `平台大会 ${id}`, lifecycle: 'draft', createdAt: '2026-10-05T11:49:00+08:00', updatedAt: '2026-10-05', committeeCount: 2, seatCount: 12 })
+  const platform = (id: string) => ({ id, name: `平台大会 ${id}`, lifecycle: 'draft', createdAt: '2026-10-05T11:49:00+08:00', updatedAt: '2026-10-05' })
   const archives = new Map<string, { conferenceId: string; snapshot: unknown; version: number }>([['remote', {
     conferenceId: 'remote', version: 1, snapshot: { id: 'remote', name: '另一设备的大会', mode: 'singleton', createdAt: 1, updatedAt: 2, committees: [{ id: 'remote-committee', name: '测试会场', seats: [] }] }
   }]])
@@ -25,6 +25,10 @@ test('账号大会列表展示平台分页并同步和恢复本地存档，开�
     const next = new URL(route.request().url()).searchParams.has('cursor')
     await route.fulfill({ json: { conferences: [platform(next ? 'second' : 'first')], nextCursor: next ? null : 'next' } })
   })
+  await page.route('**/v1/conferences/*', (route) => route.fulfill({ json: { conference: { committees: [
+    { seats: Array.from({ length: 10 }, (_, index) => ({ id: `seat-${index}` })) },
+    { seats: [{ id: 'one' }, { id: 'two' }] }
+  ] } } }))
   await page.route('**/v1/app-conferences**', async (route) => {
     if (route.request().method() === 'GET') return route.fulfill({ json: { archives: [...archives.values()], nextCursor: null } })
     const snapshot = route.request().postDataJSON().snapshot
@@ -40,6 +44,9 @@ test('账号大会列表展示平台分页并同步和恢复本地存档，开�
   await expect(platformCard).toContainText('2 个会场')
   await expect(platformCard).toContainText('12 个席位')
   await expect(platformCard).toContainText('2026/10/5')
+  const box = await platformCard.boundingBox()
+  expect(box!.width).toBeLessThan(600)
+  await platformCard.screenshot({ path: test.info().outputPath('compact-platform-card.png') })
   await expect(page.getByRole('button', { name: '另一设备的大会', exact: true })).toBeVisible()
   await expect.poll(() => localUploads).toBe(1)
   await page.getByRole('button', { name: '另一设备的大会', exact: true }).click()
