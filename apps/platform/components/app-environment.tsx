@@ -106,18 +106,24 @@ export function AppEnvironment({ children }: { children: ReactNode }) {
         titlebarActions,
       }}
     >
-      <div className={desktop ? "platform-desktop" : undefined}>
+      <div
+        className={
+          desktop
+            ? "platform-desktop m-2 overflow-clip rounded-xl bg-background shadow-sm"
+            : undefined
+        }
+      >
         {desktop && (
           <header
-            className="platform-titlebar sticky top-0 z-50 flex items-center justify-end border-b bg-background select-none"
+            className="platform-titlebar sticky top-0 z-50 flex h-9 items-center gap-2 bg-background select-none"
             aria-label="窗口标题栏"
           >
             <div
               ref={setTitlebarContent}
-              className="m-2 mr-0 flex h-9 max-w-[40%] min-w-0 items-center"
+              className="ml-2 flex h-full max-w-[40%] min-w-0 items-center"
             />
             <nav
-              className="m-2 mr-0 flex h-9 shrink-0 items-center gap-1"
+              className="flex h-full shrink-0 items-center gap-1"
               aria-label="应用导航"
             >
               <Button
@@ -156,13 +162,13 @@ export function AppEnvironment({ children }: { children: ReactNode }) {
             </nav>
             <div
               ref={setTitlebarActions}
-              className="m-2 mr-0 ml-auto flex h-9 shrink-0 items-center"
+              className="ml-auto flex h-full shrink-0 items-center"
             />
-            <div className="platform-window-actions m-2 flex h-9 shrink-0 items-center">
+            <div className="platform-window-actions flex h-full shrink-0 items-center">
               <ThemeToggler
                 className={cn(
                   buttonVariants({ variant: "ghost" }),
-                  "flex h-full w-11 items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground [&_svg]:size-[14px]"
+                  "flex h-full w-11 items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground [&_svg]:size-4"
                 )}
               />
               <span
@@ -176,7 +182,7 @@ export function AppEnvironment({ children }: { children: ReactNode }) {
                 aria-label="最小化"
                 onClick={() => sendWindowCommand("window:minimize")}
               >
-                <Minus className="size-[14px]" aria-hidden="true" />
+                <Minus className="size-4" aria-hidden="true" />
               </Button>
               <Button
                 type="button"
@@ -185,7 +191,7 @@ export function AppEnvironment({ children }: { children: ReactNode }) {
                 aria-label="最大化 / 还原"
                 onClick={() => sendWindowCommand("window:maximize")}
               >
-                <Square className="size-[11px]" aria-hidden="true" />
+                <Square className="size-4" aria-hidden="true" />
               </Button>
               <Button
                 type="button"
@@ -194,7 +200,7 @@ export function AppEnvironment({ children }: { children: ReactNode }) {
                 aria-label="关闭窗口"
                 onClick={() => sendWindowCommand("window:close")}
               >
-                <X className="size-[14px]" aria-hidden="true" />
+                <X className="size-4" aria-hidden="true" />
               </Button>
             </div>
           </header>

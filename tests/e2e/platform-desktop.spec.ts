@@ -24,6 +24,16 @@ test('App 窗口：登录页显示控件，主题按钮不重叠且可以切换'
   await page.goto(`${base}/login`)
   const minimize = page.getByRole('button', { name: '最小化', exact: true })
   await expect(minimize).toBeVisible()
+  for (const name of ['最小化', '最大化 / 还原', '关闭窗口']) {
+    const control = page.getByRole('button', { name, exact: true })
+    await expect(control.locator('svg')).toHaveCSS('width', '16px')
+    await expect(control).toHaveCSS('width', '44px')
+    await expect(control).toHaveCSS('height', '36px')
+    await expect(control).toHaveCSS('border-radius', '10px')
+  }
+  const closeBox = await page.getByRole('button', { name: '关闭窗口', exact: true }).boundingBox()
+  expect(closeBox!.y).toBe(8)
+  expect(closeBox!.x + closeBox!.width).toBe(page.viewportSize()!.width - 8)
   const theme = page.getByRole('button', { name: '切换主题', exact: true })
   await expect(theme).toHaveCount(1)
   const themeBox = await theme.boundingBox()
