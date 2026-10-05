@@ -20,7 +20,6 @@ export const timerDialogOpen = writable(false)
 // ── 内部 Timer 管理 ──
 
 const TIMER_ID = 'standalone-timer'
-let _currentTotalSec = 0
 
 function _storeValue(): StandaloneTimerState | null {
   let v: StandaloneTimerState | null = null
@@ -31,9 +30,7 @@ function _storeValue(): StandaloneTimerState | null {
 export function startStandaloneTimer(totalSec: number): void {
   const prev = _storeValue()
   const timer = createTimer(TIMER_ID, 250)
-  const initialElapsed = prev ? prev.totalSec - prev.remainingSec : 0
-
-  _currentTotalSec = totalSec
+  const initialElapsed = prev?.totalSec === totalSec ? prev.totalSec - prev.remainingSec : 0
 
   timer.start(
     totalSec,
@@ -75,5 +72,4 @@ export function resetStandaloneTimer(): void {
   const timer = getTimer(TIMER_ID)
   timer?.stop()
   standaloneTimer.set(null)
-  _currentTotalSec = 0
 }

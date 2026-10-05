@@ -59,10 +59,7 @@
 
   function applyCustomTime(): void {
     const t = inputMin * 60 + inputSec
-    localTotalSec = Math.max(1, Math.min(3600, t))
-    if (!isRunning && !hasStarted) {
-      // idle: 同步显示
-    }
+    selectPreset(Math.max(1, Math.min(3600, t)))
   }
 
   function handleOpenChange(value: boolean): void {
@@ -87,7 +84,7 @@
   }
 
   function selectPreset(sec: number): void {
-    if (isRunning) pauseStandaloneTimer()
+    resetStandaloneTimer()
     localTotalSec = sec
     syncInputFromTotal()
   }
@@ -220,7 +217,7 @@
 
         <Separator />
 
-        <!-- 自定义时间输入（仅在 idle 时可用） -->
+        <!-- 自定义时间输入（暂停或到期后修改会开始新的计时） -->
         <div class="w-full space-y-2">
           <Label class="text-xs text-muted-foreground">自定义时长</Label>
           <div class="flex items-center gap-2">
