@@ -28,10 +28,7 @@ export function usePlatformUser(
 
     const api = desktopAccount()
     const cached = api ? undefined : readCachedUser(token)
-    if (cached) {
-      setProfile({ token, user: cached })
-      return
-    }
+    if (cached) setProfile({ token, user: cached })
 
     let cancelled = false
     setError("")
@@ -65,10 +62,20 @@ export function usePlatformUser(
     const unsubscribe = api?.onChanged(() => {
       void load()
     })
-    void load()
+    const webChanged = () => {
+      const updated = readCachedUser(token)
+      if (updated && !cancelled) {
+        revision++
+        setProfile({ token, user: updated })
+        setError("")
+      } else void load()
+    }
+    window.addEventListener("veto:account:changed", webChanged)
+    if (!cached) void load()
     return () => {
       cancelled = true
       unsubscribe?.()
+      window.removeEventListener("veto:account:changed", webChanged)
     }
   }, [token, onUnauthorized])
 

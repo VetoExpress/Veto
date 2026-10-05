@@ -1,7 +1,7 @@
 <script lang="ts">
   import { User, Camera, LogOut, RefreshCw, Check, ShieldCheck, CircleCheck } from '@lucide/svelte'
   import type { AuthUser } from '@vetoexpress/auth'
-  import { prepareAvatarImage } from '$lib/classes/utils/avatar-image'
+  import { prepareAvatarUpload } from '@vetoexpress/auth/avatar'
   import * as Card from '$lib/components/ui/card'
   import { Badge } from '$lib/components/ui/badge'
   import { Button } from '$lib/components/ui/button'
@@ -31,7 +31,6 @@
     onSendPasswordCode?: () => Promise<void>
   } = $props()
 
-  const MAX_AVATAR_BYTES = 512 * 1024
   let editName = $state('')
   let avatarSrc = $state('')
   let avatarData = $state<string>()
@@ -91,17 +90,9 @@
     error = ''
     message = ''
     try {
-      const blob = await prepareAvatarImage(src, MAX_AVATAR_BYTES)
-      if (blob.size > MAX_AVATAR_BYTES)
-        throw new Error('裁剪后的头像不能超过 512 KB，请选择更小的图片。')
-      const data = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve(String(reader.result))
-        reader.onerror = () => reject(new Error('无法读取头像，请重新选择。'))
-        reader.readAsDataURL(blob)
-      })
-      avatarSrc = data
-      avatarData = data.split(',')[1]
+      const upload = await prepareAvatarUpload(src)
+      avatarSrc = upload.dataUrl
+      avatarData = upload.base64
     } catch (caught) {
       avatarSrc = user.avatar
       avatarData = undefined
