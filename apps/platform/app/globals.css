@@ -147,7 +147,7 @@
 }
 
 .platform-desktop .min-h-svh {
-  min-height: calc(100svh - 2.25rem);
+  min-height: calc(100svh - 53px);
 }
 
 .platform-titlebar {

@@ -9,6 +9,8 @@ import {
 import { Minus, Square, X } from "lucide-react"
 
 import { ThemeToggler } from "@/components/theme-toggler"
+import { Button, buttonVariants } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
 type WindowChannel = "window:minimize" | "window:maximize" | "window:close"
 type DesktopWindow = Window & {
@@ -74,39 +76,47 @@ export function AppEnvironment({ children }: { children: ReactNode }) {
       <div className={desktop ? "platform-desktop" : undefined}>
         {desktop && (
           <div
-            className="platform-titlebar sticky top-0 z-50 flex h-9 items-center border-b bg-background select-none"
+            className="platform-titlebar sticky top-0 z-50 flex items-center justify-end border-b bg-background select-none"
             aria-label="窗口标题栏"
           >
-            <span className="min-w-0 flex-1 truncate px-4 text-xs text-muted-foreground">
-              云Veto
-            </span>
-            <div className="platform-window-actions flex h-full shrink-0 items-center">
-              <ThemeToggler className="flex h-full w-11 items-center justify-center text-muted-foreground hover:bg-muted [&_svg]:size-4" />
-              <span className="mx-1 h-4 w-px bg-border" aria-hidden="true" />
-              <button
+            <div className="platform-window-actions m-2 flex h-9 shrink-0 items-center">
+              <ThemeToggler
+                className={cn(
+                  buttonVariants({ variant: "ghost" }),
+                  "flex h-full w-11 items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground [&_svg]:size-[14px]"
+                )}
+              />
+              <span
+                className="mx-0.5 h-5 w-px bg-border/40"
+                aria-hidden="true"
+              />
+              <Button
                 type="button"
-                className="flex h-full w-11 items-center justify-center text-muted-foreground hover:bg-muted"
+                variant="ghost"
+                className="flex h-full w-11 items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground"
                 aria-label="最小化"
                 onClick={() => sendWindowCommand("window:minimize")}
               >
-                <Minus className="size-4" aria-hidden="true" />
-              </button>
-              <button
+                <Minus className="size-[14px]" aria-hidden="true" />
+              </Button>
+              <Button
                 type="button"
-                className="flex h-full w-11 items-center justify-center text-muted-foreground hover:bg-muted"
+                variant="ghost"
+                className="flex h-full w-11 items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground"
                 aria-label="最大化 / 还原"
                 onClick={() => sendWindowCommand("window:maximize")}
               >
-                <Square className="size-3" aria-hidden="true" />
-              </button>
-              <button
+                <Square className="size-[11px]" aria-hidden="true" />
+              </Button>
+              <Button
                 type="button"
+                variant="ghost"
                 className="flex h-full w-11 items-center justify-center text-muted-foreground hover:bg-red-500 hover:text-white"
                 aria-label="关闭窗口"
                 onClick={() => sendWindowCommand("window:close")}
               >
-                <X className="size-4" aria-hidden="true" />
-              </button>
+                <X className="size-[14px]" aria-hidden="true" />
+              </Button>
             </div>
           </div>
         )}
