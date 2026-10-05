@@ -233,6 +233,8 @@ export interface EventSetting {
 
 export interface Battle {
   id: string
+  /** 所属大会；旧版独立战局没有此字段，不自动归入任何大会。 */
+  conferenceId?: string
   name: string
   createdAt: number
   updatedAt: number
@@ -247,6 +249,8 @@ export interface Battle {
   actionLog: ActionLogEntry[]
   /** 推演起始日期（ISO 日期字符串 YYYY-MM-DD） */
   startDate?: string
+  /** 最近保存的模拟时刻，重新进入时暂停恢复。 */
+  simulatedDate?: string
   /** 时间流速倍率（模拟秒/真实秒） */
   timeScale?: number
   /** 地图比例尺（像素/千米） */

@@ -39,7 +39,7 @@ export function initGameClock(battle: Battle): void {
 		: DEFAULT_START;
 	const timeScale = battle.timeScale ?? 60;
 	gameClock.set({
-		currentDate: simStart,
+		currentDate: battle.simulatedDate ? new Date(battle.simulatedDate) : simStart,
 		simStart,
 		timeScale,
 		isPaused: true

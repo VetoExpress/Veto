@@ -11,11 +11,12 @@
   import { fly } from 'svelte/transition'
 
   interface Props {
+    conferenceId: string
     mode: string | null
     class?: string
   }
 
-  let { mode, class: className }: Props = $props()
+  let { mode, conferenceId, class: className }: Props = $props()
 
   let query = $state('')
   let dialogOpen = $state(false)
@@ -99,4 +100,4 @@
 </div>
 
 <!-- Create Battle Dialog -->
-<CreateBattleDialog bind:open={dialogOpen} />
+<CreateBattleDialog bind:open={dialogOpen} {conferenceId} />

@@ -12,6 +12,7 @@
     Puzzle,
     RefreshCw,
     ScrollText,
+    Swords,
     UserRoundCheck,
     Users
   } from '@lucide/svelte'
@@ -68,6 +69,9 @@
       : null
   )
   const isCloudSession = $derived(cloudIdentity !== null)
+  const canViewBattle = $derived(
+    isCloudSession && cloudSession.session?.result.committeeType === 'ipc'
+  )
   const canControlConference = $derived(
     !isCloudSession || cloudSession.hasCapability('control_conference')
   )
@@ -229,7 +233,7 @@
             </Sidebar.MenuItem>
           {/if}
 
-          {#if canViewDirectives || canViewFiles || canViewSituation || canViewNews}
+          {#if canViewDirectives || canViewFiles || canViewSituation || canViewNews || canViewBattle}
             <Sidebar.Separator class="my-1" />
             <Sidebar.MenuItem>
               {#if canViewDirectives}
@@ -275,6 +279,14 @@
                 </Sidebar.MenuButton>
               {/if}
             </Sidebar.MenuItem>
+            {#if canViewBattle}
+              <Sidebar.MenuItem>
+                <Sidebar.MenuButton onclick={() => goTo(`/client/${conferenceId}/battle`)}>
+                  <Swords />
+                  <span>军事推演</span>
+                </Sidebar.MenuButton>
+              </Sidebar.MenuItem>
+            {/if}
           {/if}
 
           {#if canControlConference}

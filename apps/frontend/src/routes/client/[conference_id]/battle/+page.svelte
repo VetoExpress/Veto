@@ -1,97 +1,51 @@
 <script lang="ts">
   import { goto } from '$app/navigation'
+  import { resolve } from '$app/paths'
   import { page } from '$app/stores'
-  import { onDestroy, onMount } from 'svelte'
-  import Map from '$lib/components/map/map.svelte'
-  import { battles, currentBattleId } from '$lib/classes/stores/battle/battle-store'
-  import { mods, pluginsReady } from '$lib/classes/services/plugin/mod-registry.svelte'
-  import { get } from 'svelte/store'
-  import { mapFlyTo, zoom } from '$lib/classes/stores/battle/map-store'
-  import { initGameClock } from '$lib/classes/services/engine/game-clock.store'
-  import LeftSidebar from '$lib/components/sidebar/left-sidebar.svelte'
-  import Header from '$lib/components/map/header.svelte'
-  import Bottom from '$lib/components/bottom.svelte'
-  import MessageLog from '$lib/components/panels/message-log.svelte'
-  import UnitInfoPanel from '$lib/components/panels/unit-info-panel.svelte'
-  import { useKeyboardShortcuts } from '$lib/classes/services/hooks/use-keyboard-shortcuts.svelte'
+  import { ArrowLeft } from '@lucide/svelte'
+  import { Button } from '$lib/components/ui/button'
+  import WindowControls from '$lib/components/app-sidebar/window-controls.svelte'
+  import BattleWorkspace from '$lib/components/conference/battle-workspace.svelte'
+  import { conferences } from '$lib/classes/stores/conference/conference-store'
+  import { cloudSession } from '$lib/classes/stores/cloud/cloud-session-store.svelte'
   import { VETO_NAME } from '$lib/classes/const'
-  import logo from '$lib/assets/logo.svg'
-  import { isElectron } from '$lib/classes/utils/runtime'
 
-  useKeyboardShortcuts()
+  const conferenceId = $derived($page.params.conference_id ?? '')
+  const session = $derived(
+    cloudSession.session?.result.conferenceId === conferenceId ? cloudSession.session.result : null
+  )
+  const conferenceName = $derived(
+    session?.conferenceName ?? $conferences.find((conference) => conference.id === conferenceId)?.name ?? ''
+  )
 
-  const battleId = null
-  const battle = get(battles).find((b) => b.id === battleId)
-  const exists = !!battle
-
-  if (!exists) {
-    goto('/')
-  } else {
-    currentBattleId.set(battleId)
-  }
-
-  onMount(async () => {
-    if (exists && battle) {
-      // 初始化游戏时钟（模拟起始日期 + 时间流速）
-      initGameClock(battle)
-
-      // 用战局存储的地图位置初始化地图
-      zoom.set(battle.mapZoom)
-      mapFlyTo.set({ lat: battle.mapCenter[0], lng: battle.mapCenter[1] })
-
-      if (isElectron()) {
-        // 桌面端等待插件加载完成，再恢复战局启用的 Mod。
-        await pluginsReady
-        mods.loadMods(battle.enabledMods ?? [])
-      } else {
-        // Web 端只使用内置基础数据，不加载用户插件。
-        mods.loadMods(['base'])
-      }
+  function goBack(): void {
+    if (session) {
+      goto(resolve('/client/[conference_id]/committee/[committee_id]', {
+        conference_id: conferenceId, committee_id: session.identity.committeeId
+      }))
+    } else {
+      goto(resolve('/conference'))
     }
-  })
-
-  onDestroy(() => {
-    // 离开战局页面时清理当前战局状态
-    mods.clear()
-  })
+  }
 </script>
 
-<svelte:head>
-  <title>{VETO_NAME}</title>
-  <meta name="title" content={VETO_NAME} />
-  <link rel="icon" type="image/x-icon" href={logo} />
-</svelte:head>
+<svelte:head><title>军事推演 · {conferenceName || VETO_NAME}</title></svelte:head>
 
-<LeftSidebar />
-
-<Header class="top-14" />
-<Bottom />
-<MessageLog />
-<UnitInfoPanel />
-{#if exists}
-  <div class="app-container">
-    <div class="relative flex-1 bg-[var(--bg-primary)]">
-      <div id="battle-map">
-        <Map />
-      </div>
-    </div>
-  </div>
-{/if}
+<div class="flex h-svh flex-col overflow-hidden">
+  <header class="flex h-9 shrink-0 items-center gap-2 pl-2">
+    <Button variant="ghost" size="icon-sm" onclick={goBack} title="返回会场" class="no-drag">
+      <ArrowLeft />
+    </Button>
+    <span class="truncate text-xs font-medium">{conferenceName} · 军事推演</span>
+    <div class="drag-region h-full min-w-0 flex-1"></div>
+    <WindowControls />
+  </header>
+  {#key conferenceId}
+    <BattleWorkspace {conferenceId} {conferenceName} onback={goBack} />
+  {/key}
+</div>
 
 <style>
-  * {
-    margin: 0;
-    box-sizing: border-box;
-  }
-
-  .app-container {
-    display: flex;
-    height: calc(100vh - 2.25rem);
-    overflow: hidden;
-  }
-
-  #battle-map {
-    width: 100%;
-    height: 100%;
-  }
+  .drag-region { -webkit-app-region: drag; }
+  :global(.no-drag) { -webkit-app-region: no-drag; }
 </style>

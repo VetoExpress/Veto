@@ -13,8 +13,8 @@
 
   import type { HTMLInputAttributes } from 'svelte/elements'
 
-  type Props = WithElementRef<Omit<HTMLInputAttributes, 'type'>>
-  let { class: className }: Props = $props()
+  type Props = WithElementRef<Omit<HTMLInputAttributes, 'type'>> & { onback?: () => void }
+  let { class: className, onback }: Props = $props()
 
   // ── 引擎生命周期 ──
   onMount(() => startEngine())
@@ -68,10 +68,10 @@
   <!-- 左侧：返回 + 战役名 + 控制栏 -->
   <div class="veto-card gap-3">
     <Button
-      onclick={() => goto(resolve('/'))}
+      onclick={onback ?? (() => goto(resolve('/')))}
       variant="ghost"
       class="-ml-1 inline-flex items-center justify-center rounded-md p-2 text-stone-600 transition-colors hover:bg-stone-200/50 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-700/50 dark:hover:text-stone-100"
-      title="返回首页"
+      title={onback ? '返回会场' : '返回首页'}
     >
       <ArrowLeft class="h-5 w-5" />
     </Button>

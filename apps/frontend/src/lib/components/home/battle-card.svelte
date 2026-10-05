@@ -30,9 +30,9 @@
   })
 
   function handleLoad(): void {
-    if (editing) return
+    if (editing || !battle.conferenceId) return
     loadBattle(battle.id)
-    goto(`/battle/${battle.id}`)
+    goto(`/client/${battle.conferenceId}/battle`)
   }
 
   function handleDelete(e: MouseEvent): void {

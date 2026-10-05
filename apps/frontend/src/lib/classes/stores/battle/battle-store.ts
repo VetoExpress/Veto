@@ -195,7 +195,8 @@ export function updateCurrentBattleSettings(
 
 export function createBattle(
   name: string,
-  options?: {
+  options: {
+    conferenceId: string
     mapCenter?: [number, number]
     mapZoom?: number
     startDate?: string
@@ -207,6 +208,12 @@ export function createBattle(
     campaignId?: string
   }
 ): string {
+  if (!options.conferenceId.trim()) throw new Error('战局必须属于一个大会')
+  const existing = getConferenceBattle(options.conferenceId)
+  if (existing) {
+    loadBattle(existing.id)
+    return existing.id
+  }
   const id = generateId()
 
   // 战役模式：从 campaign ModData 预读地图配置，确保初始地图位置正确
@@ -228,6 +235,7 @@ export function createBattle(
 
   const battle: Battle = {
     id,
+    conferenceId: options.conferenceId,
     name,
     createdAt: Date.now(),
     updatedAt: Date.now(),
@@ -451,6 +459,11 @@ export function loadBattle(id: string) {
 
 export function getBattleById(id: string): Battle | null {
   return get(battles).find((b) => b.id === id) ?? null
+}
+
+/** 每个大会只有一份军事推演状态。 */
+export function getConferenceBattle(conferenceId: string): Battle | null {
+  return get(battles).find((battle) => battle.conferenceId === conferenceId) ?? null
 }
 // ============ 阵营 CRUD ============
 
@@ -1056,12 +1069,15 @@ export function initRuntimePositions() {
 export function flushRuntimePositions() {
   const positions = get(runtimePositions)
   const id = get(currentBattleId)
-  if (!id || Object.keys(positions).length === 0) return
+  if (!id) return
+  const clock = get(gameClock)
   battles.update((list) =>
     list.map((b) => {
       if (b.id !== id) return b
       return {
         ...b,
+        simulatedDate: clock.currentDate.toISOString(),
+        timeScale: clock.timeScale,
         placedUnits: b.placedUnits.map((u) => {
           const pos = positions[u.id]
           return pos

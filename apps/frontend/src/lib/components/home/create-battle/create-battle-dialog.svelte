@@ -17,7 +17,7 @@
   import FreeModeForm from './free-mode-form.svelte'
   import { isElectron } from '$lib/classes/utils/runtime'
 
-  let { open = $bindable(false) }: { open: boolean } = $props()
+  let { open = $bindable(false), conferenceId }: { open: boolean; conferenceId: string } = $props()
 
   /** 已安装的插件列表（异步从主进程文件系统加载） */
   let installedPlugins = $state<InstalledPlugin[]>([])
@@ -67,7 +67,8 @@
     if (enabledMods.length === 0) {
       enabledMods.push('base')
     }
-    const id = createBattle(name, {
+    createBattle(name, {
+      conferenceId,
       startDate: draft.startDate?.toString(),
       timeScale: draft.timeScale,
       pixelsPerKm: draft.pixelsPerKm,
@@ -75,7 +76,7 @@
       enabledMods
     })
     open = false
-    goto(`/battle/${id}`)
+    goto(`/client/${conferenceId}/battle`)
   }
 
   function handleOpenChange(value: boolean) {
@@ -100,12 +101,13 @@
   }
 
   function handleCampaignCreate(name: string, campaignId: string) {
-    const id = createBattle(name, {
+    createBattle(name, {
+      conferenceId,
       enabledMods: [campaignId],
       campaignId
     })
     campaignDialogOpen = false
-    goto(`/battle/${id}`)
+    goto(`/client/${conferenceId}/battle`)
   }
 </script>
 
