@@ -7,7 +7,9 @@ function setup(saved: StoredAccount | null = null) {
   const client = {
     login: vi.fn().mockResolvedValue('secret-token'),
     fetchMe: vi.fn().mockResolvedValue(user),
-    patchMe: vi.fn().mockResolvedValue(user)
+    patchMe: vi.fn().mockResolvedValue(user),
+    forgotPassword: vi.fn().mockResolvedValue(undefined),
+    resetPassword: vi.fn().mockResolvedValue(undefined)
   }
   const storage = {
     load: vi.fn().mockResolvedValue(saved),
@@ -19,6 +21,24 @@ function setup(saved: StoredAccount | null = null) {
 }
 
 describe('desktop account session', () => {
+  it('uses the current email for recovery and signs out only after successful verification', async () => {
+    const { session, client, storage, changed } = setup({ token: 'saved-token', user })
+    await session.getSession()
+    await session.sendPasswordCode()
+    expect(client.forgotPassword).toHaveBeenCalledWith(user.email)
+    client.resetPassword.mockRejectedValueOnce(new AuthError('验证码错误', 400))
+    await expect(session.resetPassword('000000', 'new-password')).rejects.toThrow('验证码错误')
+    expect((await session.getSession()).user).toEqual(user)
+    expect(storage.clear).not.toHaveBeenCalled()
+    expect(await session.resetPassword('123456', 'new-password')).toMatchObject({
+      user: null,
+      warning: '密码已重置，请使用新密码重新登录。'
+    })
+    expect(client.resetPassword).toHaveBeenLastCalledWith(user.email, '123456', 'new-password')
+    expect(storage.clear).toHaveBeenCalledOnce()
+    expect(changed).toHaveBeenLastCalledWith(expect.objectContaining({ user: null }))
+    await expect(session.sendPasswordCode()).rejects.toThrow('请先登录')
+  })
   it('keeps server updates on local save failure and clears rejected credentials', async () => {
     const { session, client, storage, changed } = setup({ token: 'saved-token', user })
     await session.getSession()
@@ -32,7 +52,7 @@ describe('desktop account session', () => {
     expect(client.patchMe).toHaveBeenCalledWith('saved-token', { name: '新名字' })
     expect(JSON.stringify(changed.mock.calls)).not.toContain('saved-token')
     client.patchMe.mockRejectedValueOnce(new AuthError('expired', 401))
-    await expect(session.updateProfile({ password: 'new-password' })).rejects.toThrow('expired')
+    await expect(session.updateProfile({ name: '新名字' })).rejects.toThrow('expired')
     expect((await session.getSession()).user).toBeNull()
     expect(storage.clear).toHaveBeenCalledOnce()
   })

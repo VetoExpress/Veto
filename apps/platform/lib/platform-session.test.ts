@@ -38,6 +38,8 @@ function setup(token: string | null, legacy: string | null = null) {
     login: vi.fn(),
     refresh: vi.fn(),
     updateProfile: vi.fn(),
+    sendPasswordCode: vi.fn(),
+    resetPassword: vi.fn(),
     onChanged: vi.fn(),
     adoptToken: vi.fn(async (next) => {
       token = next

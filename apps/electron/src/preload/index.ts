@@ -19,6 +19,9 @@ const veto = {
     refresh: () => ipcRenderer.invoke('veto:account:refresh'),
     updateProfile: (update: AccountUpdate) =>
       ipcRenderer.invoke('veto:account:update-profile', update),
+    sendPasswordCode: () => ipcRenderer.invoke('veto:account:send-password-code'),
+    resetPassword: (code: string, password: string) =>
+      ipcRenderer.invoke('veto:account:reset-password', code, password),
     signOut: (expectedToken?: string) => ipcRenderer.invoke('veto:account:sign-out', expectedToken),
     onChanged: (callback: (session: AccountSnapshot) => void) => {
       const listener = (_event: Electron.IpcRendererEvent, session: AccountSnapshot) =>

@@ -20,7 +20,6 @@ export interface AccountUpdate {
   name?: string
   /** Raw Base64 image, up to 512 KB after decoding. */
   avatar?: string
-  password?: string
 }
 
 export interface AuthClientOptions {

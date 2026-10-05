@@ -54,13 +54,21 @@ export function registerAccountIpc(session?: AccountSession): void {
   }
   handle('veto:account:get-session', () => account.getSession())
   handle('veto:account:refresh', () => account.refresh())
+  handle('veto:account:send-password-code', () => account.sendPasswordCode())
+  handle('veto:account:reset-password', (code, password) => {
+    if (typeof code !== 'string' || !/^\d{6}$/.test(code.trim()))
+      throw new AuthError('验证码须为 6 位数字')
+    if (typeof password !== 'string' || password.length < 6 || password.length > 1024)
+      throw new AuthError('密码应为 6–1024 个字符')
+    return account.resetPassword(code.trim(), password)
+  })
   handle('veto:account:update-profile', (update) => {
     if (!update || typeof update !== 'object' || Array.isArray(update))
       throw new AuthError('无效的个人信息')
     const body = update as Record<string, unknown>
     if (
       !Object.keys(body).length ||
-      Object.keys(body).some((key) => !['name', 'avatar', 'password'].includes(key))
+      Object.keys(body).some((key) => !['name', 'avatar'].includes(key))
     )
       throw new AuthError('无效的个人信息')
     if (
@@ -68,11 +76,6 @@ export function registerAccountIpc(session?: AccountSession): void {
       (typeof body.name !== 'string' || !body.name.trim() || body.name.trim().length > 200)
     )
       throw new AuthError('用户名应为 1–200 个字符')
-    if (
-      body.password !== undefined &&
-      (typeof body.password !== 'string' || body.password.length < 6 || body.password.length > 1024)
-    )
-      throw new AuthError('密码应为 6–1024 个字符')
     if (
       body.avatar !== undefined &&
       (typeof body.avatar !== 'string' || body.avatar.length > 699052)

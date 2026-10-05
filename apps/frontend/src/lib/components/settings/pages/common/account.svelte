@@ -67,7 +67,8 @@
       onRefresh={() => accountStore.run('refresh')}
       onSignOut={() => accountStore.run('signOut')}
       onSave={(name, avatar) => accountStore.updateProfile({ name, ...(avatar ? { avatar } : {}) })}
-      onPassword={(password) => accountStore.updateProfile({ password })}
+      onSendPasswordCode={() => accountStore.sendPasswordCode()}
+      onPassword={(code, password) => accountStore.resetPassword(code, password)}
     />
   {:else}
     <Card.Root class="mx-auto w-full max-w-md">

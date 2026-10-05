@@ -16,6 +16,8 @@ function bridge() {
   const api: DesktopAccountAPI = {
     getAccessToken: vi.fn(),
     adoptToken: vi.fn(),
+    sendPasswordCode: vi.fn().mockResolvedValue({ ok: true, session: loggedIn }),
+    resetPassword: vi.fn().mockResolvedValue({ ok: true, session: empty }),
     updateProfile: vi.fn().mockResolvedValue({ ok: true, session: loggedIn }),
     getSession: vi.fn().mockResolvedValue({ ok: true, session: empty }),
     login: vi.fn().mockResolvedValue({ ok: true, session: loggedIn }),
@@ -30,6 +32,18 @@ function bridge() {
 }
 
 describe('renderer account state', () => {
+  it('retains the account on recovery errors and signs out after resetting the password', async () => {
+    const store = createAccountStore()
+    const { api } = bridge()
+    store.connect(api)
+    await vi.waitFor(() => expect(get(store).ready).toBe(true))
+    await store.sendPasswordCode()
+    vi.mocked(api.resetPassword).mockResolvedValueOnce({ ok: false, error: '验证码错误' })
+    await expect(store.resetPassword('000000', 'password')).rejects.toThrow('验证码错误')
+    expect(get(store).user).toEqual(loggedIn.user)
+    await store.resetPassword('123456', 'password')
+    expect(get(store)).toMatchObject({ user: null, pending: false, error: null })
+  })
   it('updates public state and rejects failed saves so the form cannot report success', async () => {
     const store = createAccountStore()
     const { api } = bridge()

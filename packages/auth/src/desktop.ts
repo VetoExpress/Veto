@@ -22,6 +22,8 @@ export interface DesktopAccountAPI {
   adoptToken(token: string, onlyIfSignedOut?: boolean): Promise<AccountResult>
   refresh(): Promise<AccountResult>
   updateProfile(update: AccountUpdate): Promise<AccountResult>
+  sendPasswordCode(): Promise<AccountResult>
+  resetPassword(code: string, password: string): Promise<AccountResult>
   signOut(expectedToken?: string): Promise<AccountResult>
   onChanged(callback: (session: AccountSnapshot) => void): () => void
 }

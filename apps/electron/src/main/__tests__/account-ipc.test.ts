@@ -30,6 +30,8 @@ describe('account IPC', () => {
     login: vi.fn(),
     refresh: vi.fn(),
     updateProfile: vi.fn(),
+    sendPasswordCode: vi.fn(),
+    resetPassword: vi.fn(),
     signOut: vi.fn()
   }
   beforeEach(() => {
@@ -77,6 +79,20 @@ describe('account IPC', () => {
       error: '邮箱或密码错误',
       status: 401
     })
+  })
+  it('validates recovery codes and restricts recovery to trusted frames', async () => {
+    const send = handlers.get('veto:account:send-password-code')!
+    const reset = handlers.get('veto:account:reset-password')!
+    expect(await send(event('https://evil.test'))).toMatchObject({ ok: false })
+    expect(await reset(event('veto://app', true), '123456', 'password')).toMatchObject({
+      ok: false
+    })
+    expect(await reset(event('veto://app'), 'invalid', 'password')).toMatchObject({ ok: false })
+    expect(await reset(event('veto://app'), '123456', 'short')).toMatchObject({ ok: false })
+    expect(account.resetPassword).not.toHaveBeenCalled()
+    expect(await send(event('veto://app'))).toMatchObject({ ok: true })
+    expect(await reset(event('veto://app'), ' 123456 ', 'password')).toMatchObject({ ok: true })
+    expect(account.resetPassword).toHaveBeenCalledWith('123456', 'password')
   })
   it('restricts profile updates to trusted frames and validates fields before forwarding', async () => {
     const update = handlers.get('veto:account:update-profile')!

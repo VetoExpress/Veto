@@ -1,6 +1,7 @@
 <script lang="ts">
   import { User, Camera, LogOut, RefreshCw, Check, ShieldCheck, CircleCheck } from '@lucide/svelte'
   import type { AuthUser } from '@vetoexpress/auth'
+  import { prepareAvatarImage } from '$lib/classes/utils/avatar-image'
   import * as Card from '$lib/components/ui/card'
   import { Badge } from '$lib/components/ui/badge'
   import { Button } from '$lib/components/ui/button'
@@ -18,14 +19,16 @@
     onRefresh,
     onSignOut,
     onSave,
-    onPassword
+    onPassword,
+    onSendPasswordCode
   }: {
     user: AuthUser
     pending?: boolean
     onRefresh: () => void
     onSignOut: () => void
     onSave?: (name: string, avatar?: string) => Promise<void>
-    onPassword?: (password: string) => Promise<void>
+    onPassword?: (code: string, password: string) => Promise<void>
+    onSendPasswordCode?: () => Promise<void>
   } = $props()
 
   const MAX_AVATAR_BYTES = 512 * 1024
@@ -34,6 +37,10 @@
   let avatarData = $state<string>()
   let newPassword = $state('')
   let confirmPassword = $state('')
+  let passwordCode = $state('')
+  let sendingCode = $state(false)
+  let cooldownUntil = $state(0)
+  let cooldown = $state(0)
   let saving = $state(false)
   let processingAvatar = $state(false)
   let error = $state('')
@@ -41,6 +48,33 @@
   const savedName = $derived(user.name)
   const savedAvatar = $derived(user.avatar)
   const accountEmail = $derived(user.email)
+
+  $effect(() => {
+    const deadline = cooldownUntil
+    if (!deadline) return
+    cooldown = Math.max(0, Math.ceil((deadline - Date.now()) / 1000))
+    const timer = setInterval(() => {
+      cooldown = Math.max(0, Math.ceil((deadline - Date.now()) / 1000))
+      if (!cooldown) clearInterval(timer)
+    }, 1000)
+    return () => clearInterval(timer)
+  })
+
+  async function sendPasswordCode() {
+    if (!onSendPasswordCode || sendingCode || pending || cooldown) return
+    sendingCode = true
+    error = ''
+    message = ''
+    try {
+      await onSendPasswordCode()
+      cooldownUntil = Date.now() + 60_000
+      message = '验证码已发送到注册邮箱，5 分钟内有效'
+    } catch (caught) {
+      error = caught instanceof Error ? caught.message : '验证码发送失败'
+    } finally {
+      sendingCode = false
+    }
+  }
 
   $effect(() => {
     accountEmail
@@ -57,7 +91,7 @@
     error = ''
     message = ''
     try {
-      const blob = await (await fetch(src)).blob()
+      const blob = await prepareAvatarImage(src, MAX_AVATAR_BYTES)
       if (blob.size > MAX_AVATAR_BYTES)
         throw new Error('裁剪后的头像不能超过 512 KB，请选择更小的图片。')
       const data = await new Promise<string>((resolve, reject) => {
@@ -118,12 +152,17 @@
       return
     }
     if (!onPassword) return
+    if (!/^\d{6}$/.test(passwordCode.trim())) {
+      error = '请输入邮箱收到的 6 位验证码'
+      return
+    }
     saving = true
     try {
-      await onPassword(newPassword)
+      await onPassword(passwordCode.trim(), newPassword)
+      passwordCode = ''
       newPassword = ''
       confirmPassword = ''
-      message = '密码已修改'
+      message = '密码已重置，请使用新密码重新登录'
     } catch (caught) {
       error = caught instanceof Error ? caught.message : '修改密码失败'
     } finally {
@@ -193,7 +232,9 @@
             <Badge variant="secondary"><Check data-icon="inline-start" />已登录</Badge>
           </div>
           <p class="break-all text-sm text-muted-foreground">{user.email}</p>
-          <p class="text-xs text-muted-foreground">点击头像更换图片，支持裁剪 · 最大 512 KB</p>
+          <p class="text-xs text-muted-foreground">
+            点击头像更换图片，裁剪后自动压缩 · 最大 512 KB
+          </p>
         </div>
       </div>
     </Card.Header>
@@ -255,10 +296,35 @@
     <Card.Root>
       <Card.Header>
         <Card.Title role="heading" aria-level={3}>安全设置</Card.Title>
-        <Card.Description>设置新密码，保护你的账号。</Card.Description>
+        <Card.Description>通过注册邮箱的验证码重置密码。</Card.Description>
         <Card.Action><ShieldCheck class="size-5 text-muted-foreground" /></Card.Action>
       </Card.Header>
       <Card.Content>
+        <Field.Field class="mb-5" data-disabled={!onPassword || saving || pending}>
+          <Field.FieldLabel for="account-password-code">邮箱验证码</Field.FieldLabel>
+          <div class="flex gap-2">
+            <Input
+              id="account-password-code"
+              bind:value={passwordCode}
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              maxlength={6}
+              placeholder="6 位验证码"
+              disabled={!onPassword || saving || pending}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!onSendPasswordCode || saving || sendingCode || pending || cooldown > 0}
+              onclick={sendPasswordCode}
+            >
+              {sendingCode ? '发送中…' : cooldown ? `${cooldown} 秒后重发` : '发送验证码'}
+            </Button>
+          </div>
+          <Field.FieldDescription>
+            验证码将发送至 {user.email}，5 分钟内有效。
+          </Field.FieldDescription>
+        </Field.Field>
         <Field.FieldGroup class="@min-[480px]/profile:flex-row">
           <Field.Field data-disabled={!onPassword || saving || pending}>
             <Field.FieldLabel for="account-new-password">新密码</Field.FieldLabel>
@@ -285,13 +351,13 @@
         </Field.FieldGroup>
       </Card.Content>
       <Card.Footer class="flex-wrap justify-between gap-3 border-t pt-5">
-        <p class="text-xs text-muted-foreground">修改后，其他设备需重新登录。</p>
+        <p class="text-xs text-muted-foreground">重置后，所有设备需使用新密码重新登录。</p>
         <Button
           type="submit"
           variant="outline"
           disabled={!onPassword || saving || pending || !newPassword || !confirmPassword}
         >
-          修改密码
+          重置密码
         </Button>
       </Card.Footer>
     </Card.Root>

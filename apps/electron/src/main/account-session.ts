@@ -15,7 +15,7 @@ export interface AccountStorage {
 
 /** Owns account credentials; renderers only receive public user state. */
 export function createAccountSession(
-  client: Pick<AuthClient, 'login' | 'fetchMe' | 'patchMe'>,
+  client: Pick<AuthClient, 'login' | 'fetchMe' | 'patchMe' | 'forgotPassword' | 'resetPassword'>,
   storage: AccountStorage,
   changed: (snapshot: AccountSnapshot) => void
 ) {
@@ -105,6 +105,25 @@ export function createAccountSession(
         )
       }),
     refresh: () => serial(check),
+    sendPasswordCode: () =>
+      serial(async () => {
+        if (!account) throw new AuthError('请先登录', 401)
+        await client.forgotPassword(account.user.email)
+        return snapshot
+      }),
+    resetPassword: (code: string, password: string) =>
+      serial(async () => {
+        if (!account) throw new AuthError('请先登录', 401)
+        await client.resetPassword(account.user.email, code, password)
+        // Password recovery revokes every server session, including this device.
+        account = null
+        try {
+          await storage.clear()
+        } catch {
+          /* Saved credentials are already invalid on the server. */
+        }
+        return publish(false, '密码已重置，请使用新密码重新登录。')
+      }),
     updateProfile: (update: AccountUpdate) =>
       serial(async () => {
         if (!account) throw new AuthError('请先登录', 401)

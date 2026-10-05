@@ -104,7 +104,10 @@ export function createAccountStore() {
       )
     },
     updateProfile: (update: AccountUpdate) =>
-      perform((bridge) => bridge.updateProfile(update), true)
+      perform((bridge) => bridge.updateProfile(update), true),
+    sendPasswordCode: () => perform((bridge) => bridge.sendPasswordCode(), true),
+    resetPassword: (code: string, password: string) =>
+      perform((bridge) => bridge.resetPassword(code, password), true)
   }
 }
 
