@@ -12,6 +12,8 @@ export function scheduleInstant(value: string): string | null {
 }
 
 export function scheduleError(start: string, end: string): string {
+  if (!start) return "请选择开始时间"
+  if (!end) return "请选择结束时间"
   const a = start ? Date.parse(`${start}+08:00`) : null
   const b = end ? Date.parse(`${end}+08:00`) : null
   if (

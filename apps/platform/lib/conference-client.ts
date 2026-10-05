@@ -177,8 +177,8 @@ export interface CreateConferenceInput extends ConferenceStructure {
   name: string
   description?: string
   organizer?: string
-  startsAt?: string | null
-  endsAt?: string | null
+  startsAt: string
+  endsAt: string
 }
 
 export interface SeatCommitteeUser {
@@ -415,8 +415,8 @@ export async function updateConferenceMetadata(
     name?: string
     description?: string
     organizer?: string
-    startsAt?: string | null
-    endsAt?: string | null
+    startsAt?: string
+    endsAt?: string
   }
 ): Promise<Conference> {
   const result = await apiRequest<{ ok: true; conference: Conference }>(

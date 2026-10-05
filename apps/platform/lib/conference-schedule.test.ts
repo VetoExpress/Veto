@@ -15,9 +15,11 @@ describe("conference schedule", () => {
     expect(scheduleInstant("")).toBeNull()
     expect(scheduleInput(null)).toBe("")
   })
-  it("allows optional dates but rejects equal, reversed and invalid ranges", () => {
-    expect(scheduleError("", "2026-10-03T18:00")).toBe("")
-    expect(scheduleError("2026-10-03T18:00", "")).toBe("")
+  it("requires both dates and rejects equal, reversed and invalid ranges", () => {
+    expect(scheduleError("", "")).toBe("请选择开始时间")
+    expect(scheduleError("", "2026-10-03T18:00")).toBe("请选择开始时间")
+    expect(scheduleError("2026-10-03T18:00", "")).toBe("请选择结束时间")
+    expect(scheduleError("2026-10-03T17:00", "2026-10-03T18:00")).toBe("")
     expect(scheduleError("2026-10-03T18:00", "2026-10-03T18:00")).not.toBe("")
     expect(scheduleError("2026-10-04T18:00", "2026-10-03T18:00")).not.toBe("")
     expect(scheduleError("invalid", "")).not.toBe("")

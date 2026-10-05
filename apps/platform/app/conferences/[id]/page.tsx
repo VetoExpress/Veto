@@ -227,10 +227,10 @@ export default function ConferenceDetailPage(): JSX.Element {
           ...(!conference.filesExpiredAt
             ? {
                 ...(startsAt !== scheduleInput(conference.startsAt)
-                  ? { startsAt: scheduleInstant(startsAt) }
+                  ? { startsAt: scheduleInstant(startsAt)! }
                   : {}),
                 ...(endsAt !== scheduleInput(conference.endsAt)
-                  ? { endsAt: scheduleInstant(endsAt) }
+                  ? { endsAt: scheduleInstant(endsAt)! }
                   : {}),
               }
             : {}),

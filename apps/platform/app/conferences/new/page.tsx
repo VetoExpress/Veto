@@ -430,8 +430,8 @@ export default function NewConferencePage() {
       name: name.trim(),
       description: description.trim() || undefined,
       organizer: organizer.trim() || undefined,
-      startsAt: scheduleInstant(startsAt),
-      endsAt: scheduleInstant(endsAt),
+      startsAt: scheduleInstant(startsAt)!,
+      endsAt: scheduleInstant(endsAt)!,
       roleTemplates: structure.roleTemplates.map((role) => ({
         ...role,
         name: role.name.trim(),
@@ -1183,7 +1183,7 @@ function ReviewStep({
           </div>
         </dl>
         <p className="mt-4 text-sm text-muted-foreground">
-          创建后大会处于草稿状态。请在大会设置中完成时间配置，再手动激活大会。
+          创建后大会处于草稿状态，实际会议时间不会自动激活大会。请在准备完成后手动激活大会。
         </p>
       </article>
       <div className="grid gap-4">

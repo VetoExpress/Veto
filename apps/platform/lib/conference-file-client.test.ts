@@ -6,7 +6,7 @@ describe("organizer file client", () => {
     vi.unstubAllEnvs()
   })
 
-  it("sends schedule fields on create and distinguishes clearing from omission on patch", async () => {
+  it("sends required schedule fields on create and preserves omitted fields on patch", async () => {
     vi.stubEnv("NEXT_PUBLIC_API_URL", "https://api.example.test")
     vi.resetModules()
     const { createConference, updateConferenceMetadata } =
@@ -32,10 +32,10 @@ describe("organizer file client", () => {
     )
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject(schedule)
     await updateConferenceMetadata("owner-token", "conference-1", 2, {
-      endsAt: null,
+      endsAt: "2026-10-04T10:00:00.000Z",
     })
     expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({
-      endsAt: null,
+      endsAt: "2026-10-04T10:00:00.000Z",
     })
     expect(
       new Headers(fetchMock.mock.calls[1][1].headers).get("If-Match")
