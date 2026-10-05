@@ -24,6 +24,9 @@
   import * as InputGroup from '$lib/components/ui/input-group'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
   import ConferenceCard from '$lib/components/home/conference-card.svelte'
+  import PlatformConferenceCard from '$lib/components/home/platform-conference-card.svelte'
+  import { platformConferences, refreshPlatformConferences, watchPlatformConferences } from '$lib/classes/stores/conference/platform-conference-store'
+  import { accountStore } from '$lib/classes/stores/app/account-store'
   import CloudPasswordDialog from '$lib/components/conference/join/cloud-password-dialog.svelte'
   import CloudIdentityPickerDialog from '$lib/components/conference/join/cloud-identity-picker-dialog.svelte'
   import TextAnimate from '$lib/components/ui/text-animate.svelte'
@@ -74,9 +77,13 @@
       ? ($conferences.find((conference) => conference.id === $lastOpenedConferenceId) ?? null)
       : null
   )
+  const filteredPlatformConferences = $derived($platformConferences.conferences.filter((conference) =>
+    `${conference.name} ${conference.organizer ?? ''}`.toLowerCase().includes(query.trim().toLowerCase())
+  ))
 
   onMount(() => {
     unloadConference()
+    return watchPlatformConferences()
   })
 
   function openCreatePage(): void {
@@ -229,7 +236,7 @@
           />
         </InputGroup.Root>
         <Badge variant="secondary" class="self-start px-3 py-1 sm:self-auto">
-          {filteredConferences.length} / {$conferences.length} 场大会
+          {filteredConferences.length + filteredPlatformConferences.length} / {$conferences.length + $platformConferences.conferences.length} 场大会
         </Badge>
       </div>
     </div>
@@ -329,7 +336,15 @@
           </Alert.Root>
         {/if}
 
-        {#if filteredConferences.length === 0}
+        {#if $accountStore.user}
+          <div class="mb-3 flex items-center justify-between gap-3">
+            <p class="text-sm text-muted-foreground">云平台创建的大会会在平台中打开。</p>
+            <Button variant="outline" size="sm" disabled={$platformConferences.loading} onclick={() => void refreshPlatformConferences()}>刷新云平台大会</Button>
+          </div>
+          {#if $platformConferences.loading}<p role="status" class="mb-3 text-sm text-muted-foreground">正在加载云平台大会…</p>{/if}
+          {#if $platformConferences.error}<p role="alert" class="mb-3 text-sm text-destructive">{$platformConferences.error}</p>{/if}
+        {/if}
+        {#if filteredConferences.length === 0 && filteredPlatformConferences.length === 0 && !$platformConferences.loading}
           <Empty.Root class="min-h-64 border bg-card/45 shadow-sm">
             <Empty.Header>
               <Empty.Media variant="icon">
@@ -344,6 +359,9 @@
           </Empty.Root>
         {:else}
           <div class="flex flex-col gap-3">
+            {#each filteredPlatformConferences as conference (conference.id)}
+              <PlatformConferenceCard {conference} />
+            {/each}
             {#each filteredConferences as conference (conference.id)}
               <ConferenceCard
                 {conference}
