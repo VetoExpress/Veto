@@ -29,6 +29,7 @@ describe('account IPC', () => {
     adoptToken: vi.fn(),
     login: vi.fn(),
     refresh: vi.fn(),
+    updateProfile: vi.fn(),
     signOut: vi.fn()
   }
   beforeEach(() => {
@@ -76,5 +77,26 @@ describe('account IPC', () => {
       error: '邮箱或密码错误',
       status: 401
     })
+  })
+  it('restricts profile updates to trusted frames and validates fields before forwarding', async () => {
+    const update = handlers.get('veto:account:update-profile')!
+    expect(await update(event('https://evil.test'), { name: 'Member' })).toMatchObject({
+      ok: false
+    })
+    expect(await update(event('veto://app', true), { name: 'Member' })).toMatchObject({ ok: false })
+    for (const body of [
+      null,
+      [],
+      {},
+      { name: ' ' },
+      { password: 'short' },
+      { email: 'other@example.com' },
+      { avatar: 'a'.repeat(699053) }
+    ]) {
+      expect(await update(event('veto://app'), body)).toMatchObject({ ok: false })
+    }
+    expect(account.updateProfile).not.toHaveBeenCalled()
+    expect(await update(event('veto://app'), { name: 'Member' })).toMatchObject({ ok: true })
+    expect(account.updateProfile).toHaveBeenCalledWith({ name: 'Member' })
   })
 })

@@ -6,7 +6,8 @@ const user = { name: '用户', email: 'test@example.test', avatar: '', organizat
 function setup(saved: StoredAccount | null = null) {
   const client = {
     login: vi.fn().mockResolvedValue('secret-token'),
-    fetchMe: vi.fn().mockResolvedValue(user)
+    fetchMe: vi.fn().mockResolvedValue(user),
+    patchMe: vi.fn().mockResolvedValue(user)
   }
   const storage = {
     load: vi.fn().mockResolvedValue(saved),
@@ -18,6 +19,23 @@ function setup(saved: StoredAccount | null = null) {
 }
 
 describe('desktop account session', () => {
+  it('keeps server updates on local save failure and clears rejected credentials', async () => {
+    const { session, client, storage, changed } = setup({ token: 'saved-token', user })
+    await session.getSession()
+    const updated = { ...user, name: '新名字' }
+    client.patchMe.mockResolvedValueOnce(updated)
+    storage.save.mockRejectedValueOnce(new Error('disk full'))
+    expect(await session.updateProfile({ name: '新名字' })).toMatchObject({
+      user: updated,
+      persistent: false
+    })
+    expect(client.patchMe).toHaveBeenCalledWith('saved-token', { name: '新名字' })
+    expect(JSON.stringify(changed.mock.calls)).not.toContain('saved-token')
+    client.patchMe.mockRejectedValueOnce(new AuthError('expired', 401))
+    await expect(session.updateProfile({ password: 'new-password' })).rejects.toThrow('expired')
+    expect((await session.getSession()).user).toBeNull()
+    expect(storage.clear).toHaveBeenCalledOnce()
+  })
   it('adopts a validated platform credential and exposes it separately from public state', async () => {
     const { session, client, changed } = setup()
     await session.adoptToken('platform-token')

@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { User, LogOut, RefreshCw, ExternalLink } from '@lucide/svelte'
+  import { ExternalLink } from '@lucide/svelte'
   import { accountStore } from '$lib/classes/stores/app/account-store'
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'
   import { Spinner } from '$lib/components/ui/spinner'
-  import * as Avatar from '$lib/components/ui/avatar'
+  import AccountProfile from './account-profile.svelte'
   import * as Card from '$lib/components/ui/card'
   import * as Field from '$lib/components/ui/field'
   import * as Alert from '$lib/components/ui/alert'
@@ -56,44 +56,14 @@
       </Card.Footer>
     </Card.Root>
   {:else if $accountStore.user}
-    <Card.Root>
-      <Card.Header>
-        <Card.Title role="heading" aria-level={3}>当前账号</Card.Title>
-        <Card.Description>已登录 Veto。</Card.Description>
-      </Card.Header>
-      <Card.Content>
-        <div class="flex items-center gap-4">
-          <Avatar.Root size="lg">
-            {#if $accountStore.user.avatar}<Avatar.Image
-                src={$accountStore.user.avatar}
-                alt={$accountStore.user.name}
-              />{/if}
-            <Avatar.Fallback><User /></Avatar.Fallback>
-          </Avatar.Root>
-          <div class="flex min-w-0 flex-col gap-1">
-            <p class="truncate font-medium">{$accountStore.user.name}</p>
-            <p class="truncate text-sm text-muted-foreground">{$accountStore.user.email}</p>
-            <p class="truncate text-sm text-muted-foreground">{$accountStore.user.organization}</p>
-          </div>
-        </div>
-      </Card.Content>
-      <Card.Footer class="gap-2">
-        <Button
-          variant="outline"
-          disabled={$accountStore.pending}
-          onclick={() => accountStore.run('refresh')}
-        >
-          <RefreshCw data-icon="inline-start" />刷新账号信息
-        </Button>
-        <Button
-          variant="destructive"
-          disabled={$accountStore.pending}
-          onclick={() => accountStore.run('signOut')}
-        >
-          <LogOut data-icon="inline-start" />退出登录
-        </Button>
-      </Card.Footer>
-    </Card.Root>
+    <AccountProfile
+      user={$accountStore.user}
+      pending={$accountStore.pending}
+      onRefresh={() => accountStore.run('refresh')}
+      onSignOut={() => accountStore.run('signOut')}
+      onSave={(name, avatar) => accountStore.updateProfile({ name, ...(avatar ? { avatar } : {}) })}
+      onPassword={(password) => accountStore.updateProfile({ password })}
+    />
   {:else}
     <Card.Root>
       <Card.Header>

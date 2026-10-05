@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain, type IpcMainInvokeEvent } from 'electron'
 import { is } from '@electron-toolkit/utils'
-import { AuthError, createAuthClient } from '@vetoexpress/auth'
+import { AuthError, createAuthClient, type AccountUpdate } from '@vetoexpress/auth'
 import type { AccountResult, AccountSnapshot, AccountTokenResult } from '@vetoexpress/auth/desktop'
 import { createAccountSession, type AccountSession } from '../account-session'
 import { createAccountStorage } from '../account-storage'
@@ -54,6 +54,32 @@ export function registerAccountIpc(session?: AccountSession): void {
   }
   handle('veto:account:get-session', () => account.getSession())
   handle('veto:account:refresh', () => account.refresh())
+  handle('veto:account:update-profile', (update) => {
+    if (!update || typeof update !== 'object' || Array.isArray(update))
+      throw new AuthError('无效的个人信息')
+    const body = update as Record<string, unknown>
+    if (
+      !Object.keys(body).length ||
+      Object.keys(body).some((key) => !['name', 'avatar', 'password'].includes(key))
+    )
+      throw new AuthError('无效的个人信息')
+    if (
+      body.name !== undefined &&
+      (typeof body.name !== 'string' || !body.name.trim() || body.name.trim().length > 200)
+    )
+      throw new AuthError('用户名应为 1–200 个字符')
+    if (
+      body.password !== undefined &&
+      (typeof body.password !== 'string' || body.password.length < 6 || body.password.length > 1024)
+    )
+      throw new AuthError('密码应为 6–1024 个字符')
+    if (
+      body.avatar !== undefined &&
+      (typeof body.avatar !== 'string' || body.avatar.length > 699052)
+    )
+      throw new AuthError('头像不能超过 512 KB')
+    return account.updateProfile(body as AccountUpdate)
+  })
   handle('veto:account:sign-out', (expectedToken) => {
     if (expectedToken !== undefined && typeof expectedToken !== 'string')
       throw new AuthError('无效账号凭据')

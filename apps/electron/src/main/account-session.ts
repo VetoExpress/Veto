@@ -1,4 +1,4 @@
-import { AuthError, type AuthClient, type AuthUser } from '@vetoexpress/auth'
+import { AuthError, type AuthClient, type AuthUser, type AccountUpdate } from '@vetoexpress/auth'
 import type { AccountSnapshot } from '@vetoexpress/auth/desktop'
 
 export interface StoredAccount {
@@ -15,7 +15,7 @@ export interface AccountStorage {
 
 /** Owns account credentials; renderers only receive public user state. */
 export function createAccountSession(
-  client: Pick<AuthClient, 'login' | 'fetchMe'>,
+  client: Pick<AuthClient, 'login' | 'fetchMe' | 'patchMe'>,
   storage: AccountStorage,
   changed: (snapshot: AccountSnapshot) => void
 ) {
@@ -105,6 +105,33 @@ export function createAccountSession(
         )
       }),
     refresh: () => serial(check),
+    updateProfile: (update: AccountUpdate) =>
+      serial(async () => {
+        if (!account) throw new AuthError('请先登录', 401)
+        let user: AuthUser
+        try {
+          user = await client.patchMe(account.token, update)
+        } catch (error) {
+          if (error instanceof AuthError && error.status === 401) {
+            await storage.clear()
+            account = null
+            publish(false, '登录已失效，请重新登录。')
+          }
+          throw error
+        }
+        account = { token: account.token, user }
+        // The server has already saved the change; keep the new state even if local persistence fails.
+        let persistent = false
+        try {
+          persistent = await storage.save(account)
+        } catch {
+          /* Preserve the live session. */
+        }
+        return publish(
+          persistent,
+          persistent ? null : '账号已更新，但本机无法保存登录状态，关闭应用后需重新登录。'
+        )
+      }),
     signOut: (expectedToken?: string) =>
       serial(async () => {
         // A late 401 from the previous account must not sign out the new account.

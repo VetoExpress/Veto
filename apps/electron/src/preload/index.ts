@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import type { AccountSnapshot, DesktopAccountAPI } from '@vetoexpress/auth/desktop'
+import type { AccountUpdate } from '@vetoexpress/auth'
 
 // Custom APIs for renderer
 const api = {}
@@ -16,6 +17,8 @@ const veto = {
     login: (email: string, password: string) =>
       ipcRenderer.invoke('veto:account:login', email, password),
     refresh: () => ipcRenderer.invoke('veto:account:refresh'),
+    updateProfile: (update: AccountUpdate) =>
+      ipcRenderer.invoke('veto:account:update-profile', update),
     signOut: (expectedToken?: string) => ipcRenderer.invoke('veto:account:sign-out', expectedToken),
     onChanged: (callback: (session: AccountSnapshot) => void) => {
       const listener = (_event: Electron.IpcRendererEvent, session: AccountSnapshot) =>

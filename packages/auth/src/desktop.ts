@@ -1,4 +1,4 @@
-import type { AuthUser } from './index'
+import type { AuthUser, AccountUpdate } from './index'
 
 /** Public account state. Credentials never travel with state notifications. */
 export interface AccountSnapshot {
@@ -21,6 +21,7 @@ export interface DesktopAccountAPI {
   getAccessToken(): Promise<AccountTokenResult>
   adoptToken(token: string, onlyIfSignedOut?: boolean): Promise<AccountResult>
   refresh(): Promise<AccountResult>
+  updateProfile(update: AccountUpdate): Promise<AccountResult>
   signOut(expectedToken?: string): Promise<AccountResult>
   onChanged(callback: (session: AccountSnapshot) => void): () => void
 }

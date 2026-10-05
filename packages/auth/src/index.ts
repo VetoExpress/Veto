@@ -13,6 +13,14 @@ export interface AuthUser {
   email: string
   avatar: string
   organization: string
+  created_at?: string
+}
+
+export interface AccountUpdate {
+  name?: string
+  /** Raw Base64 image, up to 512 KB after decoding. */
+  avatar?: string
+  password?: string
 }
 
 export interface AuthClientOptions {
@@ -60,7 +68,7 @@ export function createAuthClient(options: AuthClientOptions) {
     return cachedUser?.token === token ? cachedUser.user : undefined
   }
 
-  async function fetchMe(token: string): Promise<AuthUser> {
+  async function fetchMe(token: string, update?: AccountUpdate): Promise<AuthUser> {
     if (!apiBaseUrl) {
       throw new AuthError('API 服务暂未配置')
     }
@@ -68,7 +76,12 @@ export function createAuthClient(options: AuthClientOptions) {
     let response: Response
     try {
       response = await fetchImpl(new URL('v1/auth/me', `${apiBaseUrl}/`), {
-        headers: { Authorization: `Bearer ${token}` }
+        method: update ? 'PATCH' : 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(update ? { 'content-type': 'application/json' } : {})
+        },
+        body: update ? JSON.stringify(update) : undefined
       })
     } catch {
       throw new AuthError('无法连接认证服务')
@@ -151,6 +164,7 @@ export function createAuthClient(options: AuthClientOptions) {
     forgotPassword,
     resetPassword,
     fetchMe,
+    patchMe: (token: string, update: AccountUpdate) => fetchMe(token, update),
     readCachedUser
   }
 }

@@ -6,6 +6,20 @@ const user = { name: '测试用户', email: 'user@example.test', avatar: '', org
 const response = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status })
 
 describe('auth client', () => {
+  it('patches user details with bearer authorization and refreshes the cache', async () => {
+    const updated = { ...user, name: '新姓名', created_at: '2026-10-05T00:00:00Z' }
+    const fetch = vi
+      .fn<typeof globalThis.fetch>()
+      .mockResolvedValue(response({ ok: true, user: updated }))
+    const auth = createAuthClient({ apiBaseUrl, fetch })
+    expect(await auth.patchMe('token', { name: '新姓名' })).toEqual(updated)
+    expect(fetch.mock.calls[0][1]).toMatchObject({
+      method: 'PATCH',
+      body: JSON.stringify({ name: '新姓名' })
+    })
+    expect(new Headers(fetch.mock.calls[0][1]!.headers).get('Authorization')).toBe('Bearer token')
+    expect(auth.readCachedUser('token')).toEqual(updated)
+  })
   it('sends login and email verification requests using the configured transport', async () => {
     const fetch = vi
       .fn<typeof globalThis.fetch>()

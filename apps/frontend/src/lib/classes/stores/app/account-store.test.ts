@@ -16,6 +16,7 @@ function bridge() {
   const api: DesktopAccountAPI = {
     getAccessToken: vi.fn(),
     adoptToken: vi.fn(),
+    updateProfile: vi.fn().mockResolvedValue({ ok: true, session: loggedIn }),
     getSession: vi.fn().mockResolvedValue({ ok: true, session: empty }),
     login: vi.fn().mockResolvedValue({ ok: true, session: loggedIn }),
     refresh: vi.fn().mockResolvedValue({ ok: true, session: loggedIn }),
@@ -29,6 +30,17 @@ function bridge() {
 }
 
 describe('renderer account state', () => {
+  it('updates public state and rejects failed saves so the form cannot report success', async () => {
+    const store = createAccountStore()
+    const { api } = bridge()
+    store.connect(api)
+    await vi.waitFor(() => expect(get(store).ready).toBe(true))
+    await store.updateProfile({ name: '用户' })
+    expect(get(store).user).toEqual(loggedIn.user)
+    vi.mocked(api.updateProfile).mockResolvedValueOnce({ ok: false, error: '头像太大' })
+    await expect(store.updateProfile({ avatar: 'invalid' })).rejects.toThrow('头像太大')
+    expect(get(store)).toMatchObject({ pending: false, error: '头像太大', user: loggedIn.user })
+  })
   it('uses desktop state and unsubscribes when disconnected', async () => {
     const store = createAccountStore()
     const { api, emit, unsubscribe } = bridge()

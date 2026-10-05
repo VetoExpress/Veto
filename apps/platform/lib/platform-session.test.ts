@@ -37,6 +37,7 @@ function setup(token: string | null, legacy: string | null = null) {
     getSession: vi.fn(),
     login: vi.fn(),
     refresh: vi.fn(),
+    updateProfile: vi.fn(),
     onChanged: vi.fn(),
     adoptToken: vi.fn(async (next) => {
       token = next
