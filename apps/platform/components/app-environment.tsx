@@ -26,12 +26,10 @@ const APP_ENTRY_KEY = "veto_platform_app_entry"
 const AppEnvironmentContext = createContext<{
   isAppEntry: boolean
   isDesktop: boolean
-  titlebarContent: HTMLDivElement | null
   titlebarActions: HTMLDivElement | null
 }>({
   isAppEntry: false,
   isDesktop: false,
-  titlebarContent: null,
   titlebarActions: null,
 })
 
@@ -86,9 +84,6 @@ export function returnToApp() {
 export function AppEnvironment({ children }: { children: ReactNode }) {
   const desktop = useSyncExternalStore(subscribe, isDesktop, serverSnapshot)
   const appEntry = useSyncExternalStore(subscribe, isAppEntry, serverSnapshot)
-  const [titlebarContent, setTitlebarContent] = useState<HTMLDivElement | null>(
-    null
-  )
   const [titlebarActions, setTitlebarActions] = useState<HTMLDivElement | null>(
     null
   )
@@ -102,7 +97,6 @@ export function AppEnvironment({ children }: { children: ReactNode }) {
       value={{
         isAppEntry: appEntry,
         isDesktop: desktop,
-        titlebarContent,
         titlebarActions,
       }}
     >
@@ -118,14 +112,20 @@ export function AppEnvironment({ children }: { children: ReactNode }) {
             className="platform-titlebar sticky top-0 z-50 flex h-9 items-center gap-2 bg-background select-none"
             aria-label="窗口标题栏"
           >
-            <div
-              ref={setTitlebarContent}
-              className="ml-[10px] flex h-full max-w-[40%] min-w-0 items-center"
-            />
             <nav
-              className="flex h-full shrink-0 items-center gap-1"
+              className="ml-[10px] flex h-full shrink-0 items-center gap-1"
               aria-label="应用导航"
             >
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-full gap-2 text-muted-foreground hover:bg-accent hover:text-foreground"
+                onClick={returnToApp}
+                title="返回应用"
+              >
+                <Monitor className="size-4" aria-hidden="true" />
+                返回应用
+              </Button>
               <Button
                 type="button"
                 variant="ghost"
@@ -147,16 +147,6 @@ export function AppEnvironment({ children }: { children: ReactNode }) {
                 onClick={() => window.history.forward()}
               >
                 <ArrowRight className="size-4" aria-hidden="true" />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                className="h-full gap-2 text-muted-foreground hover:bg-accent hover:text-foreground"
-                onClick={returnToApp}
-                title="返回应用"
-              >
-                <Monitor className="size-4" aria-hidden="true" />
-                返回应用
               </Button>
               <span className="mx-1 h-5 w-px bg-border/40" aria-hidden="true" />
             </nav>

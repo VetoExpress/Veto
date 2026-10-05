@@ -92,8 +92,7 @@ export function PlatformShell({
   const { user } = usePlatformUser(token, signOut)
   const subtitle = usePlatformSubtitle(token, signOut)
   const onAccountPage = pathname === "/account"
-  const { isAppEntry, isDesktop, titlebarContent, titlebarActions } =
-    useAppEnvironment()
+  const { isAppEntry, isDesktop, titlebarActions } = useAppEnvironment()
   const brand = (
     <div className="flex min-w-0 items-center gap-3">
       {backHref ? (
@@ -117,10 +116,12 @@ export function PlatformShell({
           className={isDesktop ? "size-7 shrink-0" : "size-9 shrink-0"}
         />
       )}
-      <div className="min-w-0 leading-tight">
-        <p className="truncate font-semibold tracking-tight">云Veto</p>
-        <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
-      </div>
+      {!isDesktop && (
+        <div className="min-w-0 leading-tight">
+          <p className="truncate font-semibold tracking-tight">云Veto</p>
+          <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
+        </div>
+      )}
     </div>
   )
   const accountActions = (
@@ -169,8 +170,8 @@ export function PlatformShell({
     <div className="platform-shell relative flex min-h-svh flex-col overflow-clip bg-background">
       {isDesktop ? (
         <>
-          {titlebarContent && createPortal(brand, titlebarContent)}
           {titlebarActions && createPortal(accountActions, titlebarActions)}
+          {backHref && <div className="px-3 pt-4">{brand}</div>}
         </>
       ) : (
         <header className="relative z-10 flex h-20 shrink-0 items-center justify-between border-b bg-background/85 px-4 backdrop-blur-md sm:px-8 lg:px-12">
@@ -181,7 +182,12 @@ export function PlatformShell({
         </header>
       )}
 
-      <main className="relative z-10 mx-auto w-full max-w-6xl flex-1 px-4 py-12 sm:px-8 sm:py-16 lg:px-12 lg:py-20">
+      <main
+        className={cn(
+          "relative z-10 mx-auto w-full max-w-6xl flex-1 px-4 pb-12 sm:px-8 sm:pb-16 lg:px-12 lg:pb-20",
+          isDesktop ? "pt-8" : "pt-12 sm:pt-16 lg:pt-20"
+        )}
+      >
         {children}
       </main>
 

@@ -69,7 +69,7 @@ test('App 窗口：隐藏页脚，导航与刷新后仍保留窗口控件', asyn
   await expect(page).toHaveURL(`${base}/`)
   await page.locator('.platform-titlebar').getByRole('button', { name: '前进', exact: true }).click()
   await expect(page).toHaveURL(`${base}/account`)
-  await page.locator('.platform-titlebar').getByRole('link', { name: '返回大会列表' }).click()
+  await page.getByRole('link', { name: '返回大会列表' }).click()
   await expect(page).toHaveURL(`${base}/`)
   await page.getByRole('link', { name: '用户 测试组织者' }).click()
   await expect(page).toHaveURL(`${base}/account`)
