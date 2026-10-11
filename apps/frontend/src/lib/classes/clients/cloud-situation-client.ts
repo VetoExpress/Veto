@@ -58,8 +58,16 @@ export function listCloudSituations(token: string): Promise<SituationListResult>
   return request(token, '/veto/situations')
 }
 
+const pendingTimelines = new Map<string, Promise<TimelineResult>>()
+
 export function getCloudTimeline(token: string): Promise<TimelineResult> {
-  return request(token, '/veto/timeline')
+  const pending = pendingTimelines.get(token)
+  if (pending) return pending
+  const result = request<TimelineResult>(token, '/veto/timeline').finally(() => {
+    if (pendingTimelines.get(token) === result) pendingTimelines.delete(token)
+  })
+  pendingTimelines.set(token, result)
+  return result
 }
 
 export function publishCloudSituation(

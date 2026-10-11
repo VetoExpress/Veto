@@ -144,9 +144,9 @@
     cloudTimelineReceivedAt = 0
     cloudTimelineError = ''
     void refreshCloudTimeline(token)
-    const interval = window.setInterval(() => void refreshCloudTimeline(token), 5000)
+    const unsubscribe = fileNotifications.subscribe(['timeline'], () => refreshCloudTimeline(token))
     return () => {
-      window.clearInterval(interval)
+      unsubscribe()
       cloudTimelineRequest += 1
     }
   })

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
+  import { fileNotifications } from '$lib/classes/stores/cloud/file-notification-store.svelte'
   import { Newspaper, RefreshCw, Send } from '@lucide/svelte'
   import type { News } from '$lib/classes/types/delegate'
   import { cloudSession } from '$lib/classes/stores/cloud/cloud-session-store.svelte'
@@ -211,8 +212,8 @@
     if (!canView && canDraft) tab = 'mine'
     else if (!canView && canReview) tab = 'workflow'
     void load()
-    const refresh = window.setInterval(() => void load(), 5000)
-    return () => window.clearInterval(refresh)
+    const unsubscribe = fileNotifications.subscribe(['news', 'timeline'], () => load())
+    return unsubscribe
   })
 
   $effect(() => {

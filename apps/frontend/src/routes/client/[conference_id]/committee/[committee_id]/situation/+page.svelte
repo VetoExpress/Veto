@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
+  import { fileNotifications } from '$lib/classes/stores/cloud/file-notification-store.svelte'
   import { Activity, Clock3, Pause, Play, RefreshCw, Send, SkipForward } from '@lucide/svelte'
   import DOMPurify from 'dompurify'
   import { marked } from 'marked'
@@ -249,10 +250,10 @@
     draftReady = true
     void load()
     const clock = window.setInterval(() => (clockNow = Date.now()), 1000)
-    const refresh = window.setInterval(() => void load(true), 5000)
+    const unsubscribe = fileNotifications.subscribe(['situations', 'timeline'], () => load(true))
     return () => {
       window.clearInterval(clock)
-      window.clearInterval(refresh)
+      unsubscribe()
     }
   })
 

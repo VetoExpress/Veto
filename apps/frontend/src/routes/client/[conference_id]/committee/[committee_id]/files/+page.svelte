@@ -155,13 +155,10 @@
     if (!canView && canSend) tab = 'mine'
     else if (!canView && canReview) tab = 'workflow'
     void load()
-    const refresh = window.setInterval(() => void load(true), 30_000)
-    return () => window.clearInterval(refresh)
+    const unsubscribe = fileNotifications.subscribe(['files'], () => load(true))
+    return unsubscribe
   })
 
-  $effect(() => {
-    if (fileNotifications.revision > 0) queueMicrotask(() => void load(true))
-  })
 </script>
 
 <svelte:head><title>文件 · Veto</title></svelte:head>

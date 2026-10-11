@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
+  import { fileNotifications } from '$lib/classes/stores/cloud/file-notification-store.svelte'
   import { CircleAlert, Inbox, RefreshCw, ScrollText, Send } from '@lucide/svelte'
   import { cloudSession } from '$lib/classes/stores/cloud/cloud-session-store.svelte'
   import {
@@ -45,6 +46,7 @@
   let draftError = $state('')
   let otherSeatDraft = $state<{ seatId: string; title: string; content: string } | null>(null)
   let loadSequence = 0
+  let targetsLoaded = false
 
   const session = $derived(cloudSession.session?.result)
   const token = $derived(session?.token ?? '')
@@ -93,12 +95,13 @@
       const [own, inbox, targetList] = await Promise.all([
         canSubmit ? listMyDirectives(token) : Promise.resolve(null),
         canProcess ? listDirectiveWorkflow(token) : Promise.resolve(null),
-        canSubmit ? listDirectiveTargets(token) : Promise.resolve(null)
+        canSubmit ? (targetsLoaded ? Promise.resolve({ targets }) : listDirectiveTargets(token)) : Promise.resolve(null)
       ])
       if (sequence !== loadSequence || token !== cloudSession.session?.result.token) return
       mine = own?.directives ?? []
       workflow = inbox?.directives ?? []
       targets = targetList?.targets ?? []
+      if (targetList) targetsLoaded = true
       if (!targetCommitteeId && targets.length === 1) targetCommitteeId = targets[0].id
       error = ''
     } catch (caught) {
@@ -214,8 +217,8 @@
     }
     draftReady = true
     void load()
-    const refresh = window.setInterval(() => void load(true), 5000)
-    return () => window.clearInterval(refresh)
+    const unsubscribe = fileNotifications.subscribe(['directives'], () => load(true))
+    return unsubscribe
   })
 
   $effect(() => {
