@@ -11,7 +11,7 @@ import { autoUpdater } from 'electron-updater'
 type UpdateFeedOptions = Parameters<typeof autoUpdater.setFeedURL>[0]
 type UpdateSource = 'r2' | 'github'
 
-const R2_UPDATE_FEED_URL = 'https://download.miaoyww.top/releases'
+const R2_UPDATE_FEED_URL = 'https://download.miaoyww.top/veto/releases'
 
 const updateFeeds = {
   r2: { provider: 'generic', url: R2_UPDATE_FEED_URL },

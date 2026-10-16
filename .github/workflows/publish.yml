@@ -161,7 +161,7 @@ jobs:
 
           aws s3 cp \
             release-files/ \
-            "s3://${R2_BUCKET}/releases/${GITHUB_REF_NAME}/" \
+            "s3://${R2_BUCKET}/veto/releases/${GITHUB_REF_NAME}/" \
             --recursive \
             --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
 
@@ -237,7 +237,7 @@ jobs:
         shell: bash
         env:
           TAG: ${{ github.ref_name }}
-          DOWNLOAD_BASE: https://download.miaoyww.top
+          DOWNLOAD_BASE: https://download.miaoyww.top/veto
         run: |
           VERSION="${TAG#v}"
 
@@ -266,13 +266,13 @@ jobs:
         shell: bash
         env:
           TAG: ${{ github.ref_name }}
-          DOWNLOAD_BASE: https://download.miaoyww.top
+          DOWNLOAD_BASE: https://download.miaoyww.top/veto
         run: |
           node <<'EOF'
           const fs = require('fs');
 
           const tag = process.env.TAG;
-          const baseUrl = new URL(`/releases/${encodeURIComponent(tag)}/`, `${process.env.DOWNLOAD_BASE}/`);
+          const baseUrl = new URL(`releases/${encodeURIComponent(tag)}/`, `${process.env.DOWNLOAD_BASE}/`);
           const targets = [
             { input: 'artifacts/veto-win/latest.yml', output: 'latest.yml' },
             { input: 'artifacts/veto-mac/latest-mac.yml', output: 'latest-mac.yml' },
@@ -320,12 +320,16 @@ jobs:
           set -e
 
           for file in latest.yml latest-mac.yml; do
-            aws s3 cp "$file" \
-              "s3://${R2_BUCKET}/releases/$file" \
-              --content-type "text/yaml; charset=utf-8" \
-              --cache-control "no-cache" \
-              --region auto \
-              --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+            # Keep the old feed available for clients installed before the migration.
+            # Both manifests point to binaries under veto/releases/.
+            for prefix in veto/releases releases; do
+              aws s3 cp "$file" \
+                "s3://${R2_BUCKET}/$prefix/$file" \
+                --content-type "text/yaml; charset=utf-8" \
+                --cache-control "no-cache" \
+                --region auto \
+                --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+            done
           done
 
       - name: Upload latest.json to R2
@@ -340,9 +344,12 @@ jobs:
           R2_BUCKET: ${{ vars.R2_BUCKET }}
 
         run: |
-          aws s3 cp latest.json \
-            "s3://${R2_BUCKET}/releases/latest.json" \
-            --content-type "application/json" \
-            --cache-control "no-cache" \
-            --region auto \
-            --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+          set -e
+          for prefix in veto/releases releases; do
+            aws s3 cp latest.json \
+              "s3://${R2_BUCKET}/$prefix/latest.json" \
+              --content-type "application/json" \
+              --cache-control "no-cache" \
+              --region auto \
+              --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+          done
