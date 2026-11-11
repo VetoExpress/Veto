@@ -26,13 +26,6 @@
   import AppPage from '$lib/components/page-shell/app-page.svelte'
   import AppPageHeader from '$lib/components/page-shell/app-page-header.svelte'
   import ConferenceCard from '$lib/components/home/conference-card.svelte'
-  import PlatformConferenceCard from '$lib/components/home/platform-conference-card.svelte'
-  import {
-    platformConferences,
-    refreshPlatformConferences,
-    watchPlatformConferences
-  } from '$lib/classes/stores/conference/platform-conference-store'
-  import { accountStore } from '$lib/classes/stores/app/account-store'
   import CloudPasswordDialog from '$lib/components/conference/join/cloud-password-dialog.svelte'
   import CloudIdentityPickerDialog from '$lib/components/conference/join/cloud-identity-picker-dialog.svelte'
   import {
@@ -76,30 +69,15 @@
         )
       : $conferences
   )
-  const filteredPlatformConferences = $derived(
-    $platformConferences.conferences.filter((conference) =>
-      `${conference.name} ${conference.organizer ?? ''}`
-        .toLowerCase()
-        .includes(query.trim().toLowerCase())
-    )
-  )
   const lastOpened = $derived(
     $lastOpenedConferenceId
       ? ($conferences.find((conference) => conference.id === $lastOpenedConferenceId) ?? null)
       : null
   )
-  const lastOpenedPlatform = $derived(
-    !lastOpened
-      ? $platformConferences.conferences.find(
-          (conference) => conference.id === $lastOpenedConferenceId
-        )
-      : undefined
-  )
-  const workspaceCount = $derived($conferences.length + $platformConferences.conferences.length)
+  const workspaceCount = $derived($conferences.length)
 
   onMount(() => {
     unloadConference()
-    return watchPlatformConferences()
   })
 
   function openCreatePage(): void {
@@ -109,8 +87,6 @@
     if (lastOpened) {
       if (lastOpened.source === 'cloud') void rejoinCloudConference(lastOpened)
       else navigateToConference(lastOpened.id)
-    } else if (lastOpenedPlatform) {
-      window.location.replace(`/conference/${lastOpenedPlatform.id}`)
     }
   }
   async function rejoinWithMembership(membership: CloudMembership): Promise<void> {
@@ -204,7 +180,7 @@
 <AppPage class="workspace-page">
   <AppPageHeader title={t('procedure_workspace')} />
   <div class="workspace-overview">
-    {#if lastOpened || lastOpenedPlatform}
+    {#if lastOpened}
       <button
         class="resume-card flex min-w-0 flex-col justify-between gap-4 rounded-2xl p-5 text-left"
         onclick={resumeConference}
@@ -218,18 +194,17 @@
         <div>
           <p class="eyebrow">{t('procedure_last_opened_workspace')}</p>
           <h2 class="mt-2 break-words text-2xl font-semibold leading-tight tracking-tight">
-            {lastOpened?.name ?? lastOpenedPlatform?.name}
+            {lastOpened.name}
           </h2>
           <p class="resume-details mt-3 text-xs leading-relaxed">
-            {#if lastOpened}{t('procedure_committee_count', {
-                count: lastOpened.committees.length
-              })} · {t('procedure_seat_count', {
-                value1: lastOpened.committees.reduce(
-                  (count, committee) => count + committee.seats.length,
-                  0
-                )
-              })}{:else}{t('settings_cloud_platform')} · {lastOpenedPlatform?.organizer ??
-                t('procedure_conference')}{/if}
+            {t('procedure_committee_count', {
+              count: lastOpened.committees.length
+            })} · {t('procedure_seat_count', {
+              value1: lastOpened.committees.reduce(
+                (count, committee) => count + committee.seats.length,
+                0
+              )
+            })}
           </p>
         </div>
         <div class="flex items-end justify-between gap-4">
@@ -342,28 +317,7 @@
           {renderProcedureMessage(rejoinError)}
         </Alert.Description>
       </Alert.Root>{/if}
-    {#if $accountStore.user}<div
-        class="flex items-center justify-between gap-3 text-xs text-muted-foreground"
-      >
-        <span>
-          {t('procedure_conferences_created_on_the_cloud_platform_open_on_the_platform')}
-        </span>
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={$platformConferences.loading}
-          onclick={() => void refreshPlatformConferences()}
-        >
-          {t('settings_refresh')}
-        </Button>
-      </div>{/if}
-    {#if $platformConferences.loading}<p role="status" class="text-xs text-muted-foreground">
-        {t('procedure_loading_cloud_conferences')}
-      </p>{/if}
-    {#if $platformConferences.error}<p role="alert" class="text-xs text-destructive">
-        {$platformConferences.error}
-      </p>{/if}
-    {#if filteredConferences.length === 0 && filteredPlatformConferences.length === 0 && !$platformConferences.loading}<Empty.Root
+    {#if filteredConferences.length === 0}<Empty.Root
         class="min-h-64 border bg-card/60 shadow-none"
       >
         <Empty.Header>
@@ -378,9 +332,7 @@
           </Button>
         </Empty.Content>
       </Empty.Root>{:else}<div class="flex min-w-0 flex-col gap-2.5">
-        {#each filteredPlatformConferences as conference (conference.id)}<PlatformConferenceCard
-            {conference}
-          />{/each}{#each filteredConferences as conference (conference.id)}<ConferenceCard
+        {#each filteredConferences as conference (conference.id)}<ConferenceCard
             {conference}
             onJoin={conference.source === 'cloud' ? rejoinCloudConference : undefined}
             onUpdatePassword={openCloudPasswordDialog}
