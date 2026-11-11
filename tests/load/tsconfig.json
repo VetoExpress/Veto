@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "strict": true,
+    "noEmit": true,
+    "types": ["k6"],
+    "lib": ["ES2022", "DOM"]
+  },
+  "include": ["main.ts", "lib/**/*.ts", "scenarios/**/*.ts"],
+  "exclude": ["**/*.test.ts"]
+}

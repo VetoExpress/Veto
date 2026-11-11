@@ -1,0 +1,15 @@
+{
+  "profile": "files-500",
+  "scenario": "files",
+  "vus": 500,
+  "durationSeconds": 600,
+  "onlineWindowSeconds": 600,
+  "rampSeconds": 180,
+  "rampSteps": 10,
+  "startDelaySeconds": 120,
+  "actionIntervalSeconds": 10,
+  "filesPerVu": 4,
+  "uploadConcurrency": 2,
+  "fileSizesBytes": [65536, 1048576],
+  "observerEvery": 0
+}

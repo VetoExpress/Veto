@@ -1,0 +1,22 @@
+{
+  "seats": [
+    {
+      "inviteCode": "AAAA-BBBB-CCCC",
+      "password": "replace-with-test-seat-password",
+      "seatId": "replace-with-seat-id",
+      "conferenceId": "replace-with-test-conference-id",
+      "committeeId": "replace-with-source-committee-id",
+      "targetCommitteeId": "replace-with-directive-recipient-committee-id",
+      "expectedCapabilities": ["view_files", "send_files"]
+    },
+    {
+      "inviteCode": "DDDD-EEEE-FFFF",
+      "password": "replace-with-another-seat-password",
+      "seatId": "replace-with-another-seat-id",
+      "conferenceId": "replace-with-test-conference-id",
+      "committeeId": "replace-with-recipient-committee-id",
+      "targetCommitteeId": "replace-with-source-committee-id",
+      "expectedCapabilities": ["view_files", "review_files"]
+    }
+  ]
+}

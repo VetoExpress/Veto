@@ -1,0 +1,36 @@
+import { Counter, Gauge, Rate, Trend } from 'k6/metrics'
+
+export const errors = new Counter('load_errors')
+export const authOK = new Rate('seat_auth_ok')
+export const readyOK = new Rate('ws_ready_ok')
+export const readyMs = new Trend('ws_ready_ms', true)
+export const onlineWindowOK = new Rate('online_window_ok')
+export const onlineWindowSeats = new Counter('online_window_seats')
+export const onlineWindowStart = new Gauge('online_window_start_epoch_ms')
+export const onlineWindowEnd = new Gauge('online_window_end_epoch_ms')
+export const notifications = new Counter('live_notifications')
+export const deliveryOK = new Rate('live_delivery_ok')
+export const unexpectedCloses = new Counter('ws_unexpected_closes')
+export const sessionExpired = new Counter('seat_session_expired')
+export const reconnectOK = new Rate('reconnect_ok')
+export const reconnectMs = new Trend('reconnect_ms', true)
+export const refreshMs = new Trend('refresh_ms', true)
+export const refreshes = new Counter('refreshes')
+export const uploadOK = new Rate('file_upload_ok')
+export const uploadMs = new Trend('file_upload_ms', true)
+export const uploaded = new Counter('files_uploaded')
+export const uploadBytes = new Counter('file_bytes_uploaded')
+export const downloadOK = new Rate('file_download_integrity_ok')
+export const downloaded = new Counter('files_downloaded')
+export const visibleOK = new Rate('content_visible_ok')
+export const visibleMs = new Trend('content_visible_ms', true)
+export const observedMs = new Trend('published_observed_ms', true)
+export const operations = new Counter('business_operations')
+export const conflicts = new Counter('workflow_conflicts')
+export const displayOK = new Rate('display_projection_ok')
+
+/** Avoid server messages, URLs, headers, payloads and identifiers in logs and metric tags. */
+export function recordError(operation: string, kind: string, status = 0): void {
+  errors.add(1, { operation, kind, status: String(status) })
+  console.error(JSON.stringify({ operation, kind, status, impact: 'operation_failed' }))
+}

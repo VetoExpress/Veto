@@ -1,0 +1,21 @@
+{
+  "profile": "files-burst",
+  "scenario": "files",
+  "vus": 50,
+  "durationSeconds": 300,
+  "rampSeconds": 15,
+  "startDelaySeconds": 60,
+  "actionIntervalSeconds": 5,
+  "filesPerVu": 4,
+  "uploadConcurrency": 2,
+  "fileSizesBytes": [65536, 1048576, 5242880, 20971520],
+  "readyTimeoutSeconds": 60,
+  "visibilityTimeoutSeconds": 60,
+  "requestTimeoutSeconds": 60,
+  "thresholds": {
+    "httpP95Ms": 3000,
+    "uploadP95Ms": 30000,
+    "visibleP95Ms": 30000,
+    "errorRate": 0.01
+  }
+}

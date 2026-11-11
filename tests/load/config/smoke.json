@@ -1,0 +1,18 @@
+{
+  "profile": "smoke",
+  "scenario": "mixed",
+  "vus": 2,
+  "durationSeconds": 60,
+  "rampSeconds": 5,
+  "startDelaySeconds": 10,
+  "actionIntervalSeconds": 5,
+  "filesPerVu": 1,
+  "uploadConcurrency": 1,
+  "fileSizesBytes": [65536],
+  "thresholds": {
+    "httpP95Ms": 2000,
+    "uploadP95Ms": 10000,
+    "visibleP95Ms": 10000,
+    "errorRate": 0.01
+  }
+}

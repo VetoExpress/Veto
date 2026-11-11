@@ -1,0 +1,19 @@
+{
+  "profile": "load",
+  "scenario": "mixed",
+  "vus": 50,
+  "durationSeconds": 600,
+  "rampSeconds": 60,
+  "rampSteps": 5,
+  "startDelaySeconds": 90,
+  "actionIntervalSeconds": 10,
+  "filesPerVu": 2,
+  "uploadConcurrency": 1,
+  "fileSizesBytes": [65536, 1048576],
+  "thresholds": {
+    "httpP95Ms": 2000,
+    "uploadP95Ms": 10000,
+    "visibleP95Ms": 10000,
+    "errorRate": 0.01
+  }
+}

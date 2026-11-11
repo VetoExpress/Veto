@@ -1,0 +1,18 @@
+{
+  "profile": "spike",
+  "scenario": "mixed",
+  "vus": 150,
+  "durationSeconds": 180,
+  "rampSeconds": 0,
+  "startDelaySeconds": 10,
+  "actionIntervalSeconds": 2,
+  "filesPerVu": 2,
+  "uploadConcurrency": 2,
+  "fileSizesBytes": [65536, 1048576],
+  "thresholds": {
+    "httpP95Ms": 5000,
+    "uploadP95Ms": 20000,
+    "visibleP95Ms": 20000,
+    "errorRate": 0.05
+  }
+}

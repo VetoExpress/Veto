@@ -15,3 +15,9 @@ docs/*
 !docs/adr/
 !docs/adr/*.md
 scripts/api-proxy.mjs
+tests/load/.tools/
+tests/load/results/
+tests/load/local/.state/
+tests/load/local/.generated/
+tests/load/fixtures/*.seats.json
+tests/load/fixtures/*.local.json

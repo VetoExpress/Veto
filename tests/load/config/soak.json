@@ -1,0 +1,18 @@
+{
+  "profile": "soak",
+  "scenario": "mixed",
+  "vus": 30,
+  "durationSeconds": 7200,
+  "rampSeconds": 120,
+  "startDelaySeconds": 150,
+  "actionIntervalSeconds": 15,
+  "filesPerVu": 3,
+  "uploadConcurrency": 1,
+  "fileSizesBytes": [65536, 1048576],
+  "thresholds": {
+    "httpP95Ms": 2000,
+    "uploadP95Ms": 10000,
+    "visibleP95Ms": 10000,
+    "errorRate": 0.01
+  }
+}
