@@ -29,11 +29,22 @@
   )
 
   const conferenceName = $derived(
-    cloudProjection?.conference.name ?? conference?.name ?? t('procedure_current_conference')
+    cloudProjection?.conference.name ??
+      cloudResult?.conferenceName ??
+      conference?.name ??
+      t('procedure_current_conference')
   )
-  const committeeName = $derived(cloudProjection?.committee.name ?? committee?.name ?? t('procedure_current_committee'))
+  const committeeName = $derived(
+    cloudProjection?.committee.name ??
+      cloudResult?.committeeName ??
+      committee?.name ??
+      t('procedure_current_committee')
+  )
   const organizer = $derived(
-    cloudProjection?.conference.organizer ?? conference?.organizer ?? t('procedure_not_provided')
+    cloudProjection?.conference.organizer ??
+      cloudResult?.organizer ??
+      conference?.organizer ??
+      t('procedure_not_provided')
   )
   const seatName = $derived(cloudResult ? cloudResult.seatShortName || cloudResult.seatName : null)
   const participantCount = $derived(
@@ -50,7 +61,11 @@
         <PanelLeft class="size-5" />
       </Empty.Media>
       <Empty.Title>{t('procedure_start_your_conference_from_the_sidebar')}</Empty.Title>
-      <Empty.Description>{t('procedure_choose_an_available_feature_on_the_left_to_view_content_or_enter_the_chair_workspace')}</Empty.Description>
+      <Empty.Description>
+        {t(
+          'procedure_choose_an_available_feature_on_the_left_to_view_content_or_enter_the_chair_workspace'
+        )}
+      </Empty.Description>
     </Empty.Header>
 
     <Empty.Content class="max-w-xl">
@@ -75,7 +90,9 @@
             </dd>
           {:else}
             <dt class="text-xs text-muted-foreground">{t('procedure_participants')}</dt>
-            <dd class="mt-1 text-sm font-medium text-foreground">{t('procedure_participant_count', { value1: participantCount })}</dd>
+            <dd class="mt-1 text-sm font-medium text-foreground">
+              {t('procedure_participant_count', { value1: participantCount })}
+            </dd>
           {/if}
         </div>
       </dl>

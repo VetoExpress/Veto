@@ -5,7 +5,6 @@
     type ProcedureMessage
   } from '$lib/components/conference/common/message'
   import { t } from '$lib/i18n'
-  import { onMount } from 'svelte'
   import {
     Activity,
     ArrowLeft,
@@ -15,10 +14,9 @@
     Monitor,
     Newspaper,
     Plus,
-    Puzzle,
     RefreshCw,
     ScrollText,
-    Swords,
+    Settings,
     UserRoundCheck,
     Users
   } from '@lucide/svelte'
@@ -26,7 +24,6 @@
   import { resolve } from '$app/paths'
   import { page } from '$app/stores'
   import GlobalSidebar from '$lib/components/global-sidebar.svelte'
-  import BrandSwitcher from '$lib/components/app-sidebar/brand-switcher.svelte'
   import DisplayOnlyDialog from '$lib/components/conference/display-only-dialog.svelte'
   import DynamicIsland from '$lib/components/dynamic-island.svelte'
   import { Button } from '$lib/components/ui/button'
@@ -37,18 +34,15 @@
   import { fileNotifications } from '$lib/classes/stores/cloud/file-notification-store.svelte'
   import { getChairRosterEntries } from '$lib/classes/utils/committee/chair-presentation'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
-  import { createConferenceDialogOpen } from '$lib/classes/stores/app/global-ui-store'
-  import { isElectron } from '$lib/classes/utils/runtime'
+  import {
+    createConferenceDialogOpen,
+    settingsDialogOpen
+  } from '$lib/classes/stores/app/global-ui-store'
   import { getCloudTimeline, type CloudTimeline } from '$lib/classes/clients/cloud-situation-client'
   import StatusBar from '$lib/components/app-sidebar/status-bar.svelte'
 
   let { children } = $props()
   let displayOnlyDialogOpen = $state(false)
-  let electronEnvironment = $state(false)
-
-  onMount(() => {
-    electronEnvironment = isElectron()
-  })
 
   const recentConferences = $derived([...$conferences].reverse().slice(0, 5))
   const conferenceId = $derived($page.params.conference_id ?? '')
@@ -62,19 +56,16 @@
     activeConference?.committees.find((committee) => committee.id === committeeId) ?? null
   )
   const participantSeats = $derived(activeCommittee?.participantSeats ?? [])
-  const simpleMajority = $derived(activeCommittee?.getSimpleMajorityThreshold() ?? 0)
-  const twoThirds = $derived(activeCommittee?.getTwoThirdsThreshold() ?? 0)
   const committeeRoute = $derived(`/client/${conferenceId}/committee/${committeeId}`)
-  const cloudIdentity = $derived(
+  const cloudResult = $derived(
     cloudSession.session?.result.conferenceId === conferenceId &&
       cloudSession.session?.result.identity.committeeId === committeeId
-      ? cloudSession.session.result.identity
+      ? cloudSession.session.result
       : null
   )
+  const cloudIdentity = $derived(cloudResult?.identity ?? null)
+  const seatName = $derived(cloudResult?.seatShortName || cloudResult?.seatName)
   const isCloudSession = $derived(cloudIdentity !== null)
-  const canViewBattle = $derived(
-    isCloudSession && cloudSession.session?.result.committeeType === 'ipc'
-  )
   const canControlConference = $derived(
     !isCloudSession || cloudSession.hasCapability('control_conference')
   )
@@ -172,12 +163,12 @@
   )
   const displayConferenceName = $derived(
     cloudIdentity
-      ? (cloudProjection?.conference.name ?? activeConference?.name)
+      ? (cloudProjection?.conference.name ?? cloudResult?.conferenceName ?? activeConference?.name)
       : activeConference?.name
   )
   const displayCommitteeName = $derived(
     cloudIdentity
-      ? (cloudProjection?.committee.name ?? activeCommittee?.name)
+      ? (cloudProjection?.committee.name ?? cloudResult?.committeeName ?? activeCommittee?.name)
       : activeCommittee?.name
   )
 
@@ -191,24 +182,38 @@
   }
 </script>
 
-<GlobalSidebar>
-  {#snippet sidebar()}
-    <Sidebar.Header>
-      <BrandSwitcher conferenceName={displayConferenceName} committeeName={displayCommitteeName} />
-    </Sidebar.Header>
+<GlobalSidebar fullWidth collapsible="none">
+  {#snippet heading()}
+    <div class="flex min-w-0 flex-1 items-center gap-3">
+      <Button
+        variant="secondary"
+        size="icon"
+        class="no-drag shrink-0"
+        onclick={() => goto(resolve('/conference'))}
+        title={t('procedure_return_home')}
+        aria-label={t('procedure_return_home')}
+      >
+        <ArrowLeft />
+      </Button>
+      <div class="drag-region flex min-w-0 flex-1 flex-col gap-0.5 py-2">
+        <p class="flex min-w-0 items-center gap-1.5 text-[10px] text-muted-foreground">
+          <span class="shrink-0">Veto</span>
+          <span aria-hidden="true">/</span>
+          <span class="truncate" title={displayConferenceName}>
+            {displayConferenceName ?? t('procedure_current_conference')}
+          </span>
+        </p>
+        <p class="truncate text-sm font-medium" title={displayCommitteeName}>
+          {displayCommitteeName ?? t('procedure_current_committee')}
+        </p>
+      </div>
+    </div>
+  {/snippet}
 
+  {#snippet sidebar()}
     <Sidebar.Content>
       {#if inCommittee && (isCloudSession || (activeConference && activeCommittee))}
         <Sidebar.Menu class="p-3">
-          <Sidebar.MenuItem>
-            <Sidebar.MenuButton onclick={() => goto(resolve('/conference'))}>
-              <ArrowLeft />
-              <span>{t('procedure_return_home')}</span>
-            </Sidebar.MenuButton>
-          </Sidebar.MenuItem>
-
-          <Sidebar.Separator class="my-1" />
-
           {#if isChair}
             <Sidebar.MenuItem>
               <Sidebar.MenuButton
@@ -234,7 +239,7 @@
             </Sidebar.MenuItem>
           {/if}
 
-          {#if canViewDirectives || canViewFiles || canViewSituation || canViewNews || canViewBattle}
+          {#if canViewDirectives || canViewFiles || canViewSituation || canViewNews}
             <Sidebar.Separator class="my-1" />
             <Sidebar.MenuItem>
               {#if canViewDirectives}
@@ -280,14 +285,6 @@
                 </Sidebar.MenuButton>
               {/if}
             </Sidebar.MenuItem>
-            {#if canViewBattle}
-              <Sidebar.MenuItem>
-                <Sidebar.MenuButton onclick={() => goTo(`/client/${conferenceId}/battle`)}>
-                  <Swords />
-                  <span>{t('procedure_military_simulation_3')}</span>
-                </Sidebar.MenuButton>
-              </Sidebar.MenuItem>
-            {/if}
           {/if}
 
           {#if canControlConference}
@@ -369,63 +366,44 @@
   {/snippet}
 
   {#snippet toolbar()}
-    <Sidebar.Trigger class="-ms-1" />
-
-    <div class="flex min-w-0 flex-1 items-center gap-6">
-      {#if cloudIdentity}
-        <div class="flex min-w-0 flex-col leading-tight">
-          <span class="truncate text-xs font-medium">{cloudIdentity.displayName}</span>
-          <span class="truncate text-[10px] text-muted-foreground">
-            {cloudIdentity.roleName}
-          </span>
-        </div>
-      {/if}
-
-      {#if canControlConference}
-        <div class="hidden items-center gap-6 sm:flex">
-          <div class="flex flex-col leading-tight">
-            <span class="text-[10px] text-muted-foreground">{t('procedure_simple_majority')}</span>
-            <span class="text-xs font-semibold">{simpleMajority}</span>
-          </div>
-          <div class="flex flex-col leading-tight">
-            <span class="text-[10px] text-muted-foreground">
-              {t('procedure_two_thirds_majority')}
-            </span>
-            <span class="text-xs font-semibold">{twoThirds}</span>
-          </div>
-        </div>
-      {/if}
-    </div>
-
-    <div class="drag-region h-full flex-1"></div>
-
-    {#if !isCloudSession || canViewCloudTimeline}
-      <div
-        class="pointer-events-none absolute inset-x-0 z-10 flex h-full items-center justify-center gap-1.5"
-      >
-        <div class="no-drag pointer-events-auto min-w-0 max-w-[calc(100%_-_10rem)]">
+    <div class="drag-region flex h-full min-w-0 flex-1 items-center justify-center">
+      {#if !isCloudSession || canViewCloudTimeline}
+        <div class="client-timeline no-drag flex min-w-0 items-center gap-1">
           <DynamicIsland
             cloudMode={isCloudSession}
             {cloudTimeline}
             cloudTimezone={cloudTimelineTimezone}
             {cloudTimelineReceivedAt}
           />
+          {#if canViewCloudTimeline}
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              class={`no-drag pointer-events-auto text-muted-foreground hover:text-foreground ${cloudTimelineError ? 'text-destructive' : ''}`}
+              disabled={cloudTimelineLoading}
+              onclick={() => void refreshCloudTimeline(cloudSession.session?.result.token ?? '')}
+              title={cloudTimelineError
+                ? renderProcedureMessage(cloudTimelineError)
+                : t('procedure_refresh_timeline')}
+              aria-label={t('procedure_refresh_timeline')}
+            >
+              <RefreshCw class={cloudTimelineLoading ? 'animate-spin' : ''} />
+            </Button>
+          {/if}
         </div>
-        {#if canViewCloudTimeline}
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            class={`no-drag pointer-events-auto text-muted-foreground hover:text-foreground ${cloudTimelineError ? 'text-destructive' : ''}`}
-            disabled={cloudTimelineLoading}
-            onclick={() => void refreshCloudTimeline(cloudSession.session?.result.token ?? '')}
-            title={cloudTimelineError
-              ? renderProcedureMessage(cloudTimelineError)
-              : t('procedure_refresh_timeline')}
-            aria-label={t('procedure_refresh_timeline')}
-          >
-            <RefreshCw class={cloudTimelineLoading ? 'animate-spin' : ''} />
-          </Button>
-        {/if}
+      {/if}
+    </div>
+
+    {#if cloudIdentity}
+      <div
+        class="flex min-w-0 max-w-32 shrink-0 flex-col gap-0.5 text-right sm:max-w-44"
+        title={`${cloudIdentity.displayName} · ${seatName} · ${cloudIdentity.roleName}`}
+        aria-label={t('procedure_current_identity')}
+      >
+        <span class="truncate text-xs font-medium">{cloudIdentity.displayName}</span>
+        <span class="truncate text-[10px] text-muted-foreground">
+          {seatName} · {cloudIdentity.roleName}
+        </span>
       </div>
     {/if}
 
@@ -435,21 +413,23 @@
       class="no-drag px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
       onclick={() => (displayOnlyDialogOpen = true)}
       title={t('procedure_display_window')}
+      aria-label={t('procedure_display_window')}
     >
       <Monitor />
     </Button>
+    <Button
+      variant="ghost"
+      class="no-drag shrink-0 px-3"
+      onclick={() => settingsDialogOpen.set(true)}
+      title={t('settings_title')}
+      aria-label={t('settings_title')}
+    >
+      <Settings />
+    </Button>
+  {/snippet}
 
-    {#if electronEnvironment && (!isCloudSession || canControlConference)}
-      <Button
-        variant="ghost"
-        size="sm"
-        class="no-drag px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
-        onclick={() => goto(resolve('/conference/plugins'))}
-        title={t('procedure_plugins')}
-      >
-        <Puzzle />
-      </Button>
-    {/if}
+  {#snippet footer()}
+    <StatusBar />
   {/snippet}
 
   {#if isCloudSession && fileNotifications.latest}
@@ -476,7 +456,6 @@
     </div>
   {/if}
   {@render children()}
-  <StatusBar />
 </GlobalSidebar>
 
 <DisplayOnlyDialog bind:open={displayOnlyDialogOpen} />
@@ -487,5 +466,17 @@
   }
   .no-drag {
     -webkit-app-region: no-drag;
+  }
+
+  @media (max-width: 1023px) {
+    .client-timeline :global([data-slot='button']) {
+      display: none;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .client-timeline {
+      display: none;
+    }
   }
 </style>

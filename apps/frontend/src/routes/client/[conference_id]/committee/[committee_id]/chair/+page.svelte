@@ -17,7 +17,10 @@
   } from '$lib/classes/clients/conference-display-client'
 
   import { timerDialogOpen } from '$lib/classes/stores/conference/timer-store'
-  import { activeSettingsSection, settingsDialogOpen } from '$lib/classes/stores/app/global-ui-store'
+  import {
+    activeSettingsSection,
+    settingsDialogOpen
+  } from '$lib/classes/stores/app/global-ui-store'
 
   import ChairPhaseView from '$lib/components/conference/chair/chair-phase-view.svelte'
   import { getChairPresentation } from '$lib/classes/utils/committee/chair-presentation'
@@ -141,6 +144,17 @@
         {/if}
       {/snippet}
     </PageTopBar>
+
+    <dl class="flex shrink-0 flex-wrap items-center gap-6 border-b px-6 py-2 text-xs">
+      <div class="flex items-center gap-2">
+        <dt class="text-muted-foreground">{t('procedure_simple_majority')}</dt>
+        <dd class="font-semibold tabular-nums">{conf.getSimpleMajorityThreshold()}</dd>
+      </div>
+      <div class="flex items-center gap-2">
+        <dt class="text-muted-foreground">{t('procedure_two_thirds_majority')}</dt>
+        <dd class="font-semibold tabular-nums">{conf.getTwoThirdsThreshold()}</dd>
+      </div>
+    </dl>
 
     <ChairPhaseView screen={presentation.screen} onStartRollCall={startRollCall} />
 

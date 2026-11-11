@@ -11,7 +11,7 @@
 
   import { joinConferenceDialogOpen } from '$lib/classes/stores/app/global-ui-store'
   import { isElectron } from '$lib/classes/utils/runtime'
-  import WindowControls from '$lib/components/app-sidebar/window-controls.svelte'
+  import TitleBar from '$lib/components/app-sidebar/title-bar.svelte'
   import StatusBar from '$lib/components/app-sidebar/status-bar.svelte'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
 
@@ -43,11 +43,9 @@
 <JoinConferenceDialog bind:open={$joinConferenceDialogOpen} />
 
 <div class="flex h-svh flex-col overflow-hidden">
-  <header class="app-toolbar-header relative flex h-12 shrink-0 items-center gap-2">
+  <TitleBar class="app-toolbar-header">
     <AppToolbar onOpenDisplay={() => (displayOnlyDialogOpen = true)} />
-
-    <WindowControls />
-  </header>
+  </TitleBar>
 
   <main class="app-page-scroll flex min-h-0 flex-1 flex-col">
     <ScrollArea class="min-h-0 flex-1">
@@ -63,7 +61,7 @@
     margin: 0;
   }
 
-  .app-toolbar-header {
+  :global(.app-toolbar-header) {
     padding-inline-start: max(
       var(--app-page-padding),
       calc((100% - var(--app-page-max-width)) / 2 + var(--app-page-padding))
