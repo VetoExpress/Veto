@@ -1,7 +1,9 @@
 # 10000 席分大会诊断
 
 本入口用 Node.js、后端工作区已安装的 `undici` 和 `ws` 建立独立席位的真实 HTTP/WS 会话。
-原 k6 套件仍保留。该入口只允许 loopback 的本地 Worker，不能作为 Cloudflare 线上验收。
+原 k6 套件仍保留。默认使用 loopback 本地 Worker；实际云端运行必须显式指定
+`--environment cloudflare`、HTTPS `--target`、独立 `--credentials` 与已核验的 `--deployment`。
+云端准备、压测与清理见 [../cloud/README.md](../cloud/README.md)。
 
 ```powershell
 node tests/load/local/start.mjs --seats 10000 --conferences 10 --port 8797 --claim-concurrency 8

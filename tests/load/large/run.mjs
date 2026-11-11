@@ -18,6 +18,8 @@ const { values } = parseArgs({
     window: { type: 'string', default: '120' },
     concurrency: { type: 'string', default: '128' },
     label: { type: 'string', default: 'baseline' },
+    environment: { type: 'string', default: 'local' },
+    deployment: { type: 'string' },
     'api-dir': { type: 'string', default: path.resolve(directory, '../../../../veto-api') },
     target: { type: 'string', default: 'http://127.0.0.1:8797/v1' },
     credentials: {
@@ -36,12 +38,26 @@ const ramp = number('ramp', 0, 1800)
 const windowSeconds = number('window', 10, 1800)
 const concurrency = number('concurrency', 1, 512)
 const target = new URL(values.target)
+const cloud = values.environment === 'cloudflare'
 if (
-  target.protocol !== 'http:' ||
-  !['127.0.0.1', 'localhost'].includes(target.hostname) ||
-  target.pathname !== '/v1'
+  !['local', 'cloudflare'].includes(values.environment) ||
+  target.pathname !== '/v1' ||
+  target.username ||
+  target.password ||
+  target.search ||
+  target.hash
 )
-  throw new Error('This diagnostic harness accepts only an explicit local Worker /v1 target')
+  throw new Error('Invalid environment or /v1 target')
+if (cloud) {
+  if (
+    !process.argv.includes('--target') ||
+    !process.argv.includes('--credentials') ||
+    target.protocol !== 'https:' ||
+    !values.deployment
+  )
+    throw new Error('Cloud run needs explicit HTTPS target, credentials and verified deployment ID')
+} else if (target.protocol !== 'http:' || !['127.0.0.1', 'localhost'].includes(target.hostname))
+  throw new Error('Local target must be loopback HTTP')
 if (!/^[a-z0-9-]{1,40}$/.test(values.label)) throw new Error('Invalid --label')
 const require = createRequire(path.resolve(values['api-dir'], 'package.json'))
 const { Pool } = require('undici')
@@ -138,7 +154,8 @@ async function request(state, operation, route, options = {}) {
     bodyMs = performance.now() - dispatched - ttfbMs
     ok = status >= 200 && status < 300
     if (hash) {
-      if (hash.digest('hex') !== options.hash) {
+      if (!ok) code = `HTTP_${status}`
+      else if (hash.digest('hex') !== options.hash) {
         ok = false
         code = 'HASH_MISMATCH'
       }
@@ -227,7 +244,8 @@ async function connect(state) {
   state.auth = true
   state.token = auth.token
   const url = new URL(auth.wsUrl)
-  if (url.host !== target.host || url.protocol !== 'ws:') throw new Error('UNTRUSTED_WS_URL')
+  if (url.host !== target.host || url.protocol !== (cloud ? 'wss:' : 'ws:'))
+    throw new Error('UNTRUSTED_WS_URL')
   const started = performance.now()
   await new Promise((resolve) => {
     const socket = new WebSocket(url, ['veto', `token.${auth.token}`, 'live.v1'], {
@@ -444,8 +462,9 @@ try {
   const summary = {
     runId,
     label: values.label,
-    environment: 'local',
-    cloudflareVerified: false,
+    environment: values.environment,
+    cloudflareVerified: cloud,
+    deployment: values.deployment ?? null,
     target: target.href,
     requiredSeats: count,
     conferences: conferences.length,

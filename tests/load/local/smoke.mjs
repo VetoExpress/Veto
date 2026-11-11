@@ -40,7 +40,7 @@ export async function verifyLocalBusiness(api, baseUrl, sessions) {
   const wsUrl = new URL(mpc.wsUrl)
   const target = new URL(baseUrl)
   assert.equal(wsUrl.host, target.host, 'Backend wsUrl must preserve the target host and port')
-  assert.equal(wsUrl.protocol, 'ws:')
+  assert.equal(wsUrl.protocol, target.protocol === 'https:' ? 'wss:' : 'ws:')
   assert.equal(wsUrl.pathname, '/v1/veto/ws')
   const socket = new WebSocket(wsUrl, ['veto', `token.${mpc.token}`, 'live.v1'])
   try {

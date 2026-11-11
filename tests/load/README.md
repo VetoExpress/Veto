@@ -1,5 +1,7 @@
 # Veto 压力测试
 
+Cloudflare 2000 席实际结果见 [CLOUDFLARE-2000.md](CLOUDFLARE-2000.md)：2000 席完成五分钟共同在线，业务请求成功率 88.11%，整体未通过。
+
 10000 席分大会短时容量诊断入口见 [large/README.md](large/README.md)，使用 Node.js 共享 HTTP 连接池与独立 WS，单独记录客户端排队与服务端阶段耗时。
 
 本套件使用 **k6 v2.3.0 + TypeScript**，对现有 HTTP API、原生 WebSocket 通知和真实文件字节发压。
