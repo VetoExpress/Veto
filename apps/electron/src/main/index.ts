@@ -23,6 +23,7 @@ import { loadPluginConfig } from './plugin-store'
 import { stopDisplayWs as stopDisplayDataWs } from './display-ws'
 import { loadPlugin, unloadAll } from './plugin-host/extension-host/index'
 import { registerAllIpcHandlers, type IpcDependencies } from './ipc'
+import { getAppUrl } from './dev-server'
 import { scheduleLaunchTelemetry } from './telemetry'
 import type { PluginInstance } from './plugin-discovery'
 import type { DisplayWindowRef } from './ipc/conference'
@@ -97,7 +98,7 @@ function createWindow(): void {
   })
 
   if (is.dev) {
-    mainWindow.loadURL('http://localhost:5173')
+    mainWindow.loadURL(getAppUrl(true))
   } else {
     // The static SvelteKit build uses root-relative asset URLs (/_app/...).
     // Load it through the registered protocol so those URLs resolve inside
@@ -106,7 +107,6 @@ function createWindow(): void {
     // The protocol handler serves index.html for the root request.
     mainWindow.loadURL('veto://app/')
   }
-
 }
 
 // ═══════════════════════════════════════════════════════════════════

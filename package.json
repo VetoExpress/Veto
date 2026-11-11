@@ -6,7 +6,7 @@
   "homepage": "https://veto.miaoyww.top",
   "repository": "https://github.com/Miaoyww/Veto",
   "scripts": {
-    "dev": "pnpm --parallel --filter \"@vetoexpress/electron\" --filter \"@vetoexpress/frontend\" dev",
+    "dev": "node scripts/dev.mjs",
     "dev:electron": "pnpm --filter \"@vetoexpress/electron\" dev",
     "dev:frontend": "pnpm --filter \"@vetoexpress/frontend\" dev",
     "proxy": "node scripts/api-proxy.mjs",

@@ -4,13 +4,20 @@ import { AuthError, createAuthClient, type AccountUpdate } from '@vetoexpress/au
 import type { AccountResult, AccountSnapshot, AccountTokenResult } from '@vetoexpress/auth/desktop'
 import { createAccountSession, type AccountSession } from '../account-session'
 import { createAccountStorage } from '../account-storage'
+import { getDevServerOrigin } from '../dev-server'
 
 export function isAccountOrigin(origin: string, development: boolean): boolean {
   return (
     origin === 'veto://app' ||
     origin === 'https://platform.miaoyww.top' ||
     (development &&
-      ['http://localhost:5173', 'http://localhost:4174', 'http://localhost:3000'].includes(origin))
+      [
+        'http://localhost:5173',
+        'http://127.0.0.1:5173',
+        'http://localhost:4174',
+        'http://localhost:3000',
+        getDevServerOrigin()
+      ].includes(origin))
   )
 }
 

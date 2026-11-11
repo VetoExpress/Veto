@@ -9,6 +9,7 @@
 
 import { ipcMain, BrowserWindow } from 'electron'
 import { join } from 'path'
+import { getAppUrl } from '../dev-server'
 
 /** Display 窗口的可变引用 */
 export interface DisplayWindowRef {
@@ -29,7 +30,9 @@ export function registerConferenceIpc(displayWindow: DisplayWindowRef): void {
     'veto:conference:open-display',
     async (_event, conferenceIdOrParams: string | { conferenceId?: string; label?: string }) => {
       const isParams = typeof conferenceIdOrParams === 'object'
-      const conferenceId = isParams ? (conferenceIdOrParams.conferenceId || 'standalone') : conferenceIdOrParams
+      const conferenceId = isParams
+        ? conferenceIdOrParams.conferenceId || 'standalone'
+        : conferenceIdOrParams
       const label = isParams ? conferenceIdOrParams.label : undefined
 
       if (displayWindow.current && !displayWindow.current.isDestroyed()) {
@@ -52,8 +55,8 @@ export function registerConferenceIpc(displayWindow: DisplayWindowRef): void {
           sandbox: false,
           webSecurity: false,
           allowRunningInsecureContent: true,
-          spellcheck: false,
-        },
+          spellcheck: false
+        }
       })
 
       win.on('ready-to-show', () => {
@@ -63,13 +66,13 @@ export function registerConferenceIpc(displayWindow: DisplayWindowRef): void {
       win.on('enter-full-screen', () => {
         win.webContents.send('veto:conference:display-update', {
           type: 'fullscreen-change',
-          isFullScreen: true,
+          isFullScreen: true
         })
       })
       win.on('leave-full-screen', () => {
         win.webContents.send('veto:conference:display-update', {
           type: 'fullscreen-change',
-          isFullScreen: false,
+          isFullScreen: false
         })
       })
 
@@ -82,7 +85,7 @@ export function registerConferenceIpc(displayWindow: DisplayWindowRef): void {
       const devUrl = process.env['ELECTRON_RENDERER_URL']
       const displayPath = `/display/${encodeURIComponent(conferenceId)}`
       if (isDev() && devUrl) {
-        win.loadURL(`${devUrl}${displayPath}`)
+        win.loadURL(getAppUrl(true, displayPath))
       } else {
         // Use a real pathname so SvelteKit resolves the display route.
         // The protocol handler falls back to index.html for this SPA route.
@@ -95,7 +98,7 @@ export function registerConferenceIpc(displayWindow: DisplayWindowRef): void {
       })
 
       return { success: true }
-    },
+    }
   )
 
   ipcMain.handle('veto:conference:close-display', () => {

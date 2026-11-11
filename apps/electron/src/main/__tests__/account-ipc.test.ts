@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { IpcMainInvokeEvent } from 'electron'
 import { AuthError } from '@vetoexpress/auth'
 
@@ -40,6 +40,7 @@ describe('account IPC', () => {
     for (const method of Object.values(account)) method.mockResolvedValue(snapshot)
     registerAccountIpc(account)
   })
+  afterEach(() => vi.unstubAllEnvs())
   it('accepts the local app and official platform, rejects unrelated pages and subframes', async () => {
     const get = handlers.get('veto:account:get-session')!
     expect(await get(event('veto://app'))).toEqual({ ok: true, session: snapshot })
@@ -52,6 +53,11 @@ describe('account IPC', () => {
     expect(account.getSession).toHaveBeenCalledTimes(2)
     expect(isAccountOrigin('http://localhost:5173', false)).toBe(false)
     expect(isAccountOrigin('https://evil.test', true)).toBe(false)
+  })
+  it('accepts the configured development server origin only in development', () => {
+    vi.stubEnv('ELECTRON_RENDERER_URL', 'http://127.0.0.1:5174')
+    expect(isAccountOrigin('http://127.0.0.1:5174', true)).toBe(true)
+    expect(isAccountOrigin('http://127.0.0.1:5174', false)).toBe(false)
   })
   it('only returns credentials to trusted top-level frames and validates adopted tokens', async () => {
     const get = handlers.get('veto:account:get-access-token')!
