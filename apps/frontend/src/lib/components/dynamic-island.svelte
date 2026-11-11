@@ -9,19 +9,24 @@
   import { standaloneTimer, timerDialogOpen } from '$lib/classes/stores/conference/timer-store'
   import { formatTime } from '$lib/classes/formatters/time-formater'
   import { timelines } from '$lib/classes/stores/timeline-store'
-  import { currentConferenceRecord, bindTimeline } from '$lib/classes/stores/conference/conference-store'
+  import {
+    currentConferenceRecord,
+    bindTimeline
+  } from '$lib/classes/stores/conference/conference-store'
   import type { CloudTimeline } from '$lib/classes/clients/cloud-situation-client'
 
   let {
     cloudMode = false,
     cloudTimeline = null,
     cloudTimezone = 'Asia/Shanghai',
-    cloudTimelineReceivedAt = 0
+    cloudTimelineReceivedAt = 0,
+    expanded = false
   }: {
     cloudMode?: boolean
     cloudTimeline?: CloudTimeline | null
     cloudTimezone?: string
     cloudTimelineReceivedAt?: number
+    expanded?: boolean
   } = $props()
 
   let clockNow = $state(Date.now())
@@ -81,7 +86,13 @@
   })
 
   function formatSimTime(ts: number): string {
-    return new Intl.DateTimeFormat(getLocale(), { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).format(ts)
+    return new Intl.DateTimeFormat(getLocale(), {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(ts)
   }
 
   let copied = $state(false)
@@ -119,17 +130,37 @@
 {#if visible}
   <div class="flex min-w-0 justify-center">
     <div
-      class="flex h-7 min-w-0 items-center gap-2 px-1 text-xs text-foreground"
+      class={expanded
+        ? 'flex min-w-0 flex-wrap items-center gap-3 text-sm text-foreground'
+        : 'flex h-7 min-w-0 items-center gap-2 px-1 text-xs text-foreground'}
     >
       {#if cloudMode}
         {#if cloudTimeline && cloudTime !== null}
           <Clock3 class="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-          <span class="hidden max-w-24 truncate text-muted-foreground lg:inline" title={cloudTimeline.name}>{cloudTimeline.name}</span>
-          <span class="whitespace-nowrap font-mono font-medium tabular-nums" title={`${cloudTimeline.name} · ${cloudTimeline.paused ? t('components_paused') : t('components_ratio_running', { ratio: cloudTimeline.ratio })}`}>
-            <span class="sm:hidden">{formatCloudTime(cloudTime, true)}</span>
-            <span class="hidden sm:inline">{formatCloudTime(cloudTime)}</span>
+          <span
+            class={expanded
+              ? 'text-muted-foreground'
+              : 'hidden max-w-24 truncate text-muted-foreground lg:inline'}
+            title={cloudTimeline.name}
+          >
+            {cloudTimeline.name}
           </span>
-          <span class="hidden whitespace-nowrap text-muted-foreground lg:inline">
+          <span
+            class={`whitespace-nowrap font-mono font-medium tabular-nums ${expanded ? 'text-lg' : ''}`}
+            title={`${cloudTimeline.name} · ${cloudTimeline.paused ? t('components_paused') : t('components_ratio_running', { ratio: cloudTimeline.ratio })}`}
+          >
+            {#if expanded}
+              {formatCloudTime(cloudTime)}
+            {:else}
+              <span class="sm:hidden">{formatCloudTime(cloudTime, true)}</span>
+              <span class="hidden sm:inline">{formatCloudTime(cloudTime)}</span>
+            {/if}
+          </span>
+          <span
+            class={expanded
+              ? 'whitespace-nowrap text-muted-foreground'
+              : 'hidden whitespace-nowrap text-muted-foreground lg:inline'}
+          >
             {cloudTimeline.paused ? t('components_pause') : `${cloudTimeline.ratio}x`}
           </span>
           <Button
@@ -147,90 +178,90 @@
           <span class="whitespace-nowrap text-muted-foreground">{t('components_no_timeline')}</span>
         {/if}
       {:else}
-      {#if $standaloneTimer}
-        {@const st = $standaloneTimer}
-        {@const expired = !st.isRunning && st.remainingSec <= 0}
-        <Button
-          variant="ghost"
-          size="xs"
-          class="h-auto gap-1 px-1.5 py-0 font-mono tabular-nums hover:bg-accent {expired
-            ? 'text-destructive'
-            : st.isRunning
-              ? 'text-foreground'
-              : 'text-muted-foreground'}"
-          onclick={() => timerDialogOpen.set(true)}
-          title={expired
-            ? t('components_timer_expired_open')
-            : st.isRunning
-              ? t('components_timer_running_open')
-              : t('components_timer_paused_open')}
-        >
-          <Timer size={12} class={expired ? 'animate-pulse' : ''} />
-          <span>{formatTime(st.remainingSec)}</span>
-        </Button>
-        {#if timeline || timelineItems.length > 0}
-          <span class="h-4 w-px bg-border"></span>
+        {#if $standaloneTimer}
+          {@const st = $standaloneTimer}
+          {@const expired = !st.isRunning && st.remainingSec <= 0}
+          <Button
+            variant="ghost"
+            size="xs"
+            class="h-auto gap-1 px-1.5 py-0 font-mono tabular-nums hover:bg-accent {expired
+              ? 'text-destructive'
+              : st.isRunning
+                ? 'text-foreground'
+                : 'text-muted-foreground'}"
+            onclick={() => timerDialogOpen.set(true)}
+            title={expired
+              ? t('components_timer_expired_open')
+              : st.isRunning
+                ? t('components_timer_running_open')
+                : t('components_timer_paused_open')}
+          >
+            <Timer size={12} class={expired ? 'animate-pulse' : ''} />
+            <span>{formatTime(st.remainingSec)}</span>
+          </Button>
+          {#if timeline || timelineItems.length > 0}
+            <span class="h-4 w-px bg-border"></span>
+          {/if}
         {/if}
-      {/if}
 
-      {#if timeline}
-        <div class="flex items-center gap-1.5">
-          <span class="font-mono tabular-nums">{formatSimTime(liveSimTime)}</span>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            class="size-5 text-muted-foreground hover:bg-accent hover:text-foreground"
-            title={t('components_copy_sim_time')}
-            onclick={copySimTime}
-          >
-            {#if copied}
-              <Check size={11} />
-            {:else}
-              <Copy size={11} />
-            {/if}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            class="size-5 text-muted-foreground hover:bg-accent hover:text-destructive"
-            title={t('components_unbind')}
-            onclick={handleUnbind}
-          >
-            <X size={11} />
-          </Button>
-        </div>
-      {:else if timelineItems.length > 0}
-        <Popover.Root bind:open={timelinePopoverOpen}>
-          <Popover.Trigger>
-            {#snippet child({ props })}
-              <Button
-                variant="ghost"
-                size="xs"
-                class="h-auto gap-1 px-1.5 py-0 text-muted-foreground hover:bg-accent hover:text-foreground"
-                {...props}
-              >
-                <Plus size={11} />
-                <span>{t('components_bind_timeline')}</span>
-              </Button>
-            {/snippet}
-          </Popover.Trigger>
-          <Popover.Content class="w-[200px] p-0">
-            <Command.Root>
-              <Command.Input placeholder={t('components_search')} />
-              <Command.List>
-                <Command.Empty>{t('components_no_matches')}</Command.Empty>
-                <Command.Group>
-                  {#each timelineItems as item (item.value)}
-                    <Command.Item value={item.value} onSelect={() => handleBind(item.value)}>
-                      {item.label}
-                    </Command.Item>
-                  {/each}
-                </Command.Group>
-              </Command.List>
-            </Command.Root>
-          </Popover.Content>
-        </Popover.Root>
-      {/if}
+        {#if timeline}
+          <div class="flex items-center gap-1.5">
+            <span class="font-mono tabular-nums">{formatSimTime(liveSimTime)}</span>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              class="size-5 text-muted-foreground hover:bg-accent hover:text-foreground"
+              title={t('components_copy_sim_time')}
+              onclick={copySimTime}
+            >
+              {#if copied}
+                <Check size={11} />
+              {:else}
+                <Copy size={11} />
+              {/if}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              class="size-5 text-muted-foreground hover:bg-accent hover:text-destructive"
+              title={t('components_unbind')}
+              onclick={handleUnbind}
+            >
+              <X size={11} />
+            </Button>
+          </div>
+        {:else if timelineItems.length > 0}
+          <Popover.Root bind:open={timelinePopoverOpen}>
+            <Popover.Trigger>
+              {#snippet child({ props })}
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  class="h-auto gap-1 px-1.5 py-0 text-muted-foreground hover:bg-accent hover:text-foreground"
+                  {...props}
+                >
+                  <Plus size={11} />
+                  <span>{t('components_bind_timeline')}</span>
+                </Button>
+              {/snippet}
+            </Popover.Trigger>
+            <Popover.Content class="w-[200px] p-0">
+              <Command.Root>
+                <Command.Input placeholder={t('components_search')} />
+                <Command.List>
+                  <Command.Empty>{t('components_no_matches')}</Command.Empty>
+                  <Command.Group>
+                    {#each timelineItems as item (item.value)}
+                      <Command.Item value={item.value} onSelect={() => handleBind(item.value)}>
+                        {item.label}
+                      </Command.Item>
+                    {/each}
+                  </Command.Group>
+                </Command.List>
+              </Command.Root>
+            </Popover.Content>
+          </Popover.Root>
+        {/if}
       {/if}
     </div>
   </div>

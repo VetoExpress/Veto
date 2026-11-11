@@ -1,9 +1,4 @@
 <script lang="ts">
-  import {
-    procedureMessage,
-    renderProcedureMessage,
-    type ProcedureMessage
-  } from '$lib/components/conference/common/message'
   import { t } from '$lib/i18n'
   import {
     Activity,
@@ -11,10 +6,10 @@
     FolderOpen,
     Globe,
     House,
+    LayoutDashboard,
     Monitor,
     Newspaper,
     Plus,
-    RefreshCw,
     ScrollText,
     Settings,
     UserRoundCheck,
@@ -25,7 +20,6 @@
   import { page } from '$app/stores'
   import GlobalSidebar from '$lib/components/global-sidebar.svelte'
   import DisplayOnlyDialog from '$lib/components/conference/display-only-dialog.svelte'
-  import DynamicIsland from '$lib/components/dynamic-island.svelte'
   import { Button } from '$lib/components/ui/button'
   import * as Sidebar from '$lib/components/ui/sidebar'
   import { conferences } from '$lib/classes/stores/conference/conference-store'
@@ -38,7 +32,6 @@
     createConferenceDialogOpen,
     settingsDialogOpen
   } from '$lib/classes/stores/app/global-ui-store'
-  import { getCloudTimeline, type CloudTimeline } from '$lib/classes/clients/cloud-situation-client'
   import StatusBar from '$lib/components/app-sidebar/status-bar.svelte'
 
   let { children } = $props()
@@ -96,57 +89,6 @@
         'control_timeline'
       )
   )
-  const canViewCloudTimeline = $derived(
-    isCloudSession &&
-      cloudSession.hasCapability('view_situation', 'publish_situation', 'control_timeline')
-  )
-  let cloudTimeline = $state<CloudTimeline | null>(null)
-  let cloudTimelineTimezone = $state('Asia/Shanghai')
-  let cloudTimelineReceivedAt = $state(0)
-  let cloudTimelineLoading = $state(false)
-  let cloudTimelineError = $state<ProcedureMessage>('')
-  let cloudTimelineRequest = 0
-
-  async function refreshCloudTimeline(token: string): Promise<void> {
-    const request = ++cloudTimelineRequest
-    cloudTimelineLoading = true
-    try {
-      const result = await getCloudTimeline(token)
-      if (request !== cloudTimelineRequest) return
-      cloudTimeline = result.timeline
-      cloudTimelineTimezone = result.timezone
-      cloudTimelineReceivedAt = Date.now()
-      cloudTimelineError = ''
-    } catch (error) {
-      if (request !== cloudTimelineRequest) return
-      cloudTimelineError =
-        error instanceof Error
-          ? error.message
-          : procedureMessage('procedure_failed_to_refresh_timeline')
-    } finally {
-      if (request === cloudTimelineRequest) cloudTimelineLoading = false
-    }
-  }
-
-  $effect(() => {
-    const token = canViewCloudTimeline ? cloudSession.session?.result.token : undefined
-    if (!token) {
-      cloudTimelineRequest += 1
-      cloudTimeline = null
-      cloudTimelineError = ''
-      cloudTimelineLoading = false
-      return
-    }
-    cloudTimeline = null
-    cloudTimelineReceivedAt = 0
-    cloudTimelineError = ''
-    void refreshCloudTimeline(token)
-    const unsubscribe = fileNotifications.subscribe(['timeline'], () => refreshCloudTimeline(token))
-    return () => {
-      unsubscribe()
-      cloudTimelineRequest += 1
-    }
-  })
   const canViewNews = $derived(
     isCloudSession &&
       cloudSession.hasCapability('view_news', 'draft_news', 'review_news', 'withdraw_news')
@@ -171,6 +113,59 @@
       ? (cloudProjection?.committee.name ?? cloudResult?.committeeName ?? activeCommittee?.name)
       : activeCommittee?.name
   )
+  const navigation = $derived(
+    [
+      {
+        path: committeeRoute,
+        label: t('procedure_overview'),
+        icon: LayoutDashboard,
+        visible: true
+      },
+      {
+        path: `${committeeRoute}/chair`,
+        label: t('procedure_chair'),
+        icon: Users,
+        visible: isChair
+      },
+      {
+        path: `${committeeRoute}/chair/participants`,
+        label: t('procedure_seat_management'),
+        icon: UserRoundCheck,
+        visible: canControlConference && !isCloudSession
+      },
+      {
+        path: `${committeeRoute}/directives`,
+        label: t('procedure_directives'),
+        icon: ScrollText,
+        visible: canViewDirectives
+      },
+      {
+        path: `${committeeRoute}/situation`,
+        label: t('procedure_situation_updates'),
+        icon: Activity,
+        visible: canViewSituation
+      },
+      {
+        path: `${committeeRoute}/news`,
+        label: t('procedure_news'),
+        icon: Newspaper,
+        visible: canViewNews
+      },
+      {
+        path: `${committeeRoute}/files`,
+        label: t('procedure_files'),
+        icon: FolderOpen,
+        visible: canViewFiles
+      }
+    ].filter((item) => item.visible)
+  )
+
+  function isNavigationActive(path: string): boolean {
+    if (path === committeeRoute) return $page.url.pathname === path
+    if (path === `${committeeRoute}/chair` && $page.url.pathname.startsWith(`${path}/participants`))
+      return false
+    return $page.url.pathname === path || $page.url.pathname.startsWith(`${path}/`)
+  }
 
   $effect(() => {
     void cloudSession.ensureChairProjection(conferenceId, committeeId)
@@ -213,80 +208,25 @@
   {#snippet sidebar()}
     <Sidebar.Content>
       {#if inCommittee && (isCloudSession || (activeConference && activeCommittee))}
-        <Sidebar.Menu class="p-3">
-          {#if isChair}
-            <Sidebar.MenuItem>
-              <Sidebar.MenuButton
-                isActive={$page.url.pathname.startsWith(`${committeeRoute}/chair`) &&
-                  !$page.url.pathname.startsWith(`${committeeRoute}/chair/participants`)}
-                onclick={() => goTo(`${committeeRoute}/chair`)}
-              >
-                <Users />
-                <span>{t('procedure_chair')}</span>
-              </Sidebar.MenuButton>
-            </Sidebar.MenuItem>
-          {/if}
-
-          {#if canControlConference && !isCloudSession}
-            <Sidebar.MenuItem>
-              <Sidebar.MenuButton
-                isActive={$page.url.pathname.startsWith(`${committeeRoute}/chair/participants`)}
-                onclick={() => goTo(`${committeeRoute}/chair/participants`)}
-              >
-                <UserRoundCheck />
-                <span>{t('procedure_seat_management')}</span>
-              </Sidebar.MenuButton>
-            </Sidebar.MenuItem>
-          {/if}
-
-          {#if canViewDirectives || canViewFiles || canViewSituation || canViewNews}
-            <Sidebar.Separator class="my-1" />
-            <Sidebar.MenuItem>
-              {#if canViewDirectives}
+        <Sidebar.Group class="px-4 py-3">
+          <Sidebar.GroupLabel class="h-auto px-3 pb-2 text-[11px] font-normal">
+            {t('procedure_committee_workspace')}
+          </Sidebar.GroupLabel>
+          <Sidebar.Menu class="client-navigation gap-2">
+            {#each navigation as item (item.path)}
+              <Sidebar.MenuItem>
                 <Sidebar.MenuButton
-                  isActive={$page.url.pathname === `${committeeRoute}/directives`}
-                  onclick={() => goTo(`${committeeRoute}/directives`)}
+                  class="cursor-pointer"
+                  isActive={isNavigationActive(item.path)}
+                  aria-current={isNavigationActive(item.path) ? 'page' : undefined}
+                  onclick={() => goTo(item.path)}
                 >
-                  <ScrollText />
-                  <span>{t('procedure_directives')}</span>
+                  <item.icon />
+                  <span>{item.label}</span>
                 </Sidebar.MenuButton>
-              {/if}
-            </Sidebar.MenuItem>
-            <Sidebar.MenuItem>
-              {#if canViewFiles}
-                <Sidebar.MenuButton
-                  isActive={$page.url.pathname === `${committeeRoute}/files`}
-                  onclick={() => goTo(`${committeeRoute}/files`)}
-                >
-                  <FolderOpen />
-                  <span>{t('procedure_files')}</span>
-                </Sidebar.MenuButton>
-              {/if}
-            </Sidebar.MenuItem>
-            <Sidebar.MenuItem>
-              {#if canViewSituation}
-                <Sidebar.MenuButton
-                  isActive={$page.url.pathname === `${committeeRoute}/situation`}
-                  onclick={() => goTo(`${committeeRoute}/situation`)}
-                >
-                  <Activity />
-                  <span>{t('procedure_situation_updates')}</span>
-                </Sidebar.MenuButton>
-              {/if}
-            </Sidebar.MenuItem>
-            <Sidebar.MenuItem>
-              {#if canViewNews}
-                <Sidebar.MenuButton
-                  isActive={$page.url.pathname === `${committeeRoute}/news`}
-                  onclick={() => goTo(`${committeeRoute}/news`)}
-                >
-                  <Newspaper />
-                  <span>{t('procedure_news')}</span>
-                </Sidebar.MenuButton>
-              {/if}
-            </Sidebar.MenuItem>
-          {/if}
-
+              </Sidebar.MenuItem>
+            {/each}
+          </Sidebar.Menu>
           {#if canControlConference}
             <!-- 代表团列表 -->
             <div class="flex flex-1 flex-col">
@@ -325,7 +265,7 @@
               {/if}
             </div>
           {/if}
-        </Sidebar.Menu>
+        </Sidebar.Group>
       {:else}
         <Sidebar.Menu class="p-3">
           <Sidebar.MenuItem>
@@ -366,33 +306,7 @@
   {/snippet}
 
   {#snippet toolbar()}
-    <div class="drag-region flex h-full min-w-0 flex-1 items-center justify-center">
-      {#if !isCloudSession || canViewCloudTimeline}
-        <div class="client-timeline no-drag flex min-w-0 items-center gap-1">
-          <DynamicIsland
-            cloudMode={isCloudSession}
-            {cloudTimeline}
-            cloudTimezone={cloudTimelineTimezone}
-            {cloudTimelineReceivedAt}
-          />
-          {#if canViewCloudTimeline}
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              class={`no-drag pointer-events-auto text-muted-foreground hover:text-foreground ${cloudTimelineError ? 'text-destructive' : ''}`}
-              disabled={cloudTimelineLoading}
-              onclick={() => void refreshCloudTimeline(cloudSession.session?.result.token ?? '')}
-              title={cloudTimelineError
-                ? renderProcedureMessage(cloudTimelineError)
-                : t('procedure_refresh_timeline')}
-              aria-label={t('procedure_refresh_timeline')}
-            >
-              <RefreshCw class={cloudTimelineLoading ? 'animate-spin' : ''} />
-            </Button>
-          {/if}
-        </div>
-      {/if}
-    </div>
+    <div class="drag-region h-full min-w-0 flex-1"></div>
 
     {#if cloudIdentity}
       <div
@@ -468,15 +382,16 @@
     -webkit-app-region: no-drag;
   }
 
-  @media (max-width: 1023px) {
-    .client-timeline :global([data-slot='button']) {
-      display: none;
-    }
+  :global(.client-navigation [data-slot='sidebar-menu-button']) {
+    height: 38px;
+    gap: 12px;
+    padding-inline: 12px;
+    background: transparent;
+    color: inherit;
+    font-weight: 400;
+    transition: box-shadow 150ms;
   }
-
-  @media (max-width: 767px) {
-    .client-timeline {
-      display: none;
-    }
+  :global(.client-navigation [data-slot='sidebar-menu-button'][data-active='true']) {
+    box-shadow: 0 2px 6px color-mix(in srgb, var(--foreground) 12%, transparent);
   }
 </style>
