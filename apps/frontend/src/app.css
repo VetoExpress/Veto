@@ -14,7 +14,6 @@ body {
   overscroll-behavior: none;
   overflow-x: hidden;
   scrollbar-width: none;
-  font-family: 'HarmonyOS SansSC', 'Microsoft YaHei UI', 'PingFang SC', 'Noto Sans SC', sans-serif;
 }
 
 html::-webkit-scrollbar,
@@ -122,7 +121,6 @@ body::-webkit-scrollbar {
 }
 
 @theme inline {
-  --font-sans: 'HarmonyOS SansSC', 'Microsoft YaHei UI', 'PingFang SC', 'Noto Sans SC', sans-serif;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);

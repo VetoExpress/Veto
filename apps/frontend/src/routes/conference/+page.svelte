@@ -206,7 +206,7 @@
   <div class="workspace-overview">
     {#if lastOpened || lastOpenedPlatform}
       <button
-        class="resume-card flex min-w-0 flex-col justify-between gap-6 rounded-2xl p-6 text-left"
+        class="resume-card flex min-w-0 flex-col justify-between gap-4 rounded-2xl p-5 text-left"
         onclick={resumeConference}
       >
         <div class="flex items-center justify-between">
@@ -242,7 +242,7 @@
         </div>
       </button>
     {:else}
-      <div class="empty-resume-card flex min-w-0 flex-col justify-between gap-6 rounded-2xl p-6">
+      <div class="empty-resume-card flex min-w-0 flex-col justify-between gap-4 rounded-2xl p-5">
         <div
           class="flex size-10 items-center justify-center rounded-xl bg-muted text-muted-foreground"
         >
@@ -263,16 +263,15 @@
         </span>
       </div>
     {/if}
-    <div class="flex min-w-0 flex-col gap-4">
-      <section class="surface-card rounded-2xl p-5" aria-labelledby="quick-actions-heading">
-        <div class="mb-4 flex items-center justify-between">
+    <div class="flex min-w-0 flex-col gap-3">
+      <section class="surface-card rounded-2xl p-4" aria-labelledby="quick-actions-heading">
+        <div class="mb-2 flex items-center justify-between">
           <div>
             <p class="eyebrow">{t('procedure_get_moving')}</p>
             <h2 id="quick-actions-heading" class="mt-1 text-[15px] font-bold">
               {t('procedure_quick_actions')}
             </h2>
           </div>
-          <Workflow class="size-4 text-muted-foreground" />
         </div>
         <div class="grid grid-cols-2 gap-2">
           <button class="quick-action quick-action-primary" onclick={openCreatePage}>
@@ -292,11 +291,10 @@
         </div>
       </section>
       <section
-        class="tip-card flex flex-1 flex-col justify-between gap-4 rounded-2xl p-5"
+        class="tip-card flex flex-1 flex-col justify-between gap-2 rounded-2xl p-4"
         aria-labelledby="workflow-tip-heading"
       >
         <div class="flex items-center justify-between">
-          <span class="tip-icon"><Workflow class="size-4" /></span>
           <span class="eyebrow">
             {t('procedure_workflow_tip')}
           </span>
@@ -305,7 +303,7 @@
           <h2 id="workflow-tip-heading" class="text-[15px] font-semibold text-foreground">
             {t('procedure_keep_every_room_in_sync')}
           </h2>
-          <p class="mt-2 text-xs leading-relaxed text-muted-foreground">
+          <p class="mt-1 text-xs leading-relaxed text-muted-foreground">
             {t('procedure_display_window_tip')}
           </p>
         </div>
@@ -424,7 +422,7 @@
     }
   }
   .resume-card {
-    min-height: 20rem;
+    min-height: 16rem;
     background: var(--primary);
     color: var(--primary-foreground);
     transition: opacity 150ms ease;
@@ -451,7 +449,7 @@
     background: var(--card);
   }
   .empty-resume-card {
-    min-height: 20rem;
+    min-height: 16rem;
   }
   .resume-badge {
     display: inline-flex;
@@ -492,7 +490,7 @@
   }
   .quick-action {
     display: flex;
-    min-height: 62px;
+    min-height: 50px;
     align-items: center;
     gap: 0.6rem;
     border-radius: 0.65rem;
@@ -553,8 +551,8 @@
   }
   .tip-icon {
     display: flex;
-    height: 30px;
-    width: 30px;
+    height: 24px;
+    width: 24px;
     align-items: center;
     justify-content: center;
     border-radius: 0.55rem;
