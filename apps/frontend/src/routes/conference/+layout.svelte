@@ -49,7 +49,7 @@
 
   <main class="app-page-scroll flex min-h-0 flex-1 flex-col">
     <ScrollArea class="min-h-0 flex-1">
-      {@render children()}
+      {@render children()} 
     </ScrollArea>
   </main>
   <StatusBar />
