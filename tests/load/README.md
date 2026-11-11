@@ -1,5 +1,7 @@
 # Veto 压力测试
 
+10000 席分大会短时容量诊断入口见 [large/README.md](large/README.md)，使用 Node.js 共享 HTTP 连接池与独立 WS，单独记录客户端排队与服务端阶段耗时。
+
 本套件使用 **k6 v2.3.0 + TypeScript**，对现有 HTTP API、原生 WebSocket 通知和真实文件字节发压。
 本地联调使用同级 `veto-api` 的真实 Worker、D1、R2 和 Durable Object；没有业务 mock，不接入 KV。
 本地验证和 Cloudflare 验收是两项独立结果，任何本地通过都不能替代真实 Cloudflare 部署的测试。

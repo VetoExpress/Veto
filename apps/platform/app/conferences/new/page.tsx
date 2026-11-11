@@ -1385,10 +1385,10 @@ function ReviewCommittee({
             {committee.name}
           </h3>
           <Badge variant="outline">
-                  {t(committeeTypeLabels[committee.type])} ·{" "}
-                  {t("platform_seat_count", {
-                    value1: committee.seats.length,
-                  })}
+            {t(committeeTypeLabels[committee.type])} ·{" "}
+            {t("platform_seat_count", {
+              value1: committee.seats.length,
+            })}
           </Badge>
           <CollapsibleTrigger
             className={cn(

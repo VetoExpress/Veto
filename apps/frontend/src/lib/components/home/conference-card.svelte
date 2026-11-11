@@ -5,7 +5,6 @@
     Cloud,
     HardDrive,
     KeyRound,
-    MoreHorizontal,
     Pencil,
     Play,
     Trash2,
@@ -203,7 +202,6 @@
           <Trash2 />
         </Button>{/if}
     </div>
-    <MoreHorizontal class="size-4 shrink-0 text-muted-foreground group-hover:hidden" />
   </div>
   <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
     <span>{t('settings_committee_count', { count: conference.committees.length })}</span>

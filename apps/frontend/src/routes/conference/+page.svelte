@@ -228,7 +228,7 @@
           <h2 class="mt-2 text-2xl font-semibold tracking-tight">
             {t('procedure_no_workspace_open')}
           </h2>
-          <p class="mt-2 text-xs text-muted-foreground">
+          <p class="mt-2 text-sm text-muted-foreground">
             {t('procedure_create_or_join_to_begin')}
           </p>
         </div>
@@ -278,7 +278,7 @@
           <h2 id="workflow-tip-heading" class="text-[15px] font-semibold text-foreground">
             {t('procedure_keep_every_room_in_sync')}
           </h2>
-          <p class="mt-1 text-xs leading-relaxed text-muted-foreground">
+          <p class="mt-1 text-sm leading-relaxed text-muted-foreground">
             {t('procedure_display_window_tip')}
           </p>
         </div>
@@ -411,7 +411,7 @@
     border-radius: 0.4rem;
     background: color-mix(in oklch, currentColor 10%, transparent);
     padding: 0.35rem 0.55rem;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -430,12 +430,12 @@
     background: var(--primary-foreground);
     padding: 0.6rem 0.8rem;
     color: var(--primary);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
   }
   .eyebrow {
     color: var(--muted-foreground);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -482,7 +482,7 @@
   }
   .quick-action strong {
     color: var(--foreground);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
   }
   .quick-action-primary strong {
@@ -491,7 +491,7 @@
   .quick-action small {
     margin-top: 3px;
     color: var(--muted-foreground);
-    font-size: 9px;
+    font-size: 11px;
   }
   .tip-card {
     border: 1px solid var(--border);
@@ -524,7 +524,7 @@
     border: 1px dashed var(--border);
     border-radius: 0.85rem;
     color: var(--muted-foreground);
-    font-size: 11px;
+    font-size: 12px;
   }
   .create-placeholder:hover {
     border-color: var(--ring);

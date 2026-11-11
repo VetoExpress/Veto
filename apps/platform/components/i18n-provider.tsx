@@ -51,27 +51,30 @@ export function I18nProvider({
   const revision = useRef(0)
   const currentLocale = useRef(initialLocale)
   const [error, setError] = useState(false)
-  const applyLocale = useCallback((next: Locale) => {
-    document.cookie = `${LOCALE_COOKIE}=${next}; Path=/; Max-Age=31536000; SameSite=Lax${location.protocol === "https:" ? "; Secure" : ""}`
-    document.documentElement.lang = next
-    if (currentLocale.current === next) return
-    currentLocale.current = next
-    updateLocale(next)
-    const titleKey =
-      pathname === "/login"
-        ? "platform_login"
-        : pathname === "/account"
-          ? "platform_account"
-          : pathname === "/conferences/new"
-            ? "platform_create_conference"
-            : pathname.startsWith("/conferences/")
-              ? "platform_conference_details"
-              : pathname === "/conferences"
-                ? "platform_conferences"
-                : undefined
-    if (titleKey)
-      document.title = `${platformTranslate(titleKey, {}, next)} | ${platformTranslate("platform_brand", {}, next)}`
-  }, [pathname])
+  const applyLocale = useCallback(
+    (next: Locale) => {
+      document.cookie = `${LOCALE_COOKIE}=${next}; Path=/; Max-Age=31536000; SameSite=Lax${location.protocol === "https:" ? "; Secure" : ""}`
+      document.documentElement.lang = next
+      if (currentLocale.current === next) return
+      currentLocale.current = next
+      updateLocale(next)
+      const titleKey =
+        pathname === "/login"
+          ? "platform_login"
+          : pathname === "/account"
+            ? "platform_account"
+            : pathname === "/conferences/new"
+              ? "platform_create_conference"
+              : pathname.startsWith("/conferences/")
+                ? "platform_conference_details"
+                : pathname === "/conferences"
+                  ? "platform_conferences"
+                  : undefined
+      if (titleKey)
+        document.title = `${platformTranslate(titleKey, {}, next)} | ${platformTranslate("platform_brand", {}, next)}`
+    },
+    [pathname]
+  )
   const setLocale = useCallback(
     (next: Locale) => {
       const request = ++revision.current

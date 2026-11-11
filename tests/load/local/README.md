@@ -21,7 +21,9 @@ node tests/load/local/start.mjs --dry-run --seats 100 --port 8787
 
 `--dry-run` 只检查只读后端路径并打印命令计划，不写文件、不启动 Worker。
 未知选项、非法数值、端口占用会直接报错。`--seats 1` 会补足为 2 席；
-最多 2000 席，超过 500 席的同类委员会自动拆分。
+最多 10000 席，超过 500 席的同类委员会自动拆分。`--conferences 10` 分到十个独立大会；
+`--claim-concurrency 8` 控制准备阶段的席位认领并发。`--reuse` 验证已有凭据的人数和大会数后复用，
+不创建新的大会与席位。
 
 ## 隔离范围
 
@@ -32,7 +34,7 @@ node tests/load/local/start.mjs --dry-run --seats 100 --port 8787
 - Wrangler 工作目录、构建产物、CLI 日志、Worker 日志和数据库均位于 `.state`。
   不使用后端 `.wrangler` 或已有数据。
 - 不加载后端 `.dev.vars` 或 `.env`；清除继承的 Cloudflare、SES、AWS 和 Wrangler
-  配置变量，只传入本地 `ALLOWED_ORIGINS`。业务测试不需要邮件、统计查询或任何云端密钥。
+  配置变量，只传入本地 `ALLOWED_ORIGINS` 与 `LOAD_DIAGNOSTICS`。业务测试不需要邮件、统计查询或任何云端密钥。
 - 运行真实本地 workerd 和本地 D1/R2/Durable Object 存储；所有 API、鉴权、
   SQL、R2 读写、WebSocket 和事件投递都执行后端代码，没有业务 mock。
 - 没有 remote、deploy、删除或重置命令。每次启动新建一个组织者和大会，旧的隔离数据保留。

@@ -21,8 +21,11 @@ let shutdownPromise
 
 const help = `Usage: node tests/load/local/start.mjs [options]
 
-  --seats N       Independent claimed seats (default 2; 2..2000, minimum 2).
+  --seats N       Independent claimed seats (default 2; 2..10000, minimum 2).
                   Alternating MPC/IPC seats; each committee has at most 500.
+  --conferences N Number of independent conferences (default 1).
+  --claim-concurrency N Concurrent setup claims (default 8).
+  --reuse         Reuse the existing isolated credentials, without creating seats.
   --port PORT     Loopback HTTP port (default 8787).
   --api-dir PATH  Read-only veto-api checkout with installed Wrangler.
                   Default: ../veto-api relative to the Veto repository.
@@ -152,6 +155,9 @@ async function main() {
   const { values } = parseArgs({
     options: {
       seats: { type: 'string', default: '2' },
+      conferences: { type: 'string', default: '1' },
+      'claim-concurrency': { type: 'string', default: '8' },
+      reuse: { type: 'boolean', default: false },
       port: { type: 'string', default: '8787' },
       'api-dir': { type: 'string' },
       'dry-run': { type: 'boolean', default: false },
@@ -166,7 +172,9 @@ async function main() {
   if (Number(process.versions.node.split('.')[0]) < 22 || typeof WebSocket !== 'function') {
     throw new Error('Node >=22 with built-in fetch and WebSocket is required')
   }
-  const count = Math.max(2, integer(values.seats, '--seats', 1, 2000))
+  const count = Math.max(2, integer(values.seats, '--seats', 1, 10000))
+  const conferenceCount = integer(values.conferences, '--conferences', 1, Math.floor(count / 2))
+  const claimConcurrency = integer(values['claim-concurrency'], '--claim-concurrency', 1, 32)
   const port = integer(values.port, '--port', 1024, 65535)
   const apiDir = path.resolve(values['api-dir'] ?? path.resolve(localDir, '../../../../veto-api'))
   const wranglerCli = path.join(apiDir, 'node_modules/wrangler/wrangler-dist/cli.js')
@@ -180,6 +188,7 @@ async function main() {
     baseUrl,
     apiDir,
     seats: count,
+    conferences: conferenceCount,
     stateDir,
     fixturePath,
     commands: [
@@ -251,8 +260,8 @@ async function main() {
     durable_objects: backendConfig.durable_objects,
     migrations: backendConfig.migrations,
     analytics_engine_datasets: [{ binding: 'ANALYTICS', dataset: 'veto_load_local' }],
-    vars: { ALLOWED_ORIGINS: `http://127.0.0.1:${port},veto://app` },
-    observability: { enabled: true, head_sampling_rate: 1 }
+    vars: { ALLOWED_ORIGINS: `http://127.0.0.1:${port},veto://app`, LOAD_DIAGNOSTICS: '1' },
+    observability: { enabled: true, head_sampling_rate: 0.01 }
   }
   await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`)
   console.log(`[local] Applying backend migrations to ${stateDir}`)
@@ -295,7 +304,12 @@ async function main() {
       const text = (await response.text()).slice(0, 1600)
       throw new Error(`${method} ${route}: expected ${status}, got ${response.status}: ${text}`)
     }
-    return binary ? response.arrayBuffer() : response.json()
+    if (binary) return response.arrayBuffer()
+    try {
+      return await response.json()
+    } catch {
+      throw new Error(`${method} ${route}: response ${response.status} had no valid JSON`)
+    }
   }
 
   const login = await api('/auth/login', {
@@ -304,60 +318,112 @@ async function main() {
     body: { email: organizer.email, password: organizer.password }
   })
   if (!login.token) throw new Error('Organizer login returned no token')
-  const created = await api('/conferences', {
-    method: 'POST',
-    token: login.token,
-    headers: { 'Idempotency-Key': randomUUID() },
-    body: conferenceInput(count),
-    status: 201
-  })
-  let conference = created.conference
-  const runtime = await api(`/conferences/${conference.id}/runtime`, {
-    method: 'PUT',
-    token: login.token,
-    headers: { 'If-Match': `"${conference.version}"` },
-    body: { timeline: { name: 'Local load timeline', initialSimTime: Date.now(), ratio: 1 } }
-  })
-  conference = runtime.conference
-  const active = await api(`/conferences/${conference.id}/activate`, {
-    method: 'POST',
-    token: login.token,
-    headers: { 'If-Match': `"${conference.version}"` }
-  })
-  if (active.conference.lifecycle !== 'active') throw new Error('Conference did not activate')
-  const seats = seatFixtures(active.conference)
-  const sessions = []
-  console.log(`[local] Claiming ${seats.length} independent seats through HTTP`)
-  for (const [index, seat] of seats.entries()) {
-    const session = await api('/veto/join/claim', {
-      method: 'POST',
-      body: {
-        inviteCode: seat.inviteCode,
-        password: seat.password,
-        displayName: `Load ${index + 1}`
-      },
-      status: 201
-    })
-    if (
-      session.identity?.seatId !== seat.seatId ||
-      session.identity?.conferenceId !== seat.conferenceId ||
-      session.identity?.committeeId !== seat.committeeId ||
-      !seat.expectedCapabilities.every((capability) => session.capabilities.includes(capability))
-    ) {
-      throw new Error(`Claim identity/capabilities mismatch for fixture index ${index}`)
+  let seats = []
+  const conferenceIds = []
+  if (values.reuse) {
+    seats = JSON.parse(await readFile(fixturePath, 'utf8')).seats
+    if (seats.length !== count) throw new Error('Reused fixture seat count does not match --seats')
+    conferenceIds.push(...new Set(seats.map((seat) => seat.conferenceId)))
+    if (conferenceIds.length !== conferenceCount)
+      throw new Error('Reused conference count mismatch')
+  } else
+    for (let group = 0; group < conferenceCount; group++) {
+      const groupCount =
+        Math.floor(count / conferenceCount) + (group < count % conferenceCount ? 1 : 0)
+      const created = await api('/conferences', {
+        method: 'POST',
+        token: login.token,
+        headers: { 'Idempotency-Key': randomUUID() },
+        body: conferenceInput(groupCount),
+        status: 201
+      })
+      let conference = created.conference
+      const runtime = await api(`/conferences/${conference.id}/runtime`, {
+        method: 'PUT',
+        token: login.token,
+        headers: { 'If-Match': `"${conference.version}"` },
+        body: { timeline: { name: 'Local load timeline', initialSimTime: Date.now(), ratio: 1 } }
+      })
+      conference = runtime.conference
+      const active = await api(`/conferences/${conference.id}/activate`, {
+        method: 'POST',
+        token: login.token,
+        headers: { 'If-Match': `"${conference.version}"` }
+      })
+      if (active.conference.lifecycle !== 'active') throw new Error('Conference did not activate')
+      seats.push(...seatFixtures(active.conference))
+      conferenceIds.push(conference.id)
+      console.log(`[local] Created conference ${group + 1}/${conferenceCount}: ${groupCount} seats`)
     }
-    sessions.push(session)
-    if ((index + 1) % 100 === 0) console.log(`[local] Claimed ${index + 1}/${seats.length}`)
-  }
+  // Spread adjacent fixture entries over conferences for a balanced connection ramp.
+  const grouped = conferenceIds.map((id) => seats.filter((seat) => seat.conferenceId === id))
+  seats = Array.from({ length: Math.max(...grouped.map((group) => group.length)) }, (_, index) =>
+    grouped.flatMap((group) => (group[index] ? [group[index]] : []))
+  ).flat()
+  const sessions = []
+  console.log(
+    `[local] ${values.reuse ? 'Reusing' : 'Claiming'} ${seats.length} independent seats through HTTP`
+  )
+  let nextClaim = 0
+  let completedClaims = 0
+  await Promise.all(
+    Array.from({ length: values.reuse ? 0 : claimConcurrency }, async () => {
+      while (nextClaim < seats.length) {
+        const index = nextClaim++
+        const seat = seats[index]
+        const session = await api('/veto/join/claim', {
+          method: 'POST',
+          body: {
+            inviteCode: seat.inviteCode,
+            password: seat.password,
+            displayName: `Load ${index + 1}`
+          },
+          status: 201
+        })
+        if (
+          session.identity?.seatId !== seat.seatId ||
+          session.identity?.conferenceId !== seat.conferenceId ||
+          session.identity?.committeeId !== seat.committeeId ||
+          !seat.expectedCapabilities.every((capability) =>
+            session.capabilities.includes(capability)
+          )
+        ) {
+          throw new Error(`Claim identity/capabilities mismatch for fixture index ${index}`)
+        }
+        sessions[index] = session
+        completedClaims++
+        if (completedClaims % 500 === 0)
+          console.log(`[local] Claimed ${completedClaims}/${seats.length}`)
+      }
+    })
+  )
   // Reauthenticate one representative of each type, checking real password verification
   // before the WS/business probe. Authentication replaces that seat's previous token.
-  for (let index = 0; index < 2; index++) {
+  const probes = [
+    0,
+    seats.findIndex((seat) => seat.expectedCapabilities.includes('publish_situation'))
+  ]
+  const probeSessions = []
+  for (const index of probes) {
     sessions[index] = await api('/veto/join/authenticate', {
       method: 'POST',
       body: { inviteCode: seats[index].inviteCode, password: seats[index].password }
     })
+    probeSessions.push(sessions[index])
   }
-  const verification = await verifyLocalBusiness(api, baseUrl, sessions)
+  // Business smoke requires both types from the same conference.
+  const firstConference = seats[0].conferenceId
+  const ipcIndex = seats.findIndex(
+    (seat) =>
+      seat.conferenceId === firstConference &&
+      seat.expectedCapabilities.includes('publish_situation')
+  )
+  if (ipcIndex !== probes[1])
+    probeSessions[1] = await api('/veto/join/authenticate', {
+      method: 'POST',
+      body: { inviteCode: seats[ipcIndex].inviteCode, password: seats[ipcIndex].password }
+    })
+  const verification = await verifyLocalBusiness(api, baseUrl, probeSessions)
   // Publish credentials only after all binding and application checks have passed.
   await mkdir(path.dirname(fixturePath), { recursive: true })
   await writeFile(fixturePath, `${JSON.stringify({ seats }, null, 2)}\n`, { mode: 0o600 })
@@ -368,7 +434,7 @@ async function main() {
         baseUrl,
         pid: process.pid,
         workerPid: worker.child.pid,
-        conferenceId: conference.id,
+        conferenceIds,
         seats: seats.length,
         fixturePath,
         ...verification
