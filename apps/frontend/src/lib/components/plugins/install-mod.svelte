@@ -15,10 +15,16 @@
   import { Button } from '$lib/components/ui/button'
   import type { PluginManifest } from '$lib/classes/services/plugin/plugin-db'
   import { dbGetAllPlugins } from '$lib/classes/services/plugin/plugin-db'
-  import { fetchPluginRegistry, fetchPluginStars } from '$lib/classes/services/plugin/plugin-registry'
+  import {
+    fetchPluginRegistry,
+    fetchPluginStars
+  } from '$lib/classes/services/plugin/plugin-registry'
   import { importModPackage } from '$lib/classes/services/plugin/mod-package-service'
-  import RegistryPluginCard from '../../../cards/registry-plugin-card.svelte'
+  import RegistryPluginCard from './registry-plugin-card.svelte'
   import { onMount } from 'svelte'
+  import { createLogger } from '$lib/classes/logger'
+
+  const log = createLogger('plugin-install')
 
   // ── 本地 .csmod 导入 ──
   type ImportState = 'idle' | 'loading' | 'done' | 'error'
@@ -29,6 +35,7 @@
   let fileInput: HTMLInputElement
 
   async function handleFiles(files: FileList | null) {
+    if (importState === 'loading') return
     const file = files?.[0]
     if (!file) return
     importState = 'loading'
@@ -39,6 +46,10 @@
       importedName = plugin.manifest.name
       importState = 'done'
     } catch (err) {
+      log.error('Importing local plugin failed; installation did not complete', {
+        fileName: file.name,
+        error: err
+      })
       importError = err instanceof Error ? err.message : () => t('settings_import_failed')
       importState = 'error'
     }
@@ -86,11 +97,16 @@
       installedIds = new Set(dbPlugins.map((p) => p.id))
       fetchState = 'done'
       // stars 在后台独立加载，完成后通过自定义事件通知各卡片
-      fetchPluginStars().then((stars) => {
-        starsMap = stars
-        window.dispatchEvent(new CustomEvent('veto:stars-loaded', { detail: stars }))
-      })
+      fetchPluginStars()
+        .then((stars) => {
+          starsMap = stars
+          window.dispatchEvent(new CustomEvent('veto:stars-loaded', { detail: stars }))
+        })
+        .catch((error) => {
+          log.warn('Loading community stars failed; plugin installation remains available', error)
+        })
     } catch (err) {
+      log.error('Loading plugin registry failed; online plugins are unavailable', err)
       fetchError = err instanceof Error ? err.message : () => t('settings_unknown_error')
       fetchState = 'error'
     }
@@ -101,16 +117,20 @@
   }
 </script>
 
-<div class="space-y-5">
+<div
+  class="grid min-w-0 grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]"
+>
   <!-- ── 本地 .csmod 导入区 ── -->
-  <div>
-    <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">{t('settings_local_import')}</p>
+  <div class="min-w-0 rounded-xl border bg-card p-5">
+    <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      {t('settings_local_import')}
+    </p>
 
     <!-- 隐藏 file input -->
     <input
       bind:this={fileInput}
       type="file"
-      accept=".csmod"
+      accept=".vmod,.csmod"
       class="hidden"
       onchange={(e) => handleFiles((e.currentTarget as HTMLInputElement).files)}
     />
@@ -120,15 +140,23 @@
       <div
         role="button"
         tabindex="0"
-        class="flex min-h-36 cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed transition-colors
+        class="flex min-h-64 cursor-pointer flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed p-5 transition-colors focus-visible:outline-2 focus-visible:outline-ring
 					{dragOver
           ? 'border-primary bg-primary/5 text-primary'
-          : 'border-stone-300 text-stone-400 hover:border-stone-400 hover:text-stone-500 dark:border-stone-700 dark:text-stone-500'}"
+          : 'border-border text-muted-foreground hover:border-primary/40 hover:bg-muted/30'}"
         ondragover={onDragOver}
         ondragleave={onDragLeave}
         ondrop={onDrop}
         onclick={() => fileInput.click()}
-        onkeydown={(e) => e.key === 'Enter' && fileInput.click()}
+        onkeydown={(event) => {
+          if (
+            event.target === event.currentTarget &&
+            (event.key === 'Enter' || event.key === ' ')
+          ) {
+            event.preventDefault()
+            fileInput.click()
+          }
+        }}
       >
         <Upload class="size-7 opacity-60" />
         <div class="text-center">
@@ -163,7 +191,9 @@
           <CheckCircle2 class="size-4 shrink-0" />
           <div>
             <p class="text-sm font-medium">{t('settings_import_success')}</p>
-            <p class="text-xs opacity-80">{t('settings_mod_imported', { name: importedName ?? '' })}</p>
+            <p class="text-xs opacity-80">
+              {t('settings_mod_imported', { name: importedName ?? '' })}
+            </p>
           </div>
         </div>
         <Button
@@ -200,15 +230,9 @@
     {/if}
   </div>
 
-  <!-- 分隔线 -->
-  <div class="flex items-center gap-3">
-    <div class="h-px flex-1 bg-border"></div>
-    <span class="text-xs text-muted-foreground">{t('settings_online_install')}</span>
-    <div class="h-px flex-1 bg-border"></div>
-  </div>
-
   <!-- ── 在线注册中心 ── -->
-  <div class="space-y-3">
+  <div class="flex min-w-0 flex-col gap-4">
+    <h2 class="text-sm font-semibold">{t('settings_online_install')}</h2>
     {#if fetchState === 'idle'}
       <div
         class="flex min-h-48 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-stone-300 text-stone-400 dark:border-stone-700 dark:text-stone-500"
@@ -236,7 +260,9 @@
       </div>
     {:else}
       <div class="flex items-center justify-between">
-        <span class="text-xs text-muted-foreground">{t('settings_plugin_count', { count: remotePlugins.length })}</span>
+        <span class="text-xs text-muted-foreground">
+          {t('settings_plugin_count', { count: remotePlugins.length })}
+        </span>
         <Button variant="ghost" size="sm" class="h-7 gap-1 px-2 text-xs" onclick={loadRegistry}>
           <RefreshCw class="size-3" />{t('settings_refresh')}
         </Button>
@@ -250,7 +276,9 @@
           />
         {/each}
         {#if remotePlugins.length === 0}
-          <p class="py-8 text-center text-sm text-muted-foreground">{t('settings_plugins_empty')}</p>
+          <p class="py-8 text-center text-sm text-muted-foreground">
+            {t('settings_plugins_empty')}
+          </p>
         {/if}
       </div>
     {/if}

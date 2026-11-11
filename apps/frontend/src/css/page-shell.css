@@ -1,0 +1,65 @@
+:root {
+  --app-page-max-width: 80rem;
+  --app-page-padding: clamp(1rem, 3vw, 2.5rem);
+  --app-page-gap: 2rem;
+  --app-page-title-size: 1.5rem;
+  --app-page-background: var(--background);
+}
+
+.app-page-scroll {
+  background: var(--app-page-background);
+  color: var(--foreground);
+}
+
+.app-page {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  max-width: var(--app-page-max-width);
+  margin-inline: auto;
+  flex-direction: column;
+  gap: var(--app-page-gap);
+  padding: var(--app-page-padding);
+}
+
+.app-page-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+}
+
+.app-page-heading-copy {
+  min-width: 0;
+}
+
+.app-page-title {
+  font-size: var(--app-page-title-size);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.025em;
+  overflow-wrap: anywhere;
+}
+
+.app-page-description {
+  max-width: 40rem;
+  margin-top: 0.5rem;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.app-page-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+@media (max-width: 639px) {
+  .app-page-heading {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

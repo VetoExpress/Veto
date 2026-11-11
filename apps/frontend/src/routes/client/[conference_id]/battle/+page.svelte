@@ -10,6 +10,7 @@
   import { conferences } from '$lib/classes/stores/conference/conference-store'
   import { cloudSession } from '$lib/classes/stores/cloud/cloud-session-store.svelte'
   import { VETO_NAME } from '$lib/classes/const'
+  import StatusBar from '$lib/components/app-sidebar/status-bar.svelte'
 
   const conferenceId = $derived($page.params.conference_id ?? '')
   const session = $derived(
@@ -44,6 +45,7 @@
   {#key conferenceId}
     <BattleWorkspace {conferenceId} {conferenceName} onback={goBack} />
   {/key}
+  <StatusBar />
 </div>
 
 <style>

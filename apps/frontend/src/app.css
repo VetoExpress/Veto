@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import './css/theme.css';
+@import './css/page-shell.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -200,7 +201,7 @@ html[data-veto-theme-transition='active']::view-transition-new(root) {
 html[data-veto-route-transition='create']::view-transition-old(root) {
   animation: veto-route-old 720ms var(--veto-route-ease-in) both;
 }
-  
+
 html[data-veto-route-transition='create']::view-transition-new(root) {
   animation: veto-route-new 720ms var(--veto-route-ease-out) both;
 }

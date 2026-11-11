@@ -1,5 +1,9 @@
 <script lang="ts">
-  import { procedureMessage, renderProcedureMessage, type ProcedureMessage } from '$lib/components/conference/common/message'
+  import {
+    procedureMessage,
+    renderProcedureMessage,
+    type ProcedureMessage
+  } from '$lib/components/conference/common/message'
   import { t } from '$lib/i18n'
   import { onMount } from 'svelte'
   import {
@@ -33,13 +37,10 @@
   import { fileNotifications } from '$lib/classes/stores/cloud/file-notification-store.svelte'
   import { getChairRosterEntries } from '$lib/classes/utils/committee/chair-presentation'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
-  import {
-    activeSettingsSection,
-    createConferenceDialogOpen,
-    settingsDialogOpen
-  } from '$lib/classes/stores/app/global-ui-store'
+  import { createConferenceDialogOpen } from '$lib/classes/stores/app/global-ui-store'
   import { isElectron } from '$lib/classes/utils/runtime'
   import { getCloudTimeline, type CloudTimeline } from '$lib/classes/clients/cloud-situation-client'
+  import StatusBar from '$lib/components/app-sidebar/status-bar.svelte'
 
   let { children } = $props()
   let displayOnlyDialogOpen = $state(false)
@@ -127,7 +128,10 @@
       cloudTimelineError = ''
     } catch (error) {
       if (request !== cloudTimelineRequest) return
-      cloudTimelineError = error instanceof Error ? error.message : procedureMessage('procedure_failed_to_refresh_timeline')
+      cloudTimelineError =
+        error instanceof Error
+          ? error.message
+          : procedureMessage('procedure_failed_to_refresh_timeline')
     } finally {
       if (request === cloudTimelineRequest) cloudTimelineLoading = false
     }
@@ -184,11 +188,6 @@
   function goTo(path: string): void {
     // @ts-expect-error resolve requires a literal route type for dynamic paths.
     goto(resolve(path))
-  }
-
-  function openModsSettings(): void {
-    activeSettingsSection.set('mods')
-    settingsDialogOpen.set(true)
   }
 </script>
 
@@ -297,7 +296,9 @@
               {#if cloudSession.chairError}
                 <p class="px-5 pb-3 text-xs text-destructive">{cloudSession.chairError}</p>
               {:else if cloudSession.loadingChairProjection}
-                <p class="px-5 pb-3 text-xs text-muted-foreground">{t('procedure_loading_seat_information')}</p>
+                <p class="px-5 pb-3 text-xs text-muted-foreground">
+                  {t('procedure_loading_seat_information')}
+                </p>
               {:else}
                 <ScrollArea class="flex-1 overflow-hidden">
                   <div class="px-3 pb-3">
@@ -387,7 +388,9 @@
             <span class="text-xs font-semibold">{simpleMajority}</span>
           </div>
           <div class="flex flex-col leading-tight">
-            <span class="text-[10px] text-muted-foreground">{t('procedure_two_thirds_majority')}</span>
+            <span class="text-[10px] text-muted-foreground">
+              {t('procedure_two_thirds_majority')}
+            </span>
             <span class="text-xs font-semibold">{twoThirds}</span>
           </div>
         </div>
@@ -415,7 +418,9 @@
             class={`no-drag pointer-events-auto text-muted-foreground hover:text-foreground ${cloudTimelineError ? 'text-destructive' : ''}`}
             disabled={cloudTimelineLoading}
             onclick={() => void refreshCloudTimeline(cloudSession.session?.result.token ?? '')}
-            title={cloudTimelineError ? renderProcedureMessage(cloudTimelineError) : t('procedure_refresh_timeline')}
+            title={cloudTimelineError
+              ? renderProcedureMessage(cloudTimelineError)
+              : t('procedure_refresh_timeline')}
             aria-label={t('procedure_refresh_timeline')}
           >
             <RefreshCw class={cloudTimelineLoading ? 'animate-spin' : ''} />
@@ -439,7 +444,7 @@
         variant="ghost"
         size="sm"
         class="no-drag px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
-        onclick={openModsSettings}
+        onclick={() => goto(resolve('/conference/plugins'))}
         title={t('procedure_plugins')}
       >
         <Puzzle />
@@ -464,11 +469,14 @@
         <Button variant="outline" size="sm" onclick={() => goTo(`${committeeRoute}/files`)}>
           {t('procedure_view_files')}
         </Button>
-        <Button variant="ghost" size="sm" onclick={() => fileNotifications.dismiss()}>{t('procedure_close')}</Button>
+        <Button variant="ghost" size="sm" onclick={() => fileNotifications.dismiss()}>
+          {t('procedure_close')}
+        </Button>
       </div>
     </div>
   {/if}
   {@render children()}
+  <StatusBar />
 </GlobalSidebar>
 
 <DisplayOnlyDialog bind:open={displayOnlyDialogOpen} />

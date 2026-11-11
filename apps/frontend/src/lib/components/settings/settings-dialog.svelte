@@ -1,11 +1,10 @@
 <script lang="ts">
   import { t } from '$lib/i18n'
   import { onMount } from 'svelte'
-  import { Settings, Info, X, Puzzle, Map, User, ChevronRight } from '@lucide/svelte'
+  import { Settings, Info, X, Map, User, ChevronRight } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import * as Separator from '$lib/components/ui/separator/index.js'
   import GeneralPage from './pages/common/general.svelte'
-  import ModsPage from './pages/common/mods.svelte'
   import AboutPage from '../settings/pages/common/about.svelte'
   import CommitteePage from './pages/common/committee.svelte'
   import AccountPage from './pages/common/account.svelte'
@@ -16,24 +15,21 @@
   import * as Dialog from '$lib/components/ui/dialog'
   import {
     settingsDialogOpen,
-    activeSettingsSection
+    activeSettingsSection,
+    type SettingsSection
   } from '$lib/classes/stores/app/global-ui-store'
-  import { isElectron } from '$lib/classes/utils/runtime'
   const version = `${__APP_VERSION__}-${__APP_BUILD_TIME__}`
 
-  let activeSection = $state<Section>('general')
-  let electronEnvironment = $state(false)
-  type Section = 'general' | 'mods' | 'committee' | 'about' | 'account'
+  let activeSection = $state<SettingsSection>('general')
 
   interface NavItem {
-    key: Section
+    key: SettingsSection
     label: string
     icon: typeof Settings
   }
 
   const NAV_TOP: NavItem[] = $derived([
     { key: 'general', label: t('settings_general'), icon: Settings },
-    { key: 'mods', label: t('settings_mods'), icon: Puzzle },
     { key: 'committee', label: t('settings_committee'), icon: Map }
   ])
 
@@ -42,10 +38,6 @@
   let open = $state(false)
 
   onMount(() => {
-    electronEnvironment = isElectron()
-    if (!electronEnvironment && activeSection === 'mods') {
-      activeSection = 'general'
-    }
     return accountStore.connect(window.veto?.account)
   })
 
@@ -55,10 +47,7 @@
     if (wasClosed) {
       // 打开时读取指定的 section，否则默认 general
       const target = $activeSettingsSection
-      if (target === 'mods' && !electronEnvironment) {
-        activeSection = 'general'
-        activeSettingsSection.set(null)
-      } else if (target) {
+      if (target) {
         activeSection = target
         activeSettingsSection.set(null)
       } else {
@@ -118,7 +107,10 @@
               </Avatar.Root>
               <div class="min-w-0 flex-1">
                 <div class="truncate text-sm font-medium">
-                  {$accountStore.user?.name ?? ($accountStore.ready ? t('settings_signed_out') : t('settings_restoring_account'))}
+                  {$accountStore.user?.name ??
+                    ($accountStore.ready
+                      ? t('settings_signed_out')
+                      : t('settings_restoring_account'))}
                 </div>
                 <div class="truncate text-xs text-muted-foreground">
                   {$accountStore.user?.email ?? t('settings_account_management')}
@@ -134,16 +126,14 @@
 
           <div class="flex flex-1 flex-col gap-0.5 px-3 pt-3">
             {#each NAV_TOP as item (item.key)}
-              {#if item.key !== 'mods' || electronEnvironment}
-                <Button
-                  class="w-full cursor-pointer justify-start gap-2.5 px-3 h-9"
-                  variant={activeSection === item.key ? 'secondary' : 'ghost'}
-                  onclick={() => (activeSection = item.key)}
-                >
-                  <item.icon size={18} />
-                  <span class="text-sm">{item.label}</span>
-                </Button>
-              {/if}
+              <Button
+                class="w-full cursor-pointer justify-start gap-2.5 px-3 h-9"
+                variant={activeSection === item.key ? 'secondary' : 'ghost'}
+                onclick={() => (activeSection = item.key)}
+              >
+                <item.icon size={18} />
+                <span class="text-sm">{item.label}</span>
+              </Button>
             {/each}
           </div>
           <div class="mt-auto flex flex-col gap-0.5 px-3 pt-2 pb-5">
@@ -173,7 +163,6 @@
             <div class="p-10">
               {#if activeSection === 'general'}<GeneralPage />{/if}
               {#if activeSection === 'account'}<AccountPage />{/if}
-              {#if activeSection === 'mods' && electronEnvironment}<ModsPage />{/if}
               {#if activeSection === 'committee'}<CommitteePage />{/if}
               {#if activeSection === 'about'}<AboutPage />{/if}
             </div>

@@ -12,6 +12,8 @@
   import { joinConferenceDialogOpen } from '$lib/classes/stores/app/global-ui-store'
   import { isElectron } from '$lib/classes/utils/runtime'
   import WindowControls from '$lib/components/app-sidebar/window-controls.svelte'
+  import StatusBar from '$lib/components/app-sidebar/status-bar.svelte'
+  import { ScrollArea } from '$lib/components/ui/scroll-area'
 
   let { children } = $props()
 
@@ -40,16 +42,19 @@
 <TimerDialog bind:open={$timerDialogOpen} />
 <JoinConferenceDialog bind:open={$joinConferenceDialogOpen} />
 
-<div class="h-svh overflow-hidden">
+<div class="flex h-svh flex-col overflow-hidden">
   <header class="relative flex h-12 shrink-0 items-center gap-2 pl-4">
     <AppToolbar onOpenDisplay={() => (displayOnlyDialogOpen = true)} />
 
     <WindowControls />
   </header>
 
-  <div class="flex min-h-0 flex-1 flex-col">
-    {@render children()}
-  </div>
+  <main class="app-page-scroll flex min-h-0 flex-1 flex-col">
+    <ScrollArea class="min-h-0 flex-1">
+      {@render children()}
+    </ScrollArea>
+  </main>
+  <StatusBar />
   <DisplayOnlyDialog bind:open={displayOnlyDialogOpen} />
 </div>
 

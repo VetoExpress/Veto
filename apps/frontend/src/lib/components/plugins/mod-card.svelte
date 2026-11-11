@@ -2,7 +2,6 @@
   import { t } from '$lib/i18n'
   import { Package, ShieldCheck, User } from '@lucide/svelte'
   import type { ModData } from '$lib/classes/types/battle'
-  import { registry } from '$lib/classes/services/plugin/mod-registry.svelte'
   import { Badge } from '$lib/components/ui/badge'
 
   let {
@@ -11,17 +10,11 @@
     entry: ModData
   } = $props()
 
-  $effect(() => {
-    console.log('[ModCard] render:', entry.id, entry.metadata?.source)
-  })
-
   const systemSource = $derived(entry.metadata?.source === 'system')
 </script>
 
 <div
-  class="flex flex-col gap-3 rounded-lg border border-border bg-card p-5 transition-opacity {!systemSource
-    ? 'opacity-50'
-    : ''}"
+  class="flex min-w-0 flex-col gap-4 rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary/30"
 >
   <!-- 标题行 -->
   <div class="flex items-start justify-between gap-3">
@@ -38,15 +31,15 @@
         {/if}
       </div>
       <div class="min-w-0">
-        <div class="flex items-center gap-1.5">
-          <span class="truncate text-sm font-semibold text-foreground"
-            >{entry.metadata?.name ?? entry.metadata?.id ?? t('settings_unknown_mod')}</span
-          >
+        <div class="flex flex-wrap items-center gap-1.5">
+          <span class="truncate text-sm font-semibold text-foreground">
+            {entry.metadata?.name ?? entry.metadata?.id ?? t('settings_unknown_mod')}
+          </span>
           {#if systemSource}
             <Badge variant="secondary" class="shrink-0 text-[10px]">{t('settings_system')}</Badge>
           {/if}
         </div>
-        <div class="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
+        <div class="mt-1 flex flex-wrap items-center gap-2 break-all text-xs text-muted-foreground">
           {#if entry.metadata?.version}
             <span>v{entry.metadata.version}</span>
           {/if}
@@ -65,7 +58,9 @@
 
   <!-- 描述 -->
   {#if entry.metadata?.description}
-    <p class="text-xs leading-relaxed text-muted-foreground">{entry.metadata.description}</p>
+    <p class="break-words text-sm leading-relaxed text-muted-foreground">
+      {entry.metadata.description}
+    </p>
   {/if}
 
   <!-- 统计标签 -->
@@ -77,20 +72,23 @@
       {#if branchCount > 0}
         <span
           class="rounded-md border border-border bg-muted/50 px-2 py-0.5 text-[11px] text-muted-foreground"
-          >{t('settings_branch_count', { count: branchCount })}</span
         >
+          {t('settings_branch_count', { count: branchCount })}
+        </span>
       {/if}
       {#if categoryCount > 0}
         <span
           class="rounded-md border border-border bg-muted/50 px-2 py-0.5 text-[11px] text-muted-foreground"
-          >{t('settings_category_count', { count: categoryCount })}</span
         >
+          {t('settings_category_count', { count: categoryCount })}
+        </span>
       {/if}
       {#if templateCount > 0}
         <span
           class="rounded-md border border-border bg-muted/50 px-2 py-0.5 text-[11px] text-muted-foreground"
-          >{t('settings_template_count', { count: templateCount })}</span
         >
+          {t('settings_template_count', { count: templateCount })}
+        </span>
       {/if}
     </div>
   {/if}

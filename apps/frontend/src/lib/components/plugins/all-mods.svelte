@@ -2,7 +2,7 @@
   import { t } from '$lib/i18n'
   import { Puzzle } from '@lucide/svelte'
   import { registry } from '$lib/classes/services/plugin/mod-registry.svelte'
-  import ModCard from '../../../cards/mod-card.svelte'
+  import ModCard from './mod-card.svelte'
 
   // 直接从 registry 获取响应式列表
   const modList = $derived(registry.getModList())
@@ -15,8 +15,10 @@
 <div class="space-y-4">
   <!--系统内置-->
   <div>
-    <p class="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">{t('settings_builtin')}</p>
-    <div class="flex flex-col gap-2">
+    <p class="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+      {t('settings_builtin')}
+    </p>
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
       {#each systemMods as entry (entry.id)}
         <ModCard {entry} />
       {/each}
@@ -25,8 +27,10 @@
 
   {#if userMods.length > 0}
     <div>
-      <p class="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">{t('settings_user_installed')}</p>
-      <div class="flex flex-col gap-2">
+      <p class="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+        {t('settings_user_installed')}
+      </p>
+      <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {#each userMods as entry (entry.id || entry.metadata?.id || JSON.stringify(entry))}
           <ModCard {entry} />
         {/each}
