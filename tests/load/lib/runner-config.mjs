@@ -8,7 +8,11 @@ export const PROFILES = [
   'spike',
   'files-burst',
   'conference-500',
-  'files-500'
+  'files-500',
+  'conference-1000',
+  'files-1000',
+  'conference-2000',
+  'files-2000'
 ]
 export const K6_VERSION = '2.3.0'
 export const MAX_FILE_BYTES = 20 * 1024 * 1024
@@ -25,6 +29,7 @@ export const DEFAULT_CONFIG = Object.freeze({
   startDelaySeconds: 10,
   onlineWindowSeconds: 0,
   actionIntervalSeconds: 5,
+  openLoopSeed: undefined,
   filesPerVu: 1,
   uploadConcurrency: 1,
   fileSizesBytes: Object.freeze([64 * 1024]),
@@ -83,9 +88,16 @@ const cliOptions = {
   'display-ws-url': 'displayWsUrl',
   'ws-allowed-hosts': 'wsAllowedHosts',
   'observer-every': 'observerEvery',
+  'open-loop-seed': 'openLoopSeed',
   revision: 'revision'
 }
-const numericKeys = new Set(['vus', 'filesPerVu', 'uploadConcurrency', 'observerEvery'])
+const numericKeys = new Set([
+  'vus',
+  'filesPerVu',
+  'uploadConcurrency',
+  'observerEvery',
+  'openLoopSeed'
+])
 
 function object(value, label) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -225,6 +237,18 @@ export function normalizeConfig(...layers) {
   ) {
     throw new Error('500-seat acceptance requires at least 500 seats and a nonzero online window')
   }
+  if (
+    ['conference-1000', 'files-1000'].includes(config.profile) &&
+    (config.vus < 1000 || !config.onlineWindowSeconds)
+  ) {
+    throw new Error('1000-seat acceptance requires at least 1000 seats and a nonzero online window')
+  }
+  if (
+    ['conference-2000', 'files-2000'].includes(config.profile) &&
+    (config.vus < 2000 || !config.onlineWindowSeconds)
+  ) {
+    throw new Error('2000-seat acceptance requires at least 2000 seats and a nonzero online window')
+  }
   for (const key of ['rampSeconds', 'startDelaySeconds']) {
     // The workload duration is measured per VU after ramping, not the total wall time.
     number(config[key], key, { zero: true, max: 7 * 86400 })
@@ -234,6 +258,8 @@ export function normalizeConfig(...layers) {
   number(config.filesPerVu, 'filesPerVu', { integer: true, max: 10000 })
   number(config.uploadConcurrency, 'uploadConcurrency', { integer: true, max: 100 })
   number(config.observerEvery, 'observerEvery', { integer: true, zero: true, max: 10000 })
+  if (config.openLoopSeed !== undefined)
+    number(config.openLoopSeed, 'openLoopSeed', { integer: true, max: 2147483647 })
   if (['files', 'mixed'].includes(config.scenario) && config.observerEvery === 1) {
     throw new Error('file workloads require at least one business seat; observerEvery cannot be 1')
   }

@@ -252,7 +252,7 @@ async function main() {
     migrations: backendConfig.migrations,
     analytics_engine_datasets: [{ binding: 'ANALYTICS', dataset: 'veto_load_local' }],
     vars: { ALLOWED_ORIGINS: `http://127.0.0.1:${port},veto://app` },
-    observability: { enabled: false }
+    observability: { enabled: true, head_sampling_rate: 1 }
   }
   await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`)
   console.log(`[local] Applying backend migrations to ${stateDir}`)

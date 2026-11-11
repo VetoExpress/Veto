@@ -284,6 +284,7 @@
   "settings_delete_battle_confirm": "此操作不可撤销，战局数据将永久删除。",
   "settings_delete_battle_named": "将永久删除战局「{name}」，此操作无法撤销。是否继续？",
   "settings_cloud": "云端",
+  "settings_local": "本地",
   "settings_singleton": "单例",
   "settings_rejoin": "重新入会",
   "settings_chair_action": "主持",

@@ -20,6 +20,7 @@ export interface LoadConfig {
   visibilityTimeoutSeconds: number
   requestTimeoutSeconds: number
   reconnectAfterSeconds: number
+  openLoopSeed?: number
   displayWsUrl?: string
   wsAllowedHosts: string[]
   observerEvery?: number

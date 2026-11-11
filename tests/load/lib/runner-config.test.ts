@@ -53,6 +53,26 @@ it('keeps conference acceptance at 500 or more seats with a real common online w
       'onlineWindowSeconds'
     )
   }
+  for (const profile of ['conference-1000', 'files-1000']) {
+    const value = JSON.parse(
+      await readFile(new URL(`../config/${profile}.json`, import.meta.url), 'utf8')
+    )
+    const acceptance = normalizeConfig(value, { target })
+    expect(acceptance.vus).toBeGreaterThanOrEqual(1000)
+    expect(acceptance.onlineWindowSeconds).toBeGreaterThanOrEqual(600)
+    expect(() => normalizeConfig(value, { target, vus: 999 })).toThrow('at least 1000')
+    expect(() => normalizeConfig(value, { target, onlineWindowSeconds: 0 })).toThrow('nonzero')
+  }
+  for (const profile of ['conference-2000', 'files-2000']) {
+    const value = JSON.parse(
+      await readFile(new URL(`../config/${profile}.json`, import.meta.url), 'utf8')
+    )
+    const acceptance = normalizeConfig(value, { target })
+    expect(acceptance.vus).toBeGreaterThanOrEqual(2000)
+    expect(acceptance.onlineWindowSeconds).toBeGreaterThanOrEqual(600)
+    expect(() => normalizeConfig(value, { target, vus: 1999 })).toThrow('at least 2000')
+    expect(() => normalizeConfig(value, { target, onlineWindowSeconds: 0 })).toThrow('nonzero')
+  }
   expect(parseArgs(['--online-window', '30m']).overrides.onlineWindowSeconds).toBe(1800)
   expect(() => normalizeConfig({ target, onlineWindowSeconds: 5, scenario: 'reconnect' })).toThrow(
     'continuously online'
@@ -72,6 +92,12 @@ it('requires enough independent seats from one conference to prove simultaneous 
   expect(() => validateCredentials(sameConference, { ...windowConfig, vus: 500 })).toThrow(
     'at least vus'
   )
+})
+
+it('accepts a deterministic ramp micro-stagger for diagnosis', () => {
+  expect(normalizeConfig({ target, openLoopSeed: 1776 }).openLoopSeed).toBe(1776)
+  expect(parseArgs(['--open-loop-seed', '1776']).overrides.openLoopSeed).toBe(1776)
+  expect(() => normalizeConfig({ target, openLoopSeed: 1.5 })).toThrow('openLoopSeed')
 })
 
 it('refuses a file workload with no writers or metadata exceeding the actual API contract', () => {
@@ -726,6 +752,8 @@ describe('runner lifecycle', () => {
         join(reportDirectory, 'k6-options.json').replaceAll('\\', '/'),
         '--address',
         '',
+        '--out',
+        `json=${join(reportDirectory, 'samples.json').replaceAll('\\', '/')}`,
         '--log-format=json',
         '--log-output=stderr',
         '--quiet',

@@ -52,7 +52,7 @@ node tests/load/local/start.mjs --dry-run --seats 100 --port 8787
    配置 Timeline，带真实版本 `If-Match` 激活大会。
 4. 创建 MPC 和 IPC 委员会，为每个席位真实 `POST /veto/join/claim`；
    再对两个代表席位真实 authenticate，验证密码哈希与会话刷新。
-5. 运行下述业务与 WS 验证，成功后才写凭据和 ready 记录。
+5. 运行下述业务与 WS 验证，成功后才写凭据和 ready 记录。负载运行时可通过 Wrangler Local Explorer 查询实时 Worker request spans，以对齐客户端请求名、状态与服务端 wall/CPU 时间；本地模式只辅助归因，不能替代线上观测。
 
 凭据文件为 `tests/load/fixtures/local.seats.json`，不提交到 Git：
 

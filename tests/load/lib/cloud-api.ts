@@ -1,7 +1,7 @@
 import http from 'k6/http'
 import type { Params, RefinedResponse, ResponseType } from 'k6/http'
 import { sha256 } from 'k6/crypto'
-import { conflicts, recordError } from './metrics.ts'
+import { conflicts, recordError, requestFailed, requestMs } from './metrics.ts'
 import type { Authentication, Content, LoadConfig, SeatCredential } from './types.ts'
 
 export class RequestError extends Error {
@@ -16,6 +16,7 @@ export class RequestError extends Error {
 
 export class CloudApi {
   token = ''
+  phase = 'startup'
   constructor(readonly config: LoadConfig) {}
 
   private async send<T extends ResponseType>(
@@ -46,10 +47,18 @@ export class CloudApi {
         params
       )) as RefinedResponse<T>
     } catch {
+      requestFailed.add(1, { operation, phase: this.phase, kind: 'transport', status: '0' })
       recordError(operation, 'transport')
       throw new RequestError(operation, 0)
     }
+    requestMs.add(response.timings.duration, { operation, phase: this.phase })
     if (response.status < 200 || response.status >= 300) {
+      requestFailed.add(1, {
+        operation,
+        phase: this.phase,
+        kind: response.status === 429 ? 'rate_limited' : response.status >= 500 ? 'server' : 'http',
+        status: String(response.status)
+      })
       if (expectedConflict && response.status === 409) conflicts.add(1, { operation })
       else {
         // Cloudflare's resource-limit errors can be delivered inside a 5xx response.

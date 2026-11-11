@@ -1,0 +1,15 @@
+{
+  "profile": "conference-1000",
+  "scenario": "mixed",
+  "vus": 1000,
+  "durationSeconds": 1800,
+  "onlineWindowSeconds": 1800,
+  "rampSeconds": 300,
+  "rampSteps": 20,
+  "startDelaySeconds": 180,
+  "actionIntervalSeconds": 30,
+  "filesPerVu": 1,
+  "uploadConcurrency": 1,
+  "fileSizesBytes": [65536, 1048576],
+  "observerEvery": 5
+}

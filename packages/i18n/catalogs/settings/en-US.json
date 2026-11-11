@@ -284,6 +284,7 @@
   "settings_delete_battle_confirm": "This cannot be undone. Battle data will be permanently deleted.",
   "settings_delete_battle_named": "Permanently delete battle “{name}”? This cannot be undone.",
   "settings_cloud": "Cloud",
+  "settings_local": "Local",
   "settings_singleton": "Singleton",
   "settings_rejoin": "Rejoin",
   "settings_chair_action": "Chair",

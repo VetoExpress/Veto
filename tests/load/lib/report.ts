@@ -20,6 +20,11 @@ export function renderReport(data: Summary, config: LoadConfig, runId: string): 
     `计划席位：${config.vus}；持续时间：${config.durationSeconds}s；爬坡：${config.rampSeconds}s`,
     ...(config.onlineWindowSeconds
       ? [
+          '认证、初始加载和在线窗口已按阶段写入 http_request_phase_ms/http_request_failures；逐阶段详情见 samples.json。'
+        ]
+      : []),
+    ...(config.onlineWindowSeconds
+      ? [
           `共同持续在线窗口：${config.onlineWindowSeconds}s；完整覆盖窗口的独立席位：${data.metrics.online_window_seats?.values.count ?? 0}/${config.vus}；任何迟到、掉线或提前结束均失败。`
         ]
       : []),

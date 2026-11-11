@@ -1,37 +1,51 @@
 <script lang="ts">
-  import { procedureMessage, renderProcedureMessage, type ProcedureMessage } from '$lib/components/conference/common/message'
+  import {
+    procedureMessage,
+    renderProcedureMessage,
+    type ProcedureMessage
+  } from '$lib/components/conference/common/message'
   import { t, getLocale } from '$lib/i18n'
   import { onMount } from 'svelte'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
   import {
+    Activity,
     ArrowRight,
-    Building2,
+    Bell,
+    Check,
     CircleAlert,
-    CalendarDays,
+    CircleHelp,
+    Cloud,
+    HardDrive,
+    Layers3,
+    LayoutDashboard,
     LogIn,
+    Monitor,
+    MoreHorizontal,
     Play,
     Plus,
     Search,
-    Users
+    Timer,
+    Users,
+    Workflow
   } from '@lucide/svelte'
-
   import type { Conference } from '$lib/classes/types/conference'
-
-  import { Badge } from '$lib/components/ui/badge'
   import * as Alert from '$lib/components/ui/alert'
+  import { Badge } from '$lib/components/ui/badge'
   import { Button } from '$lib/components/ui/button'
-  import * as Card from '$lib/components/ui/card'
   import * as Empty from '$lib/components/ui/empty'
   import * as InputGroup from '$lib/components/ui/input-group'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
   import ConferenceCard from '$lib/components/home/conference-card.svelte'
   import PlatformConferenceCard from '$lib/components/home/platform-conference-card.svelte'
-  import { platformConferences, refreshPlatformConferences, watchPlatformConferences } from '$lib/classes/stores/conference/platform-conference-store'
+  import {
+    platformConferences,
+    refreshPlatformConferences,
+    watchPlatformConferences
+  } from '$lib/classes/stores/conference/platform-conference-store'
   import { accountStore } from '$lib/classes/stores/app/account-store'
   import CloudPasswordDialog from '$lib/components/conference/join/cloud-password-dialog.svelte'
   import CloudIdentityPickerDialog from '$lib/components/conference/join/cloud-identity-picker-dialog.svelte'
-  import TextAnimate from '$lib/components/ui/text-animate.svelte'
   import {
     conferences,
     deleteConference,
@@ -73,18 +87,48 @@
         )
       : $conferences
   )
-
+  const filteredPlatformConferences = $derived(
+    $platformConferences.conferences.filter((conference) =>
+      `${conference.name} ${conference.organizer ?? ''}`
+        .toLowerCase()
+        .includes(query.trim().toLowerCase())
+    )
+  )
   const lastOpened = $derived(
     $lastOpenedConferenceId
       ? ($conferences.find((conference) => conference.id === $lastOpenedConferenceId) ?? null)
       : null
   )
   const lastOpenedPlatform = $derived(
-    !lastOpened ? $platformConferences.conferences.find((conference) => conference.id === $lastOpenedConferenceId) : undefined
+    !lastOpened
+      ? $platformConferences.conferences.find(
+          (conference) => conference.id === $lastOpenedConferenceId
+        )
+      : undefined
   )
-  const filteredPlatformConferences = $derived($platformConferences.conferences.filter((conference) =>
-    `${conference.name} ${conference.organizer ?? ''}`.toLowerCase().includes(query.trim().toLowerCase())
-  ))
+  const workspaceCount = $derived($conferences.length + $platformConferences.conferences.length)
+  const committeeCount = $derived(
+    $conferences.reduce((count, conference) => count + conference.committees.length, 0) +
+      $platformConferences.conferences.reduce(
+        (count, conference) => count + (conference.committeeCount ?? 0),
+        0
+      )
+  )
+  const seatCount = $derived(
+    $conferences.reduce(
+      (count, conference) =>
+        count +
+        conference.committees.reduce(
+          (committeeCount, committee) => committeeCount + committee.seats.length,
+          0
+        ),
+      0
+    ) +
+      $platformConferences.conferences.reduce(
+        (count, conference) => count + (conference.seatCount ?? 0),
+        0
+      )
+  )
 
   onMount(() => {
     unloadConference()
@@ -94,20 +138,17 @@
   function openCreatePage(): void {
     createConferenceDialogOpen.set(true)
   }
-
-  function formatDate(ts: number): string {
+  function formatDate(ts: number | string): string {
     return new Date(ts).toLocaleString(getLocale(), { dateStyle: 'short', timeStyle: 'short' })
   }
-
   function resumeConference(): void {
-    if (!lastOpened) return
-    if (lastOpened.source === 'cloud') {
-      void rejoinCloudConference(lastOpened)
-      return
+    if (lastOpened) {
+      if (lastOpened.source === 'cloud') void rejoinCloudConference(lastOpened)
+      else navigateToConference(lastOpened.id)
+    } else if (lastOpenedPlatform) {
+      window.location.replace(`/conference/${lastOpenedPlatform.id}`)
     }
-    navigateToConference(lastOpened.id)
   }
-
   async function rejoinWithMembership(membership: CloudMembership): Promise<void> {
     rejoinError = ''
     try {
@@ -125,12 +166,12 @@
         passwordDialogOpen = true
         return
       }
-
       rejoinError =
-        error instanceof CloudJoinError ? error.message : procedureMessage('procedure_unable_to_rejoin_check_your_connection_and_try_again')
+        error instanceof CloudJoinError
+          ? error.message
+          : procedureMessage('procedure_unable_to_rejoin_check_your_connection_and_try_again')
     }
   }
-
   function openIdentityPicker(
     conference: Conference,
     memberships: CloudMembership[],
@@ -139,19 +180,25 @@
     identityPickerMemberships = memberships
     identityPickerDescription =
       action === 'rejoin'
-        ? procedureMessage('procedure_multiple_identities_for_value_are_saved_on_this_device_choose_a_seat_to_enter', { value1: conference.name })
-        : procedureMessage('procedure_multiple_identities_for_value_are_saved_on_this_device_choose_a_seat_whose_saved_passw', { value1: conference.name })
+        ? procedureMessage(
+            'procedure_multiple_identities_for_value_are_saved_on_this_device_choose_a_seat_to_enter',
+            { value1: conference.name }
+          )
+        : procedureMessage(
+            'procedure_multiple_identities_for_value_are_saved_on_this_device_choose_a_seat_whose_saved_passw',
+            { value1: conference.name }
+          )
     identityPickerAction = action
     identityPickerOpen = true
   }
-
   async function rejoinCloudConference(conference: Conference): Promise<void> {
     const memberships = getCloudMembershipsByConferenceId(conference.id)
     if (memberships.length === 0) {
-      rejoinError = procedureMessage('procedure_no_saved_cloud_seat_information_was_found_join_again_using_an_invite_code')
+      rejoinError = procedureMessage(
+        'procedure_no_saved_cloud_seat_information_was_found_join_again_using_an_invite_code'
+      )
       return
     }
-
     rejoinError = ''
     if (memberships.length > 1) {
       openIdentityPicker(conference, memberships, 'rejoin')
@@ -159,7 +206,6 @@
     }
     await rejoinWithMembership(memberships[0])
   }
-
   function handleIdentitySelect(membership: CloudMembership): void {
     if (identityPickerAction === 'password') {
       rejoinError = ''
@@ -169,14 +215,14 @@
     }
     void rejoinWithMembership(membership)
   }
-
   function openCloudPasswordDialog(conference: Conference): void {
     const memberships = getCloudMembershipsByConferenceId(conference.id)
     if (memberships.length === 0) {
-      rejoinError = procedureMessage('procedure_no_saved_cloud_seat_information_was_found_join_again_using_an_invite_code')
+      rejoinError = procedureMessage(
+        'procedure_no_saved_cloud_seat_information_was_found_join_again_using_an_invite_code'
+      )
       return
     }
-
     rejoinError = ''
     if (memberships.length > 1) {
       openIdentityPicker(conference, memberships, 'password')
@@ -185,211 +231,238 @@
     passwordMembership = memberships[0]
     passwordDialogOpen = true
   }
-
   function removeCloudConference(conference: Conference): void {
     removeCloudMembership(conference.id)
     deleteConference(conference.id)
   }
 </script>
 
-<div class="page-shell relative flex h-screen min-h-0 flex-col overflow-hidden bg-background">
-  <div class="page-grid pointer-events-none absolute inset-0 opacity-50" aria-hidden="true"></div>
-  <div
-    class="page-orb page-orb-primary page-orb-primary-compact pointer-events-none"
-    aria-hidden="true"
-  ></div>
-
-  <header
-    class="relative z-10 shrink-0 border-b bg-background/75 px-6 py-6 backdrop-blur-xl sm:px-8 lg:pl-10 lg:pr-2"
-  >
-    <div class="flex w-full flex-col gap-6">
-      <div class="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
-        <div class="min-w-0">
-          <h1 class="text-3xl font-semibold tracking-tight sm:text-4xl">
-            <TextAnimate
-              text={t('procedure_pick_up_where_you_left_off')}
-              className="font-semibold"
-              as="span"
-              by="word"
-              animation="blurInUp"
-              startOnView={false}
-              once
-            />
-          </h1>
-          <p class="mt-2 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
-            <span>{t('procedure_every_conference_deserves_thoughtful_preparation')}</span>
-          </p>
-        </div>
-
-        <div class="flex shrink-0 gap-2">
-          <Button size="lg" variant="outline" onclick={() => joinConferenceDialogOpen.set(true)}>
-            <LogIn data-icon="inline-start" />
-            {t('procedure_join_conference')}
-          </Button>
-          <Button size="lg" onclick={openCreatePage}>
-            <Plus data-icon="inline-start" />
-            {t('procedure_create_conference')}
-            <ArrowRight data-icon="inline-end" />
-          </Button>
-        </div>
-      </div>
-
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <InputGroup.Root class="max-w-xl flex-1 bg-background/70">
-          <InputGroup.Addon>
-            <Search />
-          </InputGroup.Addon>
-          <InputGroup.Input
-            bind:value={query}
-            placeholder={t('procedure_search_conferences_or_committees')}
-            aria-label={t('procedure_search_conferences_or_committees_2')}
-          />
-        </InputGroup.Root>
-        <Badge variant="secondary" class="self-start px-3 py-1 sm:self-auto">
-          {t('procedure_conference_search_count', { value1: filteredConferences.length + filteredPlatformConferences.length, value2: $conferences.length + $platformConferences.conferences.length })}
-        </Badge>
-      </div>
-    </div>
-  </header>
-
-  <ScrollArea class="relative z-10 min-h-0 flex-1">
-    <main class="flex w-full flex-col gap-8 px-6 py-8 sm:px-8 lg:py-10 lg:pl-10 lg:pr-2">
-      {#if lastOpened && !query.trim()}
-        <section aria-labelledby="continue-heading">
-          <div class="mb-3 flex items-end justify-between gap-4">
-            <div>
-              <p class="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                {t('procedure_recently_opened')}
-              </p>
-              <h2 id="continue-heading" class="mt-1 text-lg font-semibold tracking-tight">
-                {t('procedure_return_to_your_last_conference')}
-              </h2>
-            </div>
-            <Badge variant="outline" class="hidden sm:inline-flex">{t('procedure_quick_access')}</Badge>
-          </div>
-
-          <Card.Root
-            class="group relative cursor-pointer overflow-hidden border-primary/25 bg-card/80 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg"
-            role="link"
-            tabindex={0}
+<div class="workspace-shell flex h-full min-h-0 flex-col overflow-hidden">
+  <ScrollArea class="min-h-0 flex-1">
+    <main
+      class="workspace-grid mx-auto flex w-full max-w-[1560px] flex-col gap-5 p-5 md:flex-row lg:p-7"
+    >
+      <section
+        class="flex min-w-0 flex-col gap-4 md:w-[clamp(245px,28vw,370px)] md:shrink-0"
+        aria-labelledby="quick-actions-heading"
+      >
+        {#if (lastOpened || lastOpenedPlatform) && !query.trim()}
+          <button
+            class="resume-card group flex min-h-[286px] flex-col justify-between rounded-2xl p-6 text-left shadow-lg"
             onclick={resumeConference}
-            onkeydown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault()
-                resumeConference()
-              }
-            }}
           >
-            <div class="absolute inset-y-0 left-0 w-1 bg-primary" aria-hidden="true"></div>
-            <Card.Content class="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:p-6">
-              <div
-                class="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary"
-              >
-                <Play class="size-5" />
-              </div>
+            <div class="flex items-center justify-between">
+              <span class="resume-badge">
+                <span class="status-dot"></span>
+                {t('procedure_ready_to_resume')}
+              </span>
+              <MoreHorizontal class="size-[18px] text-slate-500" />
+            </div>
+            <div>
+              <p class="eyebrow text-indigo-200/70">{t('procedure_last_opened_workspace')}</p>
+              <h1 class="mt-2 text-[25px] font-bold leading-[1.08] tracking-tight text-white">
+                {lastOpened?.name ?? lastOpenedPlatform?.name}
+              </h1>
+              <p class="mt-3 text-xs leading-relaxed text-slate-300">
+                {#if lastOpened}{t('procedure_committee_count', {
+                    count: lastOpened.committees.length
+                  })} · {t('procedure_seat_count', {
+                    value1: lastOpened.committees.reduce(
+                      (count, committee) => count + committee.seats.length,
+                      0
+                    )
+                  })}{:else}{t('settings_cloud_platform')} · {lastOpenedPlatform?.organizer ??
+                    t('procedure_conference')}{/if}
+              </p>
+            </div>
+            <div class="flex items-end justify-between gap-4">
               <div class="min-w-0 flex-1">
-                <p class="text-xs font-medium uppercase tracking-[0.16em] text-primary">{t('procedure_continue')}</p>
-                <p class="mt-1 truncate text-lg font-semibold">{lastOpened.name}</p>
-                <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                  <span class="flex items-center gap-1.5">
-                    <Building2 class="size-3.5" />
-                    {t('procedure_committee_count', { count: lastOpened.committees.length })}
-                  </span>
-                  <span class="flex items-center gap-1.5">
-                    <CalendarDays class="size-3.5" />
-                    {formatDate(lastOpened.createdAt)}
-                  </span>
-                  <span class="flex items-center gap-1.5">
-                    <Users class="size-3.5" />
-                    {t('procedure_seat_count', { value1: lastOpened.committees.reduce((count, committee) => count + committee.seats.length, 0) })}
-                  </span>
+                <p class="mb-2 text-[10px] text-slate-400">{t('procedure_recently_opened')}</p>
+                <div class="h-1.5 max-w-[150px] rounded-full bg-slate-700">
+                  <div class="h-1.5 w-2/3 rounded-full bg-indigo-400"></div>
                 </div>
               </div>
-              <Button
-                class="shrink-0"
-                onclick={(event) => {
-                  event.stopPropagation()
-                  resumeConference()
-                }}
-              >
-                {t('procedure_open_workspace')}
-                <ArrowRight data-icon="inline-end" />
-              </Button>
-            </Card.Content>
-          </Card.Root>
+              <span class="resume-button">
+                <Play class="size-3.5" />{t('procedure_open_workspace')}
+              </span>
+            </div>
+          </button>
+        {:else}
+          <div
+            class="empty-resume-card flex min-h-[286px] flex-col justify-between rounded-2xl p-6"
+          >
+            <div
+              class="flex size-10 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800"
+            >
+              <HardDrive class="size-5" />
+            </div>
+            <div>
+              <p class="eyebrow">{t('procedure_last_opened_workspace')}</p>
+              <h1 class="mt-2 text-2xl font-bold tracking-tight">
+                {t('procedure_no_workspace_open')}
+              </h1>
+              <p class="mt-2 text-xs text-muted-foreground">
+                {t('procedure_create_or_join_to_begin')}
+              </p>
+            </div>
+            <span class="text-xs font-semibold text-indigo-600 dark:text-indigo-300">
+              {t('procedure_get_moving')}
+              <ArrowRight class="ml-1 inline size-3.5" />
+            </span>
+          </div>
+        {/if}
+        <section class="surface-card rounded-2xl p-5" aria-labelledby="quick-actions-heading">
+          <div class="mb-4 flex items-center justify-between">
+            <div>
+              <p class="eyebrow">{t('procedure_get_moving')}</p>
+              <h2 id="quick-actions-heading" class="mt-1 text-[15px] font-bold">
+                {t('procedure_quick_actions')}
+              </h2>
+            </div>
+            <Workflow class="size-4 text-slate-400" />
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <button class="quick-action quick-action-primary" onclick={openCreatePage}>
+              <span class="quick-action-icon"><Plus class="size-4" /></span>
+              <span>
+                <strong>{t('procedure_create_conference')}</strong>
+                <small>{t('procedure_start_from_scratch')}</small>
+              </span>
+            </button>
+            <button class="quick-action" onclick={() => joinConferenceDialogOpen.set(true)}>
+              <span class="quick-action-icon"><LogIn class="size-4" /></span>
+              <span>
+                <strong>{t('procedure_join_conference')}</strong>
+                <small>{t('procedure_use_invite_code')}</small>
+              </span>
+            </button>
+          </div>
         </section>
-      {/if}
-
-      {#if lastOpenedPlatform && !query.trim()}
-        <section aria-label={t('procedure_recently_opened')}>
-          <p class="mb-3 text-xs font-medium text-muted-foreground">{t('procedure_recently_opened_cloud_conferences')}</p>
-          <PlatformConferenceCard conference={lastOpenedPlatform} />
-        </section>
-      {/if}
-
-      <section aria-labelledby="conference-list-heading">
-        <div class="mb-3 flex items-end justify-between gap-4">
+        <section
+          class="tip-card flex min-h-[210px] flex-col justify-between rounded-2xl p-5"
+          aria-labelledby="workflow-tip-heading"
+        >
+          <div class="flex items-center justify-between">
+            <span class="tip-icon"><Workflow class="size-4" /></span>
+            <span class="eyebrow text-teal-600/80 dark:text-teal-300/80">
+              {t('procedure_workflow_tip')}
+            </span>
+          </div>
           <div>
-            <p class="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-              {t('procedure_your_favorites')}
+            <h2
+              id="workflow-tip-heading"
+              class="text-[15px] font-bold text-teal-900 dark:text-teal-100"
+            >
+              {t('procedure_keep_every_room_in_sync')}
+            </h2>
+            <p class="mt-2 text-[11px] leading-relaxed text-teal-800/70 dark:text-teal-100/70">
+              {t('procedure_display_window_tip')}
             </p>
-            <h2 id="conference-list-heading" class="mt-1 text-lg font-semibold tracking-tight">
+          </div>
+          <span class="text-[11px] font-semibold text-teal-700 dark:text-teal-200">
+            {t('procedure_open_display_window')}
+            <ArrowRight class="ml-1 inline size-3.5" />
+          </span>
+        </section>
+      </section>
+
+      <section class="flex min-w-0 flex-1 flex-col gap-4" aria-labelledby="conference-list-heading">
+        <div class="flex items-end justify-between gap-4">
+          <div>
+            <p class="eyebrow">{t('procedure_your_workspace')}</p>
+            <h2 id="conference-list-heading" class="mt-1 text-[22px] font-bold tracking-tight">
               {t('procedure_all_conferences')}
             </h2>
           </div>
-          {#if query.trim()}
-            <span class="text-xs text-muted-foreground">{t('procedure_search_results_update_as_you_type')}</span>
-          {/if}
+          <span class="flex shrink-0 items-center gap-2 text-[11px] text-muted-foreground">
+            <span class="size-1.5 rounded-full bg-indigo-500"></span>
+            {workspaceCount}
+            {t('procedure_workspaces')}
+          </span>
         </div>
-
-        {#if rejoinError}
-          <Alert.Root variant="destructive" class="mb-3">
-            <CircleAlert />
-            <Alert.Title>{t('procedure_unable_to_rejoin')}</Alert.Title>
-            <Alert.Description>{renderProcedureMessage(rejoinError)}</Alert.Description>
-          </Alert.Root>
-        {/if}
-
-        {#if $accountStore.user}
-          <div class="mb-3 flex items-center justify-between gap-3">
-            <p class="text-sm text-muted-foreground">{t('procedure_conferences_created_on_the_cloud_platform_open_on_the_platform')}</p>
-            <Button variant="outline" size="sm" disabled={$platformConferences.loading} onclick={() => void refreshPlatformConferences()}>{t('procedure_refresh_cloud_conferences')}</Button>
-          </div>
-          {#if $platformConferences.loading}<p role="status" class="mb-3 text-sm text-muted-foreground">{t('procedure_loading_cloud_conferences')}</p>{/if}
-          {#if $platformConferences.error}<p role="alert" class="mb-3 text-sm text-destructive">{$platformConferences.error}</p>{/if}
-        {/if}
-        {#if filteredConferences.length === 0 && filteredPlatformConferences.length === 0 && !$platformConferences.loading}
-          <Empty.Root class="min-h-64 border bg-card/45 shadow-sm">
+        <InputGroup.Root class="search-field h-11 bg-card">
+          <InputGroup.Addon><Search /></InputGroup.Addon><InputGroup.Input
+            bind:value={query}
+            placeholder={t('procedure_search_conferences_or_committees')}
+            aria-label={t('procedure_search_conferences_or_committees_2')}
+          /><InputGroup.Addon align="inline-end" class="hidden sm:flex">
+            <span class="shortcut-hint">⌘ F</span>
+          </InputGroup.Addon>
+        </InputGroup.Root>
+        {#if rejoinError}<Alert.Root variant="destructive">
+            <CircleAlert /><Alert.Title>
+              {t('procedure_unable_to_rejoin')}
+            </Alert.Title><Alert.Description>
+              {renderProcedureMessage(rejoinError)}
+            </Alert.Description>
+          </Alert.Root>{/if}
+        {#if $accountStore.user}<div
+            class="flex items-center justify-between gap-3 text-xs text-muted-foreground"
+          >
+            <span>
+              {t('procedure_conferences_created_on_the_cloud_platform_open_on_the_platform')}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={$platformConferences.loading}
+              onclick={() => void refreshPlatformConferences()}
+            >
+              {t('settings_refresh')}
+            </Button>
+          </div>{/if}
+        {#if $platformConferences.loading}<p role="status" class="text-xs text-muted-foreground">
+            {t('procedure_loading_cloud_conferences')}
+          </p>{/if}
+        {#if $platformConferences.error}<p role="alert" class="text-xs text-destructive">
+            {$platformConferences.error}
+          </p>{/if}
+        {#if filteredConferences.length === 0 && filteredPlatformConferences.length === 0 && !$platformConferences.loading}<Empty.Root
+            class="min-h-64 border bg-card/60 shadow-none"
+          >
             <Empty.Header>
-              <Empty.Media variant="icon">
-                <Search class="size-4" />
-              </Empty.Media>
-              <Empty.Title>{t('procedure_no_matching_conferences')}</Empty.Title>
-              <Empty.Description>{t('procedure_try_another_keyword_or_clear_the_search')}</Empty.Description>
-            </Empty.Header>
-            <Empty.Content>
-              <Button variant="outline" size="sm" onclick={() => (query = '')}>{t('procedure_clear_search')}</Button>
+              <Empty.Media variant="icon"><Search class="size-4" /></Empty.Media><Empty.Title>
+                {t('procedure_no_matching_conferences')}
+              </Empty.Title><Empty.Description>
+                {t('procedure_try_another_keyword_or_clear_the_search')}
+              </Empty.Description>
+            </Empty.Header><Empty.Content>
+              <Button variant="outline" size="sm" onclick={() => (query = '')}>
+                {t('procedure_clear_search')}
+              </Button>
             </Empty.Content>
-          </Empty.Root>
-        {:else}
-          <div class="flex flex-col gap-3">
-            {#each filteredPlatformConferences as conference (conference.id)}
-              <PlatformConferenceCard {conference} />
-            {/each}
-            {#each filteredConferences as conference (conference.id)}
-              <ConferenceCard
+          </Empty.Root>{:else}<div class="flex min-w-0 flex-col gap-2.5">
+            {#each filteredPlatformConferences as conference (conference.id)}<PlatformConferenceCard
+                {conference}
+              />{/each}{#each filteredConferences as conference (conference.id)}<ConferenceCard
                 {conference}
                 onJoin={conference.source === 'cloud' ? rejoinCloudConference : undefined}
                 onUpdatePassword={openCloudPasswordDialog}
                 onDelete={conference.source === 'cloud' ? removeCloudConference : undefined}
-              />
-            {/each}
-          </div>
-        {/if}
+              />{/each}
+            <button class="create-placeholder" onclick={openCreatePage}>
+              <span
+                class="flex size-6 items-center justify-center rounded-lg bg-slate-100 text-slate-500 dark:bg-slate-800"
+              >
+                <Plus class="size-3.5" />
+              </span>
+              {t('procedure_create_another_conference')}
+            </button>
+          </div>{/if}
       </section>
     </main>
-    <div class="h-10"></div>
   </ScrollArea>
+  <footer
+    class="status-bar flex h-[30px] shrink-0 items-center justify-between border-t px-6 text-[10px] text-muted-foreground lg:px-8"
+  >
+    <span class="flex items-center gap-2">
+      <span class="size-1.5 rounded-full bg-emerald-400"></span>
+      {t('procedure_local_workspace_ready')}
+      <span class="text-border">|</span>
+      Veto v0.151.2
+    </span>
+    <span>{t('procedure_need_help')}</span>
+  </footer>
   <CloudPasswordDialog
     open={passwordDialogOpen}
     membership={passwordMembership}
@@ -405,52 +478,264 @@
 </div>
 
 <style>
-  .page-shell {
-    isolation: isolate;
+  .workspace-shell {
+    background: #f4f6fa;
+    color: #202a3a;
+  }
+  :global(.dark) .workspace-shell {
+    background: #111827;
+    color: #f8fafc;
   }
 
-  .page-grid {
-    background-image:
-      linear-gradient(
-        to right,
-        color-mix(in oklch, var(--border) 42%, transparent) 1px,
-        transparent 1px
-      ),
-      linear-gradient(
-        to bottom,
-        color-mix(in oklch, var(--border) 42%, transparent) 1px,
-        transparent 1px
-      );
-    background-size: 42px 42px;
-    mask-image: linear-gradient(to bottom, black, transparent 75%);
+  .workspace-grid {
+    min-height: calc(100% - 1px);
   }
-
-  .page-orb {
-    position: absolute;
-    aspect-ratio: 1;
-    border-radius: 9999px;
-    filter: blur(72px);
-    pointer-events: none;
-    opacity: 0.18;
+  .resume-card {
+    background: #18243a;
+    transition:
+      transform 0.15s,
+      box-shadow 0.15s;
   }
-
-  .page-orb-primary {
-    top: -18rem;
-    right: -12rem;
-    width: min(48rem, 72vw);
-    background: color-mix(in oklch, var(--primary) 70%, transparent);
+  .resume-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 16px 32px #17203335;
   }
-
-  .page-orb-primary-compact {
-    top: -24rem;
-    right: -16rem;
-    width: min(40rem, 55vw);
-    opacity: 0.12;
+  .empty-resume-card,
+  .surface-card {
+    border: 1px solid #e3e7ef;
+    background: #fff;
+    box-shadow: 0 4px 14px #17203308;
   }
-
-  @media (prefers-reduced-motion: reduce) {
-    .page-orb {
-      filter: blur(52px);
-    }
+  :global(.dark) .empty-resume-card,
+  :global(.dark) .surface-card {
+    border-color: #293548;
+    background: #1b2537;
+  }
+  .resume-badge {
+    display: inline-flex;
+    width: fit-content;
+    align-items: center;
+    gap: 0.45rem;
+    border-radius: 0.4rem;
+    background: #253452;
+    padding: 0.35rem 0.55rem;
+    color: #bbd7cb;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: #62d2a2;
+  }
+  .resume-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    border-radius: 0.55rem;
+    background: #6d7cff;
+    padding: 0.6rem 0.8rem;
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .eyebrow {
+    color: #98a2b3;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .quick-action {
+    display: flex;
+    min-height: 62px;
+    align-items: center;
+    gap: 0.6rem;
+    border-radius: 0.65rem;
+    background: #f4f7fa;
+    padding: 0.65rem;
+    text-align: left;
+    transition:
+      background 0.15s,
+      transform 0.15s;
+  }
+  .quick-action:hover {
+    background: #edf1f6;
+    transform: translateY(-1px);
+  }
+  .quick-action-primary {
+    background: #eef0ff;
+  }
+  .quick-action-primary:hover {
+    background: #e6e9ff;
+  }
+  .quick-action-icon {
+    display: flex;
+    height: 29px;
+    width: 29px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.5rem;
+    background: #e6ebf2;
+    color: #607087;
+  }
+  .quick-action-primary .quick-action-icon {
+    background: #dadfff;
+    color: #5362e8;
+  }
+  .quick-action strong,
+  .quick-action small {
+    display: block;
+  }
+  .quick-action strong {
+    color: #3a4658;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .quick-action-primary strong {
+    color: #3e4bb8;
+  }
+  .quick-action small {
+    margin-top: 3px;
+    color: #8793a4;
+    font-size: 9px;
+  }
+  .tip-card {
+    border: 1px solid #d5eee8;
+    background: #e9f7f4;
+  }
+  :global(.dark) .tip-card {
+    border-color: #24534f;
+    background: #153b3a;
+  }
+  .tip-icon {
+    display: flex;
+    height: 30px;
+    width: 30px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.55rem;
+    background: #cdeee6;
+    color: #249d8d;
+  }
+  :global(.search-field) {
+    border-color: #dde3ec;
+    box-shadow: none;
+  }
+  :global(.dark) :global(.search-field) {
+    border-color: #334155;
+  }
+  .shortcut-hint {
+    border-radius: 0.3rem;
+    background: #f2f4f7;
+    padding: 0.2rem 0.35rem;
+    color: #8793a4;
+    font-size: 10px;
+  }
+  .create-placeholder {
+    display: flex;
+    min-height: 70px;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    border: 1px dashed #d8dee8;
+    border-radius: 0.85rem;
+    color: #7e8a9c;
+    font-size: 11px;
+  }
+  .create-placeholder:hover {
+    border-color: #9ca8bb;
+    background: #fafbfc;
+  }
+  .stat-tile {
+    display: flex;
+    min-height: 76px;
+    flex-direction: column;
+    justify-content: space-between;
+    border-radius: 0.65rem;
+    padding: 0.7rem;
+  }
+  .stat-tile strong {
+    font-size: 22px;
+    line-height: 1;
+  }
+  .stat-tile span {
+    font-size: 10px;
+  }
+  .stat-tile-indigo {
+    background: #f5f6ff;
+    color: #5261e4;
+  }
+  .stat-tile-indigo span {
+    color: #7f89a7;
+  }
+  .stat-tile-teal {
+    background: #f3fbf9;
+    color: #279a87;
+  }
+  .stat-tile-teal span {
+    color: #6f958e;
+  }
+  .stat-tile-amber {
+    background: #fff8ee;
+    color: #c37b20;
+  }
+  .stat-tile-amber span {
+    color: #9f8969;
+  }
+  :global(.status-ready) {
+    border: 0;
+    background: #e8f7f3;
+    color: #279a87;
+    font-size: 9px;
+  }
+  .connection-row {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+  }
+  .connection-row > span:nth-child(2) {
+    min-width: 0;
+  }
+  .connection-row strong,
+  .connection-row small {
+    display: block;
+  }
+  .connection-row strong {
+    color: #445166;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .connection-row small {
+    margin-top: 3px;
+    max-width: 190px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #9aa5b5;
+    font-size: 10px;
+  }
+  :global(.dark) .connection-row strong {
+    color: #d9e1ee;
+  }
+  .connection-icon {
+    display: flex;
+    height: 24px;
+    width: 24px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.5rem;
+  }
+  .connection-icon-local {
+    background: #eef1f5;
+    color: #607087;
+  }
+  .connection-icon-cloud {
+    background: #e8f7f3;
+    color: #279a87;
   }
 </style>

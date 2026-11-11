@@ -24,6 +24,9 @@ export class SeatSession {
   private observed = new Set<string>()
   private firstSeen = new ObservationTimes()
   private queue: RefreshQueue
+  private initialRefreshDone = false
+  private connectionOnline = false
+  private connectionStartedAt = 0
 
   constructor(
     readonly config: LoadConfig,
@@ -49,7 +52,26 @@ export class SeatSession {
     return !this.stopped && !this.expired
   }
 
+  private setConnectionOnline(online: boolean): void {
+    if (this.connectionOnline === online) return
+    this.connectionOnline = online
+    if (online) {
+      this.connectionStartedAt = Date.now()
+      metrics.connectionUp.add(1, { phase: this.api.phase })
+    } else {
+      if (this.connectionStartedAt) {
+        metrics.connectionDuration.add(Date.now() - this.connectionStartedAt, {
+          phase: this.api.phase
+        })
+        this.connectionStartedAt = 0
+      }
+      metrics.connectionDown.add(1, { phase: this.api.phase })
+    }
+    this.connectionChanged(online)
+  }
+
   async start(credential: SeatCredential): Promise<void> {
+    this.api.phase = 'authentication'
     try {
       this.auth = await this.api.authenticate(credential)
       metrics.authOK.add(true)
@@ -70,6 +92,7 @@ export class SeatSession {
       metrics.recordError('ws.connect', 'untrusted_ws_url')
       throw new Error('UNTRUSTED_WS_URL')
     }
+    this.api.phase = 'websocket'
     this.open()
     const started = Date.now()
     while (
@@ -83,7 +106,6 @@ export class SeatSession {
       metrics.recordError('ws.ready', 'timeout')
       throw new Error('WS_READY_TIMEOUT')
     }
-    await this.refresh(topics)
     this.heartbeat = setInterval(() => {
       if (!this.active) return
       if (Date.now() - this.lastReconciled >= (this.ready ? 300_000 : 60_000)) {
@@ -92,7 +114,7 @@ export class SeatSession {
       }
       if (this.socket?.readyState === 1 && this.ready) {
         if (Date.now() - this.lastPong > 90_000) {
-          this.connectionChanged(false)
+          this.setConnectionOnline(false)
           this.socket.close()
         } else this.socket.send('ping')
       }
@@ -113,7 +135,7 @@ export class SeatSession {
     socket.addEventListener('open', () => {
       this.lastPong = Date.now()
       this.lastReconciled = Date.now()
-      this.queue.invalidate(topics)
+      if (this.initialRefreshDone) this.queue.invalidate(topics)
     })
     socket.addEventListener('message', (event) => {
       if (!this.active || this.socket !== socket) return
@@ -130,7 +152,7 @@ export class SeatSession {
       }
       if (message.type === 'ready') {
         this.ready = true
-        this.connectionChanged(true)
+        this.setConnectionOnline(true)
         this.failures = 0
         metrics.readyMs.add(Date.now() - started)
         if (this.reconnectStarted) {
@@ -151,7 +173,7 @@ export class SeatSession {
     socket.addEventListener('close', (event) => {
       if (this.socket !== socket) return
       this.ready = false
-      this.connectionChanged(false)
+      this.setConnectionOnline(false)
       if (event.code === 1008) {
         this.expired = true
         metrics.sessionExpired.add(1)
@@ -174,7 +196,7 @@ export class SeatSession {
     })
     socket.addEventListener('error', () => {
       if (this.socket !== socket) return
-      this.connectionChanged(false)
+      this.setConnectionOnline(false)
       if (this.active)
         console.warn(
           JSON.stringify({
@@ -188,7 +210,7 @@ export class SeatSession {
   }
 
   async reconnect(): Promise<void> {
-    this.connectionChanged(false)
+    this.setConnectionOnline(false)
     this.reconnectStarted = Date.now()
     this.ready = false
     const previous = this.socket
@@ -269,6 +291,14 @@ export class SeatSession {
     if (settled.some((result) => result.status === 'rejected')) throw new Error('REFRESH_FAILED')
   }
 
+  async loadInitial(): Promise<void> {
+    if (this.initialRefreshDone) return
+    this.api.phase = 'initial-load'
+    await this.refresh(topics)
+    this.initialRefreshDone = true
+    this.api.phase = 'online-window'
+  }
+
   private async syncNotifications(): Promise<void> {
     try {
       await this.feed.sync()
@@ -308,7 +338,7 @@ export class SeatSession {
   }
 
   async close(): Promise<void> {
-    this.connectionChanged(false)
+    this.setConnectionOnline(false)
     if (this.config.scenario === 'files' || this.config.scenario === 'mixed') {
       metrics.deliveryOK.add(this.received > 0)
       if (!this.received) metrics.recordError('live.delivery', 'no_notification_received')

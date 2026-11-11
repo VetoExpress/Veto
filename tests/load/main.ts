@@ -95,14 +95,22 @@ export const options: Options = {
   discardResponseBodies: true
 }
 
-export function setup(): { started: number; windowStart: number; windowEnd: number } {
+export function setup(): {
+  started: number
+  windowStart: number
+  windowEnd: number
+} {
   const started = Date.now()
   const windowStart = started + (config.rampSeconds + config.startDelaySeconds) * 1000
   if (config.onlineWindowSeconds) {
     metrics.onlineWindowStart.add(windowStart)
     metrics.onlineWindowEnd.add(windowStart + config.onlineWindowSeconds * 1000)
   }
-  return { started, windowStart, windowEnd: windowStart + (config.onlineWindowSeconds ?? 0) * 1000 }
+  return {
+    started,
+    windowStart,
+    windowEnd: windowStart + (config.onlineWindowSeconds ?? 0) * 1000
+  }
 }
 
 export default async function (data: {
@@ -126,7 +134,11 @@ export default async function (data: {
       steps > 1
         ? Math.floor(((vu.idInTest - 1) * steps) / config.vus) / Math.max(1, steps - 1)
         : (vu.idInTest - 1) / Math.max(1, config.vus - 1)
-    await delay(config.rampSeconds * 1000 * fraction)
+    const stagger =
+      config.openLoopSeed === undefined
+        ? 0
+        : ((vu.idInTest * 2654435761 + config.openLoopSeed) >>> 0) % 500
+    await delay(config.rampSeconds * 1000 * fraction + stagger)
   }
   if (config.scenario === 'display') {
     await runDisplay(config, runId, vu.idInTest)
@@ -136,22 +148,29 @@ export default async function (data: {
   const window = config.onlineWindowSeconds
     ? new OnlineWindow(data.windowStart, data.windowEnd)
     : undefined
-  const session = new SeatSession(config, runId, (online) => window?.update(online, Date.now()))
+  const session = new SeatSession(config, runId, (online) => {
+    window?.update(online, Date.now())
+    if (config.onlineWindowSeconds) metrics.connectionState.add(online ? 1 : 0)
+  })
   let running = true
   let reviewer: Promise<void> = Promise.resolve()
   let until = Date.now() + config.durationSeconds * 1000
   try {
     await session.start(credential)
+    await session.loadInitial()
+    if (window) await delay(Math.max(0, data.windowStart - Date.now()))
     until = window
       ? data.windowStart + config.durationSeconds * 1000
       : Date.now() + config.durationSeconds * 1000
-    reviewer = reviewerLoop(session, () => running)
-    if (window) await delay(Math.max(0, data.windowStart - Date.now()))
+    const observer = Boolean(config.observerEvery && vu.idInTest % config.observerEvery === 0)
+    if (config.scenario === 'mixed' || config.scenario === 'files' || observer) {
+      session.api.phase = 'online-window'
+      reviewer = reviewerLoop(session, () => running)
+    }
     if (config.scenario === 'reconnect') {
       await delay(config.reconnectAfterSeconds * 1000)
       await session.reconnect()
     }
-    const observer = Boolean(config.observerEvery && vu.idInTest % config.observerEvery === 0)
     if (fileScenario && !observer) {
       // Absolute barrier aligns the upload burst across users that completed authentication in time.
       const barrier = data.started + (config.rampSeconds + config.startDelaySeconds) * 1000
@@ -161,10 +180,10 @@ export default async function (data: {
     }
     let sequence = config.filesPerVu
     do {
+      session.api.phase =
+        Date.now() < (window?.end ?? data.windowStart) ? 'online-window' : 'workload'
       if (config.scenario === 'mixed' && !observer)
         await submitMixed(session, credential, vu.idInTest, sequence++)
-      else if (config.scenario === 'browse')
-        await session.refresh(['files', 'news', 'directives', 'situations', 'timeline'])
       await delay(config.actionIntervalSeconds * 1000)
     } while (session.active && Date.now() < until)
     // Reviewers remain alive while the last, slower uploads finish and are verified.

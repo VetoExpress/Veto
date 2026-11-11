@@ -4,27 +4,31 @@
 本地联调使用同级 `veto-api` 的真实 Worker、D1、R2 和 Durable Object；没有业务 mock，不接入 KV。
 本地验证和 Cloudflare 验收是两项独立结果，任何本地通过都不能替代真实 Cloudflare 部署的测试。
 
-## 300 人会议的 500 人验收
+## 300 人会议的 500/1000/2000 人验收
 
 本次会议以 **至少 500 个独立席位同时在线**为验收规模，比预计 300 人多 200 人（约 67%）。
-使用以下两个专用 profile；smoke 和原有小规模探索配置不能代替此次验收：
+使用以下专用 profile；smoke 和原有小规模探索配置不能代替此次验收：
 
-| profile          | 同时在线要求                        | 业务压力                                                                                      |
-| ---------------- | ----------------------------------- | --------------------------------------------------------------------------------------------- |
-| `conference-500` | 同一大会 500 席共同连续在线 30 分钟 | 混合业务；每第 5 席只观察/审核，400 席各上传一个文件，其余时间每 30 秒尝试业务操作            |
-| `files-500`      | 同一大会 500 席共同连续在线 10 分钟 | 500 席在共同开始时间各提交 4 文件，合计 2,000 文件，每席最多 2 个上传在途；发布后逐个下载校验 |
+| profile           | 同时在线要求                         | 业务压力                                                                                       |
+| ----------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `conference-500`  | 同一大会 500 席共同连续在线 30 分钟  | 混合业务；每第 5 席只观察/审核，400 席各上传一个文件，其余时间每 30 秒尝试业务操作             |
+| `files-500`       | 同一大会 500 席共同连续在线 10 分钟  | 500 席在共同开始时间各提交 4 文件，合计 2,000 文件，每席最多 2 个上传在途；发布后逐个下载校验  |
+| `conference-1000` | 同一大会 1000 席共同连续在线 30 分钟 | 混合业务；每第 5 席只观察/审核，800 席各上传一个文件，其余时间每 30 秒尝试业务操作             |
+| `files-1000`      | 同一大会 1000 席共同连续在线 10 分钟 | 1000 席在共同开始时间各提交 4 文件，合计 4,000 文件，每席最多 2 个上传在途；发布后逐个下载校验 |
+| `conference-2000` | 同一大会 2000 席共同连续在线 30 分钟 | 混合业务；每第 5 席只观察/审核，1600 席各上传一个文件，其余时间每 30 秒尝试业务操作            |
+| `files-2000`      | 同一大会 2000 席共同连续在线 10 分钟 | 2000 席各提交 2 文件，合计 4,000 文件，每席最多 2 个上传在途；发布后逐个下载校验               |
 
-两者默认分 10 批、用 180 秒建连，随后留 120 秒准备，才开始共同窗口。
+500/1000 席默认分 10 批、用 180 秒建连，随后留 120 秒准备；2000 席默认分 20 批、用 300 秒建连，随后留 180 秒准备，才开始共同窗口。
 每个席位必须在共同窗口开始时已收到 WS ready，并完整覆盖同一个绝对时间区间；
 迟到、短暂掉线后恢复、提前退出都使该席位失败，`online_window_seats` 必须等于计划人数，
 `online_window_ok` 必须为 100%，完整会话数也必须等于计划人数。不会将累计连接数作为并发证明。
 凭据必须为同一 `conferenceId`，每席提供唯一 `seatId`；认证时还会与服务端身份比对。
-500 人 profile 禁止将人数降到 500 以下，缩短试跑必须同时显式调整 duration 与 online-window。
+500/1000/2000 人 profile 禁止将人数降到各自规模以下，缩短试跑必须同时显式调整 duration 与 online-window。
 
-先准备本地 500 席：
+先准备本地 2000 席：
 
 ```powershell
-pnpm test:load:local --seats 500 --port 8797
+pnpm test:load:local --seats 2000 --port 8797
 ```
 
 另一个终端先做 60 秒在线试跑，再执行默认的完整混合业务：
@@ -33,6 +37,18 @@ pnpm test:load:local --seats 500 --port 8797
 pnpm test:load --profile conference-500 --scenario browse `
   --target http://127.0.0.1:8797/v1 --credentials tests/load/fixtures/local.seats.json `
   --duration 60s --online-window 60s
+
+pnpm test:load --profile conference-1000 --scenario browse `
+  --target http://127.0.0.1:8797/v1 --credentials tests/load/fixtures/local.seats.json `
+  --duration 60s --online-window 60s --open-loop-seed 1776
+
+pnpm test:load --profile conference-2000 --scenario browse `
+  --target http://127.0.0.1:8797/v1 --credentials tests/load/fixtures/local.seats.json `
+  --duration 60s --online-window 60s --open-loop-seed 1776
+
+pnpm test:load --profile files-2000 `
+  --target http://127.0.0.1:8797/v1 --credentials tests/load/fixtures/local.seats.json `
+  --duration 60s --online-window 60s --visibility-timeout 120s
 
 pnpm test:load --profile conference-500 `
   --target http://127.0.0.1:8797/v1 --credentials tests/load/fixtures/local.seats.json
@@ -149,21 +165,26 @@ Durable Object 请求、WS 连接与错误，以及自定义域名入口的拦�
 `expectedCapabilities` 用于防止测试数据权限配置错误。
 缺少某类角色时不能宣称覆盖该工作流；报告中通过操作子指标查看实际样本。
 
-| profile          | 默认席位 | 持续时间 | 用途                                                  |
-| ---------------- | -------: | -------: | ----------------------------------------------------- |
-| `smoke`          |        2 |      60s | 正向业务与协议验证                                    |
-| `load`           |       50 |    10min | 分批建连后保持业务负载                                |
-| `stress`         |      200 |    15min | 较高并发探索，结合错误与资源指标定位上限              |
-| `soak`           |       30 |       2h | 持续运行与长连接稳定性                                |
-| `spike`          |      150 |     3min | 同时开始建连的突发流量                                |
-| `files-burst`    |       50 |     5min | 每业务席位 4 文件、并发 2，混合 64KiB/1MiB/5MiB/20MiB |
-| `conference-500` |      500 |    30min | 本次会议验收：共同持续在线窗口、混合业务              |
-| `files-500`      |      500 |    10min | 本次会议集中提交验收：2,000 个文件、共同持续在线窗口  |
+| profile           | 默认席位 | 持续时间 | 用途                                                  |
+| ----------------- | -------: | -------: | ----------------------------------------------------- |
+| `smoke`           |        2 |      60s | 正向业务与协议验证                                    |
+| `load`            |       50 |    10min | 分批建连后保持业务负载                                |
+| `stress`          |      200 |    15min | 较高并发探索，结合错误与资源指标定位上限              |
+| `soak`            |       30 |       2h | 持续运行与长连接稳定性                                |
+| `spike`           |      150 |     3min | 同时开始建连的突发流量                                |
+| `files-burst`     |       50 |     5min | 每业务席位 4 文件、并发 2，混合 64KiB/1MiB/5MiB/20MiB |
+| `conference-500`  |      500 |    30min | 本次会议验收：共同持续在线窗口、混合业务              |
+| `files-500`       |      500 |    10min | 本次会议集中提交验收：2,000 个文件、共同持续在线窗口  |
+| `conference-1000` |     1000 |    30min | 1000 席扩展验收：共同持续在线窗口、混合业务           |
+| `files-1000`      |     1000 |    10min | 1000 席集中提交验收：4,000 个文件、共同持续在线窗口   |
+| `conference-2000` |     2000 |    30min | 2000 席扩展验收：共同持续在线窗口、混合业务           |
+| `files-2000`      |     2000 |    10min | 2000 席集中提交验收：4,000 个文件、共同持续在线窗口   |
 
 准确值以 `config/*.json` 为准。默认值是实验起点，不表示 Veto 已能承载相应规模。
 每个 VU 只运行一次完整会话；爬坡通过延迟真实认证与建连实现。
 `vus` 指已分配的 k6 VU，不等于当时全部连接已就绪；`rampSteps` 大于 1 时按批次建连。
-500 人专用 profile 额外通过 `online_window_seats` 和 `online_window_ok` 检查共同在线窗口。
+500/1000/2000 人专用 profile 额外通过 `online_window_seats` 和 `online_window_ok` 检查共同在线窗口。
+`browse` 就绪时只做一次按权限筛选的初始读取，后续按通知刷新，保留正常连接每 5 分钟的补同步。若 profile 的 `observerEvery` 非零，这些 observer 仍会运行审核队列轮询；要测纯只读角色，需设 `observerEvery: 0`（或 `--observer-every 0`），并确认凭据角色本身不参与审核。`--open-loop-seed` 可在爬坡时间上增加可复现的 0–499ms 微分散，保留总爬坡曲线并减少同毫秒到达扎堆。
 持续时间控制常规操作窗口，文件验证和审核排空会延长实际运行；报告记录实际耗时。
 套件不在阶梯结束时强制杀掉上传；不同峰值应分别运行，保留各自报告。
 
@@ -214,6 +235,7 @@ pnpm test:load --profile files-burst --scenario files `
 - `report.md`：可阅读的指标和通过情况。
 - `events.log`：受限、脱敏、数量有界的业务诊断；不会持久化原始 k6 内部日志。
 - `online-window.json`：启用共同在线窗口时输出，记录同一窗口的起止时间和完整覆盖人数。
+- `samples.json`：k6 JSON 时序样本，记录每条请求的有限操作名、阶段、状态和耗时；文件大小随请求数增长。
 
 Git revision 是运行时工作区 HEAD，不能代表未提交改动已包含在该提交中；云端部署版本另由 `--revision` 标注。
 报告不保存密码、邀请码、token、原始响应或原始请求头。
@@ -229,19 +251,21 @@ Git revision 是运行时工作区 HEAD，不能代表未提交改动已包含�
 并发审核的预期 `409` 单独计数，并由作者最终状态验证；其他 HTTP 错误和响应契约错误会失败。
 上传不自动重试，因为当前上传接口没有幂等重试契约，网络失败可能意味着服务端已创建文件。
 
-| 指标                                                      | 含义                                                                 |
-| --------------------------------------------------------- | -------------------------------------------------------------------- |
-| `http_req_duration`、`http_req_failed`                    | HTTP 耗时与非预期状态；按 `name` 分操作                              |
-| `seat_auth_ok`、`ws_ready_ok`、`ws_ready_ms`              | 席位认证、实时通道就绪                                               |
-| `online_window_seats`、`online_window_ok`                 | 完整覆盖同一绝对在线窗口的人数与比例；必须全部成功                   |
-| `file_upload_ms`、`files_uploaded`、`file_bytes_uploaded` | 真实上传耗时、成功文件数、字节数                                     |
-| `files_downloaded`、`file_download_integrity_ok`          | 已发布文件下载数及内容完整性                                         |
-| `content_visible_ok`、`content_visible_ms`                | 写请求发起至本会话首次读取观察到目标 ID/状态；之后仍检查当前记录     |
-| `live_notifications`、`live_delivery_ok`                  | 接收消息数、会话是否至少收到一次通知；不等于逐事件广播完整率         |
-| `published_observed_ms`                                   | 内容标记开始时间至读取到发布内容，包含审核等待；跨发压机器需同步时钟 |
-| `refresh_ms`、`refreshes`                                 | 通知合并后刷新 HTTP 的耗时与次数                                     |
-| `reconnect_ok`、`reconnect_ms`                            | 断开后再次 ready 的结果与耗时                                        |
-| `workflow_conflicts`、`load_errors`                       | 预期审核竞争与非预期错误                                             |
+| 指标                                                                              | 含义                                                                 |
+| --------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `http_req_duration`、`http_req_failed`                                            | HTTP 耗时与非预期状态；按 `name` 分操作                              |
+| `seat_auth_ok`、`ws_ready_ok`、`ws_ready_ms`                                      | 席位认证、实时通道就绪                                               |
+| `online_window_seats`、`online_window_ok`                                         | 完整覆盖同一绝对在线窗口的人数与比例；必须全部成功                   |
+| `http_request_phase_ms`、`http_request_failures`                                  | 按认证、初始读取、在线窗口和业务阶段统计单请求耗时与失败类型         |
+| `seat_connection_state`、`seat_connection_up/down`、`seat_connection_duration_ms` | 按真实 ready/close 状态记录连接变化与持续时间                        |
+| `file_upload_ms`、`files_uploaded`、`file_bytes_uploaded`                         | 真实上传耗时、成功文件数、字节数                                     |
+| `files_downloaded`、`file_download_integrity_ok`                                  | 已发布文件下载数及内容完整性                                         |
+| `content_visible_ok`、`content_visible_ms`                                        | 写请求发起至本会话首次读取观察到目标 ID/状态；之后仍检查当前记录     |
+| `live_notifications`、`live_delivery_ok`                                          | 接收消息数、会话是否至少收到一次通知；不等于逐事件广播完整率         |
+| `published_observed_ms`                                                           | 内容标记开始时间至读取到发布内容，包含审核等待；跨发压机器需同步时钟 |
+| `refresh_ms`、`refreshes`                                                         | 通知合并后刷新 HTTP 的耗时与次数                                     |
+| `reconnect_ok`、`reconnect_ms`                                                    | 断开后再次 ready 的结果与耗时                                        |
+| `workflow_conflicts`、`load_errors`                                               | 预期审核竞争与非预期错误                                             |
 
 当前 `invalidate` 只有主题，没有事件 ID 或发布时间，无法精确计算每条通知的单向传播延迟或漏收率。
 不能用“收到通知”“有过 200 响应”代替新数据可见、审核成功和文件完整。

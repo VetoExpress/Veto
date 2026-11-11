@@ -50,6 +50,7 @@ Options:
   --display-ws-url URL           Explicit ws/wss URL required for display
   --ws-allowed-hosts HOST,...     Additional allowed WS hosts (include port)
   --observer-every NUMBER        Every Nth VU observes only; 0 means no observers
+  --open-loop-seed NUMBER       Deterministic 0–499ms phase offset during the ramp
   --revision TEXT                Optional tested build revision label
   --results PATH                 Report parent (default tests/load/results)
   --dry-run                      Validate config/credentials/k6; send no traffic
@@ -304,6 +305,8 @@ export async function main(args = process.argv.slice(2)) {
           isolatedConfigPath.replaceAll('\\', '/'),
           '--address',
           '',
+          '--out',
+          `json=${resolve(resultsPath, 'samples.json').replaceAll('\\', '/')}`,
           '--log-format=json',
           '--log-output=stderr',
           '--quiet',

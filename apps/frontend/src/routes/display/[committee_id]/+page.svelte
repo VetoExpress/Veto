@@ -293,7 +293,7 @@
     onpointerleave={hideWindowControls}
   >
     <div class="display-controls no-drag" class:visible={controlsVisible}>
-      <WindowControls showSettings={false} />
+      <WindowControls />
     </div>
   </div>
 
