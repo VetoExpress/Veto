@@ -43,7 +43,7 @@
 <JoinConferenceDialog bind:open={$joinConferenceDialogOpen} />
 
 <div class="flex h-svh flex-col overflow-hidden">
-  <header class="relative flex h-12 shrink-0 items-center gap-2 pl-4">
+  <header class="app-toolbar-header relative flex h-12 shrink-0 items-center gap-2">
     <AppToolbar onOpenDisplay={() => (displayOnlyDialogOpen = true)} />
 
     <WindowControls />
@@ -61,5 +61,12 @@
 <style>
   * {
     margin: 0;
+  }
+
+  .app-toolbar-header {
+    padding-inline-start: max(
+      var(--app-page-padding),
+      calc((100% - var(--app-page-max-width)) / 2 + var(--app-page-padding))
+    );
   }
 </style>
