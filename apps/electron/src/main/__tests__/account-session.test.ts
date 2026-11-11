@@ -1,6 +1,10 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AuthError } from '@vetoexpress/auth'
 import { createAccountSession, type StoredAccount } from '../account-session'
+import { updateLocale } from '../i18n'
+
+vi.mock('../logger')
+afterEach(() => updateLocale('zh-CN'))
 
 const user = { name: '用户', email: 'test@example.test', avatar: '', organization: '模联' }
 function setup(saved: StoredAccount | null = null) {
@@ -21,6 +25,54 @@ function setup(saved: StoredAccount | null = null) {
 }
 
 describe('desktop account session', () => {
+  it('retranslates a stored warning on getSession without account requests or persistence writes', async () => {
+    const { session, storage, client } = setup()
+    storage.save.mockResolvedValue(false)
+    await session.login(user.email, 'password')
+    const requests = client.fetchMe.mock.calls.length
+    const saves = storage.save.mock.calls.length
+    updateLocale('en-US')
+    expect((await session.getSession()).warning).toContain('securely save your session')
+    expect((await session.getAccessToken()).session.warning).toContain('securely save your session')
+    expect(client.fetchMe).toHaveBeenCalledTimes(requests)
+    expect(storage.save).toHaveBeenCalledTimes(saves)
+    updateLocale('zh-CN')
+    expect((await session.getSession()).warning).toBe(
+      '当前设备无法安全保存登录状态，关闭应用后需重新登录。'
+    )
+  })
+
+  it('retranslates known auth warnings but preserves unknown third-party error messages', async () => {
+    const { session, client } = setup({ token: 'saved-token', user })
+    client.fetchMe.mockRejectedValueOnce(new AuthError('无法连接认证服务'))
+    await session.getSession()
+    updateLocale('en-US')
+    expect((await session.getSession()).warning).toBe(
+      'Unable to connect to the authentication service'
+    )
+    client.fetchMe.mockRejectedValueOnce(new Error('third-party diagnostic'))
+    expect((await session.refresh()).warning).toBe('third-party diagnostic')
+    updateLocale('zh-CN')
+    expect((await session.getSession()).warning).toBe('third-party diagnostic')
+  })
+
+  it('provides a localized snapshot immediately while an account request is pending', async () => {
+    const { session, client, storage } = setup()
+    storage.save.mockResolvedValue(false)
+    await session.login(user.email, 'password')
+    let complete!: (value: typeof user) => void
+    client.fetchMe.mockReturnValueOnce(
+      new Promise((resolve) => {
+        complete = resolve
+      })
+    )
+    const refresh = session.refresh()
+    await vi.waitFor(() => expect(client.fetchMe).toHaveBeenCalledTimes(2))
+    updateLocale('en-US')
+    expect(session.getSnapshot().warning).toContain('securely save your session')
+    complete(user)
+    await refresh
+  })
   it('uses the current email for recovery and signs out only after successful verification', async () => {
     const { session, client, storage, changed } = setup({ token: 'saved-token', user })
     await session.getSession()

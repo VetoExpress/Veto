@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import type { Seat, SeatGroup } from '$lib/classes/types/delegate'
   import { seats, resetSeatUser } from '$lib/classes/stores/delegate/delegate-store'
   import { currentConferenceRecord } from '$lib/classes/stores/conference/conference-store'
@@ -24,12 +25,12 @@
 <div class="seat-list">
   <div class="header">
     <h4 class="text-base font-semibold">
-      {selectedGroup ? `${selectedGroup.name} — 席位` : '席位'}
+      {selectedGroup ? t('procedure_value_seats', { value1: selectedGroup.name }) : t('procedure_seat')}
     </h4>
     {#if selectedGroup}
       <Button size="sm" variant="outline" onclick={onCreateNew}>
         <UserPlus class="size-4 mr-1" />
-        新建席位
+        {t('procedure_new_seat')}
       </Button>
     {/if}
   </div>
@@ -48,14 +49,14 @@
           </div>
           <div class="seat-meta">
             <span class="text-xs text-muted-foreground">
-              邀请码: <code class="invite-code">{access?.inviteCode ?? '未生成'}</code>
+              {t('procedure_invite_code_2')} <code class="invite-code">{access?.inviteCode ?? t('procedure_not_generated')}</code>
             </span>
             {#if user}
               <Badge variant="outline" class="text-xs">{user.name}</Badge>
             {:else}
-              <Badge variant="secondary" class="text-xs">未认领</Badge>
+              <Badge variant="secondary" class="text-xs">{t('procedure_unclaimed')}</Badge>
             {/if}
-            <button class="copy-btn" onclick={() => onShowInvite(seat)} title="查看邀请信息">
+            <button class="copy-btn" onclick={() => onShowInvite(seat)} title={t('procedure_view_invitation')}>
               <Eye class="size-3" />
             </button>
           </div>
@@ -68,7 +69,7 @@
             <Button
               size="icon-sm"
               variant="ghost"
-              title="重置使用者"
+              title={t('procedure_reset_user')}
               onclick={() => resetSeatUser(seat.id)}
             >
               <UserRoundX class="size-4 text-destructive" />
@@ -80,7 +81,7 @@
     {#if $filteredSeats.length === 0}
       <div class="empty-state">
         <p class="text-sm text-muted-foreground">
-          {selectedGroup ? '该席位组暂无席位' : '请先选择一个席位组'}
+          {selectedGroup ? t('procedure_no_seats_in_this_group') : t('procedure_select_a_seat_group_first')}
         </p>
       </div>
     {/if}

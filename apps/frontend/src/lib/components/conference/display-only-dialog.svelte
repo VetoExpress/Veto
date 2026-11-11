@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import { AlertTriangle, Monitor } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import { Input } from '$lib/components/ui/input/index.js'
@@ -43,10 +44,10 @@
       <Dialog.Header class="pb-1">
         <Dialog.Title class="flex items-center gap-2 text-base font-semibold">
           <Monitor size={18} class="text-indigo-500" />
-          仅展示模式
+          {t('procedure_display_only_mode')}
         </Dialog.Title>
         <Dialog.Description class="text-xs text-muted-foreground">
-          打开本机 Chair 的 Display 窗口。Display 只接收 Chair 的本地投影。
+          {t('procedure_open_this_chair_s_local_display_window_display_receives_the_chair_s_local_projection_o')}
         </Dialog.Description>
       </Dialog.Header>
 
@@ -54,8 +55,8 @@
         <!-- 标签 -->
         {#if isElectron()}
           <div>
-            <Label class="mb-2 block text-xs text-muted-foreground">窗口标签（可选）</Label>
-            <Input bind:value={label} placeholder="例如：投影屏、第二屏幕" class="h-9 text-sm" />
+            <Label class="mb-2 block text-xs text-muted-foreground">{t('procedure_window_label_optional')}</Label>
+            <Input bind:value={label} placeholder={t('procedure_for_example_projector_second_screen')} class="h-9 text-sm" />
           </div>
         {/if}
         {#if !isElectron()}
@@ -65,27 +66,27 @@
           >
             <AlertTriangle class="mt-0.5 size-4 shrink-0" />
             <p>
-              当前环境无法使用仅展示模式，请前往
+              {t('procedure_display_only_mode_is_unavailable_here_visit')}
               <a
                 href="https://veto.miaoyww.top"
                 target="_blank"
                 rel="noreferrer"
                 class="font-medium underline underline-offset-2"
               >
-                Veto 官网
+                {t('procedure_veto_website')}
               </a>
-              下载桌面版。
+              {t('procedure_to_download_the_desktop_app')}
             </p>
           </div>
         {/if}
       </div>
 
       <Dialog.Footer class="pt-1">
-        <Button variant="outline" onclick={() => (open = false)}>取消</Button>
+        <Button variant="outline" onclick={() => (open = false)}>{t('procedure_cancel')}</Button>
         {#if isElectron()}
           <Button onclick={handleOpenDisplay} class="min-w-[140px] gap-2">
             <Monitor size={14} />
-            打开展示窗口
+            {t('procedure_open_display_window')}
           </Button>
         {/if}
       </Dialog.Footer>

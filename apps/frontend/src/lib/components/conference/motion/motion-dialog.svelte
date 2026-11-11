@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import {
     Presentation,
     Timer,
@@ -190,7 +191,7 @@
       case 'moderated_caucus': {
         const total = committedMcTotalSec ?? 0
         const perSpeaker = committedMcSpeakerSec ?? 0
-        motionData.topic = committedTopic.trim() || '未指定主题'
+        motionData.topic = committedTopic.trim() || t('procedure_no_topic_specified')
         motionData.totalTimeSec = total
         motionData.speakingTimePerPersonSec = perSpeaker
         motionData.maxSpeakers = calcMaxSpeakers(total, perSpeaker)
@@ -208,7 +209,7 @@
         motionData.newTimeSec = committedNewTimeSec
         break
       case 'substantive_vote':
-        motionData.documentName = committedDocumentName.trim() || '未命名文件'
+        motionData.documentName = committedDocumentName.trim() || t('procedure_untitled_document')
         break
       case 'change_attendance':
         motionData.newAttendance = newAttendance
@@ -341,10 +342,10 @@
       <Dialog.Header class="pb-1">
         <Dialog.Title class="flex items-center gap-2 text-base font-semibold">
           <Presentation size={18} class="text-indigo-500" />
-          动议与程序
+          {t('procedure_motions_and_procedure')}
         </Dialog.Title>
         <Dialog.Description class="text-xs text-muted-foreground">
-          选择提出方后选择动议或程序类型
+          {t('procedure_choose_a_proposer_then_a_motion_or_procedure_type')}
         </Dialog.Description>
       </Dialog.Header>
 
@@ -352,7 +353,7 @@
         <!-- 第一步：动议提出方（始终可见） -->
         {#if conf}
           <div>
-            <Label class="mb-2 block text-xs text-muted-foreground">动议提出方</Label>
+            <Label class="mb-2 block text-xs text-muted-foreground">{t('procedure_motion_proposer')}</Label>
             <SeatSelector seats={conf.participantSeats} bind:value={selectedProposer} />
           </div>
         {/if}
@@ -361,7 +362,7 @@
         {#if selectedProposer}
           <Separator />
           <div>
-            <Label class="mb-2 block text-xs text-muted-foreground">动议类型</Label>
+            <Label class="mb-2 block text-xs text-muted-foreground">{t('procedure_motion_type')}</Label>
             <ToggleGroup.Root type="single" bind:value={toggleValue} class="grid grid-cols-4 gap-2">
               {#each motionTypes as mt (mt)}
                 {@const Icon = MOTION_ICONS[mt] ?? Presentation}
@@ -380,7 +381,7 @@
           <div class="space-y-3">
             <div>
               <div class="mb-1.5 flex items-center justify-between">
-                <Label class="text-xs text-muted-foreground">主题</Label>
+                <Label class="text-xs text-muted-foreground">{t('procedure_topic_2')}</Label>
                 <span class="text-[10px] text-muted-foreground/60">{mcTopic.length}/100</span>
               </div>
               <Input
@@ -392,13 +393,13 @@
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <Label class="mb-1.5 block text-xs text-muted-foreground">总时长（秒）</Label>
+                <Label class="mb-1.5 block text-xs text-muted-foreground">{t('procedure_total_duration_seconds')}</Label>
                 <Input
                   type="number"
                   min="30"
                   max="3600"
                   step="30"
-                  placeholder="必填"
+                  placeholder={t('procedure_required')}
                   bind:value={mcTotalSec}
                   class="h-9 text-sm"
                   onblur={() => (committedMcTotalSec = mcTotalSec)}
@@ -416,13 +417,13 @@
                 </div>
               </div>
               <div>
-                <Label class="mb-1.5 block text-xs text-muted-foreground">每人发言（秒）</Label>
+                <Label class="mb-1.5 block text-xs text-muted-foreground">{t('procedure_speaking_time_per_person_seconds')}</Label>
                 <Input
                   type="number"
                   min="15"
                   max={mcTotalSec ?? 600}
                   step="15"
-                  placeholder="先填总时长"
+                  placeholder={t('procedure_enter_total_duration_first')}
                   disabled={mcTotalSec == null}
                   bind:value={mcSpeakerSec}
                   class="h-9 text-sm"
@@ -446,9 +447,7 @@
               <div
                 class="rounded-md bg-muted/50 px-3 py-2 text-center text-xs text-muted-foreground"
               >
-                {committedMcTotalSec}秒 ÷ 每人{committedMcSpeakerSec}秒 = 最多
-                <span class="font-semibold text-foreground">{mcMaxSpeakers}</span>
-                人发言
+                {t('procedure_caucus_capacity_calculation', { total: committedMcTotalSec, seconds: committedMcSpeakerSec, speakers: mcMaxSpeakers })}
               </div>
             {/if}
           </div>
@@ -457,7 +456,7 @@
           <div class="flex flex-col gap-3">
             <div>
               <div class="mb-1.5 flex items-center justify-between">
-                <Label class="text-xs text-muted-foreground">主题</Label>
+                <Label class="text-xs text-muted-foreground">{t('procedure_topic_2')}</Label>
                 <span class="text-[10px] text-muted-foreground/60">{mdTopic.length}/100</span>
               </div>
               <Input
@@ -468,7 +467,7 @@
               />
             </div>
             <div>
-              <Label class="mb-1.5 block text-xs text-muted-foreground">时长（分钟）</Label>
+              <Label class="mb-1.5 block text-xs text-muted-foreground">{t('procedure_duration_minutes')}</Label>
               <Input
                 type="number"
                 min="1"
@@ -477,12 +476,12 @@
                 class="h-9 w-32 text-sm"
                 onblur={() => (committedUcDurationMin = ucDurationMin)}
               />
-              <p class="mt-1 text-[10px] text-muted-foreground">开始后将围绕该主题进行倒计时</p>
+              <p class="mt-1 text-[10px] text-muted-foreground">{t('procedure_the_countdown_starts_for_this_topic_when_the_debate_begins')}</p>
             </div>
           </div>
         {:else if selectedType === 'unmoderated_caucus' || selectedType === 'unmoderated_debate'}
           <div>
-            <Label class="mb-1.5 block text-xs text-muted-foreground">时长（分钟）</Label>
+            <Label class="mb-1.5 block text-xs text-muted-foreground">{t('procedure_duration_minutes')}</Label>
             <Input
               type="number"
               min="1"
@@ -491,11 +490,11 @@
               class="h-9 text-sm w-32"
               onblur={() => (committedUcDurationMin = ucDurationMin)}
             />
-            <p class="mt-1 text-[10px] text-muted-foreground">开始后将进行倒计时</p>
+            <p class="mt-1 text-[10px] text-muted-foreground">{t('procedure_the_countdown_starts_when_this_begins')}</p>
           </div>
         {:else if selectedType === 'modify_speaking_time'}
           <div>
-            <Label class="mb-1.5 block text-xs text-muted-foreground">新的默认发言时间（秒）</Label>
+            <Label class="mb-1.5 block text-xs text-muted-foreground">{t('procedure_new_default_speaking_time_seconds')}</Label>
             <Input
               type="number"
               min="30"
@@ -509,11 +508,11 @@
         {:else if selectedType === 'substantive_vote'}
           <Separator />
           <div>
-            <Label class="mb-1.5 block text-xs text-muted-foreground">文件名称</Label>
+            <Label class="mb-1.5 block text-xs text-muted-foreground">{t('procedure_document_name')}</Label>
             <Input
               bind:value={documentName}
               class="h-9 text-sm"
-              placeholder="例如：决议草案 1.1"
+              placeholder={t('procedure_for_example_draft_resolution_1_1')}
               onblur={() => (committedDocumentName = documentName)}
               list="document-name-suggestions"
             />
@@ -525,12 +524,12 @@
               </datalist>
             {/if}
             <p class="mt-1 text-[10px] text-muted-foreground">
-              此文件将进入唱名表决（{conf?.substantiveVotingMajority === 'simple_majority' ? '二分之一多数' : '三分之二多数'}）
+              {t('procedure_motion_document_voting_rule', { value1: conf?.substantiveVotingMajority === 'simple_majority' ? t('procedure_simple_majority_2') : t('procedure_two_thirds_majority_3') })}
             </p>
           </div>
         {:else if selectedType === 'individual_speech'}
           <div>
-            <Label class="mb-1.5 block text-xs text-muted-foreground">发言时长（秒）</Label>
+            <Label class="mb-1.5 block text-xs text-muted-foreground">{t('procedure_speaking_duration_seconds')}</Label>
             <Input
               type="number"
               min="1"
@@ -552,37 +551,37 @@
             </div>
             {#if selectedProposer}
               <p class="mt-1 text-[10px] text-muted-foreground">
-                {selectedProposer.name} 将获得 {committedIsDurationSec} 秒的独占发言时间
+                {t('procedure_individual_speech_duration', { value1: selectedProposer.name, value2: committedIsDurationSec })}
               </p>
             {/if}
           </div>
         {:else if selectedType === 'change_attendance'}
           <Separator />
           <div>
-            <Label class="mb-1.5 block text-xs text-muted-foreground">新出席状态</Label>
+            <Label class="mb-1.5 block text-xs text-muted-foreground">{t('procedure_new_attendance')}</Label>
             <div
               class="flex-1 rounded-lg border px-3 py-2 text-sm text-center font-medium {newAttendance ===
               'present'
                 ? 'border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400'
                 : 'border-red-400 bg-red-50 text-red-700 dark:border-red-600 dark:bg-red-950/40 dark:text-red-400'}"
             >
-              {newAttendance === 'present' ? '出席' : '缺席'}
+              {newAttendance === 'present' ? t('procedure_present_2') : t('procedure_absent')}
             </div>
             <p class="mt-1 text-[10px] text-muted-foreground">
-              当前为{selectedProposer?.procedure.attendance === 'present'
-                ? '出席'
-                : '缺席'}，只能变更为相反状态
+              {t('procedure_attendance_change_explanation', { value1: selectedProposer?.procedure.attendance === 'present'
+                ? t('procedure_present_2')
+                : t('procedure_absent') })}
             </p>
           </div>
         {:else if selectedType}
-          <div class="text-xs text-muted-foreground">此动议将进入举牌表决</div>
+          <div class="text-xs text-muted-foreground">{t('procedure_this_motion_will_be_put_to_a_placard_vote')}</div>
         {/if}
       </div>
 
       <Dialog.Footer class="pt-1">
-        <Button variant="outline" onclick={() => (open = false)}>取消</Button>
+        <Button variant="outline" onclick={() => (open = false)}>{t('procedure_cancel')}</Button>
         <Button onclick={handlePropose} disabled={!canPropose} class="min-w-[120px] gap-2">
-          提交动议
+          {t('procedure_submit_motion')}
         </Button>
       </Dialog.Footer>
     </Dialog.Content>

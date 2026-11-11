@@ -14,6 +14,15 @@ const committeeRows = [
 ]
 
 describe('seat invite export', () => {
+  it('localizes export headings while preserving user content and invite codes', () => {
+    expect(createSeatInviteText(committeeRows, 'en-US').split('\r\n')[0]).toBe(
+      'Committee\tSeat name\tShort name\tRole\tInvite code'
+    )
+    const workbook = XLSX.read(createSeatInviteWorkbook(committeeRows, 'en-US'), { type: 'array' })
+    expect(workbook.SheetNames).toEqual(['Invite codes'])
+    expect(workbook.Sheets['Invite codes'].B2.v).toBe('美国')
+    expect(workbook.Sheets['Invite codes'].E2).toMatchObject({ t: 's', v: 'ABCD-EFGH-JKLM' })
+  })
   it('exports readable tab-separated text with the same columns as Excel', () => {
     expect(createSeatInviteText(rows)).toBe(
       '席位名称\t席位简称\t角色\t邀请码\r\n' +

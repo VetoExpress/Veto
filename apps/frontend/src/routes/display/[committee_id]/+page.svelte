@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   /**
    * display/[committee_id]/+page.svelte
    * ──────────────────────────────────────────────
@@ -237,7 +238,7 @@
 </script>
 
 <svelte:head>
-  <title>{VETO_NAME} - 模拟大会</title>
+  <title>{t('components_display_title', { name: VETO_NAME })}</title>
 </svelte:head>
 
 <style>

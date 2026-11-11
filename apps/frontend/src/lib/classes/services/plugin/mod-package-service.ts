@@ -8,6 +8,7 @@
  *   assets/*.png/jpg/...   — 可选（自动扫描并写入主进程文件系统）
  */
 import JSZip from 'jszip'
+import { t } from '$lib/i18n'
 import type { InstalledPlugin, PluginManifest } from './plugin-db'
 import { processModPackage } from './plugin-registry'
 
@@ -24,13 +25,13 @@ export async function importModPackage(file: File): Promise<InstalledPlugin> {
   try {
     zip = await JSZip.loadAsync(file)
   } catch {
-    throw new Error('无法解析文件：请确认上传的是有效的 .csmod 压缩包')
+    throw new Error(t('components_mod_invalid_archive'))
   }
 
   // 2. 读取并校验 manifest.json
   const manifestFile = zip.file('manifest.json')
   if (!manifestFile) {
-    throw new Error('缺少 manifest.json：该文件不是有效的 Mod 包')
+    throw new Error(t('components_mod_manifest_missing'))
   }
 
   let manifest: PluginManifest
@@ -38,17 +39,17 @@ export async function importModPackage(file: File): Promise<InstalledPlugin> {
     const raw = await manifestFile.async('string')
     manifest = JSON.parse(raw) as PluginManifest
   } catch {
-    throw new Error('manifest.json 格式错误：内容不是合法的 JSON')
+    throw new Error(t('components_mod_manifest_invalid'))
   }
 
   if (!manifest.id?.trim()) {
-    throw new Error('manifest.json 缺少必填字段 "id"')
+    throw new Error(t('components_mod_manifest_required_field', { field: 'id' }))
   }
   if (!manifest.name?.trim()) {
-    throw new Error('manifest.json 缺少必填字段 "name"')
+    throw new Error(t('components_mod_manifest_required_field', { field: 'name' }))
   }
   if (!manifest.version?.trim()) {
-    throw new Error('manifest.json 缺少必填字段 "version"')
+    throw new Error(t('components_mod_manifest_required_field', { field: 'version' }))
   }
 
   // 3. 共用包处理逻辑

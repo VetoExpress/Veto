@@ -1,4 +1,5 @@
 ﻿<script lang="ts">
+  import { t, formatDate } from '$lib/i18n'
   import { goto } from '$app/navigation'
   import { Trash2, Play, Pencil, Check, X, CalendarDays, Clock, Swords } from '@lucide/svelte'
   import type { Battle } from '$lib/classes/types/battle'
@@ -37,7 +38,7 @@
 
   function handleDelete(e: MouseEvent): void {
     e.stopPropagation()
-    showConfirm('确认删除', `将永久删除战局「${battle.name}」，此操作无法撤销。是否继续？`, () =>
+    showConfirm(t('settings_confirm_delete'), t('settings_delete_battle_named', { name: battle.name }), () =>
       deleteBattle(battle.id)
     )
   }
@@ -65,9 +66,6 @@
     else if (e.key === 'Escape') cancelEdit()
   }
 
-  function formatDate(ts: number): string {
-    return new Date(ts).toLocaleString('zh-CN', { dateStyle: 'short', timeStyle: 'short' })
-  }
 </script>
 
 <!-- Click handled by CardAction button, not the card itself -->
@@ -90,7 +88,7 @@
           variant="ghost"
           size="icon-sm"
           class="shrink-0 text-green-600 hover:bg-green-50 hover:text-green-700 dark:text-green-400 dark:hover:bg-green-900/30 dark:hover:text-green-300"
-          title="保存"
+          title={t('settings_save')}
           onclick={(e: MouseEvent) => {
             e.stopPropagation()
             commitEdit()
@@ -102,7 +100,7 @@
           variant="ghost"
           size="icon-sm"
           class="shrink-0"
-          title="取消"
+          title={t('settings_cancel')}
           onclick={(e: MouseEvent) => {
             e.stopPropagation()
             cancelEdit()
@@ -116,7 +114,7 @@
           variant="ghost"
           size="icon-sm"
           class="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-          title="重命名"
+          title={t('settings_rename')}
           onclick={startEdit}
         >
           <Pencil />
@@ -135,9 +133,9 @@
         }}
       >
         <Play class="size-3" />
-        进入
+        {t('settings_enter')}
       </Button>
-      <Button variant="destructive" size="icon-sm" title="删除战局" onclick={handleDelete}>
+      <Button variant="destructive" size="icon-sm" title={t('settings_delete_battle')} onclick={handleDelete}>
         <Trash2 />
       </Button>
     </CardAction>
@@ -148,18 +146,18 @@
       <div class="mb-1.5">
         <span class="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
           <Swords class="size-3" />
-          战役：{campaignName}
+          {t('settings_campaign_prefix', { name: campaignName })}
         </span>
       </div>
     {/if}
     <div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
       <span class="flex items-center gap-1">
         <CalendarDays class="size-3" />
-        {formatDate(battle.createdAt)}
+        {formatDate(battle.createdAt, { dateStyle: 'short', timeStyle: 'short' })}
       </span>
       <span class="flex items-center gap-1">
         <Clock class="size-3" />
-        {battle.startDate ?? '未设置模拟时间'}
+        {battle.startDate ?? t('settings_simulation_time_unset')}
       </span>
       <!-- <span class="flex items-center gap-1">
         <Zap class="size-3" />

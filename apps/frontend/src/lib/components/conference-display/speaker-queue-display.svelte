@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   /**
    * speaker-queue-display.svelte
    * ─────────────────────────────
@@ -17,8 +18,8 @@
   let {
     speakers,
     max = Infinity,
-    emptyText = '等待主席添加发言人',
-    title = '主发言名单',
+    emptyText,
+    title,
     subtitle = '',
     onlyList = false
   }: {
@@ -52,7 +53,7 @@
 
 <div class="flex w-full flex-col items-center gap-5">
   {#if !onlyList}
-    <DisplaySectionHeader Icon={Mic} label={title} colorClass="text-[#5B92E5]" />
+    <DisplaySectionHeader Icon={Mic} label={title ?? t('components_speakers_list')} colorClass="text-[#5B92E5]" />
   {/if}
 
   {#if nextSpeaker}
@@ -73,6 +74,6 @@
   {/if}
 
   {#if speakers.length === 0}
-    <div class="text-lg tracking-wider text-white/10">{emptyText}</div>
+    <div class="text-lg tracking-wider text-white/10">{emptyText ?? t('components_wait_add_speakers')}</div>
   {/if}
 </div>

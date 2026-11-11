@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { procedureMessage, renderProcedureMessage, type ProcedureMessage } from '$lib/components/conference/common/message'
+  import { t, getLocale } from '$lib/i18n'
   import { onMount } from 'svelte'
   import { fileNotifications } from '$lib/classes/stores/cloud/file-notification-store.svelte'
   import { CircleAlert, Inbox, RefreshCw, ScrollText, Send } from '@lucide/svelte'
@@ -41,9 +43,9 @@
   let showHistory = $state<Record<string, boolean>>({})
   let loading = $state(true)
   let busy = $state(false)
-  let error = $state('')
+  let error = $state<ProcedureMessage>('')
   let draftReady = $state(false)
-  let draftError = $state('')
+  let draftError = $state<ProcedureMessage>('')
   let otherSeatDraft = $state<{ seatId: string; title: string; content: string } | null>(null)
   let loadSequence = 0
   let targetsLoaded = false
@@ -62,13 +64,13 @@
     identity ? `veto.directive-draft:${cloudApiBaseUrl}:${identity.conferenceId}:` : ''
   )
 
-  const statusLabels: Record<CloudDirective['status'], string> = {
-    submitted: '待认领',
-    processing: '处理中',
-    approved: '已批准',
-    rejected: '已驳回',
-    cancelled: '已取消'
-  }
+  const statusLabels: Record<CloudDirective['status'], string> = $derived({
+    submitted: t('procedure_awaiting_claim'),
+    processing: t('procedure_processing'),
+    approved: t('procedure_approved'),
+    rejected: t('procedure_rejected'),
+    cancelled: t('procedure_cancelled')
+  })
   const statusBadgeVariants: Record<
     CloudDirective['status'],
     'default' | 'secondary' | 'destructive' | 'outline'
@@ -106,7 +108,7 @@
       error = ''
     } catch (caught) {
       if (sequence !== loadSequence) return
-      error = caught instanceof CloudDirectiveError ? caught.message : '加载指令失败'
+      error = caught instanceof CloudDirectiveError ? caught.message : procedureMessage('procedure_failed_to_load_directives')
     } finally {
       if (sequence === loadSequence) loading = false
     }
@@ -129,7 +131,7 @@
       busy = false
       await load(true)
     } catch (caught) {
-      error = caught instanceof CloudDirectiveError ? caught.message : '提交指令失败'
+      error = caught instanceof CloudDirectiveError ? caught.message : procedureMessage('procedure_failed_to_submit_directive')
     } finally {
       busy = false
     }
@@ -150,7 +152,7 @@
     if (!token || busy) return
     const note = noteById[item.id]?.trim() ?? ''
     if ((action === 'approve' || action === 'reject') && (!note || note.length > 4000)) {
-      error = '批准或驳回必须填写处理说明（最多 4000 字）'
+      error = procedureMessage('procedure_approval_and_rejection_require_a_decision_note_up_to_4_000_characters')
       return
     }
     busy = true
@@ -160,7 +162,7 @@
       busy = false
       await load(true)
     } catch (caught) {
-      error = caught instanceof CloudDirectiveError ? caught.message : '处理指令失败'
+      error = caught instanceof CloudDirectiveError ? caught.message : procedureMessage('procedure_failed_to_process_directive')
     } finally {
       busy = false
     }
@@ -175,7 +177,7 @@
       revisions[item.id] = (await listDirectiveRevisions(token, item.id)).revisions
       showHistory[item.id] = true
     } catch (caught) {
-      error = caught instanceof CloudDirectiveError ? caught.message : '读取修改记录失败'
+      error = caught instanceof CloudDirectiveError ? caught.message : procedureMessage('procedure_failed_to_load_revisions')
     }
   }
 
@@ -212,7 +214,7 @@
           }
         }
       } catch {
-        draftError = '无法读取本地草稿'
+        draftError = procedureMessage('procedure_unable_to_read_local_draft')
       }
     }
     draftReady = true
@@ -240,7 +242,7 @@
       }
       draftError = ''
     } catch {
-      draftError = '本地草稿保存失败，请复制正文备份'
+      draftError = procedureMessage('procedure_failed_to_save_local_draft_copy_the_body_as_a_backup')
     }
   })
 </script>
@@ -265,19 +267,19 @@
   </Empty.Root>
 {/snippet}
 
-<svelte:head><title>指令 · Veto</title></svelte:head>
+<svelte:head><title>{t('procedure_directives_veto')}</title></svelte:head>
 
 <div class="mx-auto flex w-full max-w-5xl flex-col gap-6 p-6">
   <header class="flex items-start justify-between gap-4">
     <div>
-      <h1 class="flex items-center gap-2 text-xl font-semibold"><ScrollText />指令</h1>
-      <p class="mt-1 text-sm text-muted-foreground">向指定委员会提交请求并跟踪处理结果</p>
+      <h1 class="flex items-center gap-2 text-xl font-semibold"><ScrollText />{t('procedure_directives')}</h1>
+      <p class="mt-1 text-sm text-muted-foreground">{t('procedure_submit_requests_to_a_committee_and_track_the_outcome')}</p>
     </div>
     <Button variant="outline" size="sm" onclick={() => void load()} disabled={loading || busy}>
       {#if loading}<Spinner data-icon="inline-start" />{:else}<RefreshCw
           data-icon="inline-start"
         />{/if}
-      刷新
+      {t('procedure_refresh')}
     </Button>
   </header>
 
@@ -285,28 +287,28 @@
     <Empty.Root class="border bg-card/45 py-10">
       <Empty.Header>
         <Empty.Media variant="icon"><ScrollText /></Empty.Media>
-        <Empty.Title>指令仅在 Cloud Conference 中提供</Empty.Title>
-        <Empty.Description>加入云端会议后即可提交和跟踪指令。</Empty.Description>
+        <Empty.Title>{t('procedure_directives_are_available_in_cloud_conferences')}</Empty.Title>
+        <Empty.Description>{t('procedure_join_a_cloud_conference_to_submit_and_track_directives')}</Empty.Description>
       </Empty.Header>
     </Empty.Root>
   {:else}
     {#if error}
       <Alert.Root variant="destructive">
         <CircleAlert />
-        <Alert.Description>{error}</Alert.Description>
+        <Alert.Description>{renderProcedureMessage(error)}</Alert.Description>
       </Alert.Root>
     {/if}
     {#if draftError}
       <Alert.Root variant="destructive">
         <CircleAlert />
-        <Alert.Description>{draftError}</Alert.Description>
+        <Alert.Description>{renderProcedureMessage(draftError)}</Alert.Description>
       </Alert.Root>
     {/if}
     {#if otherSeatDraft}
       <Card.Root>
         <Card.Header>
-          <Card.Title>其他席位的本地草稿</Card.Title>
-          <Card.Description>属于席位 {otherSeatDraft.seatId}，仅供查看和复制。</Card.Description>
+          <Card.Title>{t('procedure_local_drafts_from_another_seat')}</Card.Title>
+          <Card.Description>{t('procedure_other_seat_draft_notice', { value1: otherSeatDraft.seatId })}</Card.Description>
         </Card.Header>
         <Card.Content class="flex flex-col gap-2">
           <p class="font-medium">{otherSeatDraft.title}</p>
@@ -318,13 +320,13 @@
     {#if canSubmit}
       <Card.Root>
         <Card.Header>
-          <Card.Title>{editingId ? '修改被驳回的指令' : '提交指令'}</Card.Title>
-          <Card.Description>草稿只保存在本机；提交成功后由云端服务保存。</Card.Description>
+          <Card.Title>{editingId ? t('procedure_revise_rejected_directive') : t('procedure_submit_directive')}</Card.Title>
+          <Card.Description>{t('procedure_drafts_are_saved_on_this_device_the_cloud_service_stores_them_after_submission')}</Card.Description>
         </Card.Header>
         <Card.Content>
           <Field.FieldGroup>
             <Field.Field>
-              <Field.FieldLabel for="directive-title">标题</Field.FieldLabel>
+              <Field.FieldLabel for="directive-title">{t('procedure_title')}</Field.FieldLabel>
               <Input
                 id="directive-title"
                 maxlength={200}
@@ -333,7 +335,7 @@
               />
             </Field.Field>
             <Field.Field>
-              <Field.FieldLabel for="directive-target">目标委员会</Field.FieldLabel>
+              <Field.FieldLabel for="directive-target">{t('procedure_target_committee')}</Field.FieldLabel>
               <Select.Select
                 type="single"
                 bind:value={targetCommitteeId}
@@ -341,7 +343,7 @@
               >
                 <Select.SelectTrigger id="directive-target" class="w-full">
                   {targets.find((target) => target.id === targetCommitteeId)?.name ??
-                    '请选择目标委员会'}
+                    t('procedure_choose_a_target_committee')}
                 </Select.SelectTrigger>
                 <Select.SelectContent>
                   {#each targets as target (target.id)}
@@ -351,14 +353,14 @@
               </Select.Select>
             </Field.Field>
             <Field.Field>
-              <Field.FieldLabel for="directive-content">正文</Field.FieldLabel>
+              <Field.FieldLabel for="directive-content">{t('procedure_body')}</Field.FieldLabel>
               <Textarea
                 id="directive-content"
                 rows={8}
                 maxlength={20000}
                 bind:value={content}
                 oninput={changeDraft}
-                placeholder="说明要执行的行动、资源和预期结果…"
+                placeholder={t('procedure_describe_the_action_resources_and_expected_outcome')}
               />
             </Field.Field>
           </Field.FieldGroup>
@@ -376,7 +378,7 @@
                 submissionKey = crypto.randomUUID()
               }}
             >
-              退出修改
+              {t('procedure_stop_editing')}
             </Button>
           {/if}
           <Button
@@ -386,7 +388,7 @@
             {#if busy}<Spinner data-icon="inline-start" />{:else}<Send
                 data-icon="inline-start"
               />{/if}
-            {busy ? '提交中…' : editingId ? '修改并重交' : '提交指令'}
+            {busy ? t('procedure_submitting') : editingId ? t('procedure_revise_and_resubmit') : t('procedure_submit_directive')}
           </Button>
         </Card.Footer>
       </Card.Root>
@@ -395,12 +397,12 @@
     {#if canProcess}
       <section class="flex flex-col gap-3">
         <h2 class="font-semibold">
-          待处理指令 <span class="text-xs text-muted-foreground">{workflow.length}</span>
+          {t('procedure_pending_directives')} <span class="text-xs text-muted-foreground">{workflow.length}</span>
         </h2>
         {#if loading && workflow.length === 0}
           {#each Array(2) as _, index (index)}{@render cardSkeleton()}{/each}
         {:else if workflow.length === 0}
-          {@render listEmpty('暂无待处理指令', '新的指令提交后会出现在这里。')}
+          {@render listEmpty(t('procedure_no_pending_directives'), t('procedure_new_directives_will_appear_here'))}
         {/if}
         {#each workflow as item (item.id)}
           <Card.Root>
@@ -409,7 +411,7 @@
                 <div>
                   <Card.Title>{item.title}</Card.Title>
                   <Card.Description>
-                    {item.author.committeeName} · {item.author.seatName} · 第 {item.revision} 版
+                    {t('procedure_directive_author_revision', { value1: item.author.committeeName ?? '', value2: item.author.seatName ?? '', value3: item.revision })}
                   </Card.Description>
                 </div>
                 <Badge variant={statusBadgeVariants[item.status]}>
@@ -421,13 +423,13 @@
               <p class="whitespace-pre-wrap text-sm leading-6">{item.content}</p>
               {#if item.status === 'submitted'}
                 <Button size="sm" disabled={busy} onclick={() => void transition(item, 'claim')}>
-                  认领处理
+                  {t('procedure_claim_directive')}
                 </Button>
               {:else if item.claimedByMe}
                 <div class="flex flex-col gap-2 border-t pt-4">
                   <Field.FieldGroup>
                     <Field.Field>
-                      <Field.FieldLabel for={`note-${item.id}`}>处理说明</Field.FieldLabel>
+                      <Field.FieldLabel for={`note-${item.id}`}>{t('procedure_decision_note')}</Field.FieldLabel>
                       <Textarea
                         id={`note-${item.id}`}
                         rows={3}
@@ -443,14 +445,14 @@
                       disabled={busy || !noteById[item.id]?.trim()}
                       onclick={() => void transition(item, 'reject')}
                     >
-                      驳回
+                      {t('procedure_reject')}
                     </Button>
                     <Button
                       size="sm"
                       disabled={busy || !noteById[item.id]?.trim()}
                       onclick={() => void transition(item, 'approve')}
                     >
-                      批准
+                      {t('procedure_approve')}
                     </Button>
                   </div>
                 </div>
@@ -464,12 +466,12 @@
     {#if canSubmit}
       <section class="flex flex-col gap-3">
         <h2 class="font-semibold">
-          我的指令 <span class="text-xs text-muted-foreground">{mine.length}</span>
+          {t('procedure_my_directives')} <span class="text-xs text-muted-foreground">{mine.length}</span>
         </h2>
         {#if loading && mine.length === 0}
           {#each Array(2) as _, index (index)}{@render cardSkeleton()}{/each}
         {:else if mine.length === 0}
-          {@render listEmpty('尚未提交指令', '使用上方表单提交你的第一条指令。')}
+          {@render listEmpty(t('procedure_no_directives_submitted'), t('procedure_use_the_form_above_to_submit_your_first_directive'))}
         {/if}
         {#each mine as item (item.id)}
           <Card.Root>
@@ -478,9 +480,9 @@
                 <div>
                   <Card.Title>{item.title}</Card.Title>
                   <Card.Description>
-                    发往 {item.targetCommitteeName} · 第 {item.revision} 版 · {new Date(
+                    {t('procedure_directive_target_revision_time', { value1: item.targetCommitteeName ?? '', value2: item.revision, value3: new Date(
                       item.createdAt
-                    ).toLocaleString('zh-CN')}
+                    ).toLocaleString(getLocale()) })}
                   </Card.Description>
                 </div>
                 <Badge variant={statusBadgeVariants[item.status]}>
@@ -491,7 +493,7 @@
             <Card.Content class="flex flex-col gap-3">
               <p class="whitespace-pre-wrap text-sm leading-6">{item.content}</p>
               {#if item.processingNote}
-                <p class="rounded-md bg-muted p-3 text-sm">处理说明：{item.processingNote}</p>
+                <p class="rounded-md bg-muted p-3 text-sm">{t('procedure_directive_decision_note', { value1: item.processingNote })}</p>
               {/if}
               <div class="flex flex-wrap gap-2">
                 {#if item.status === 'submitted'}
@@ -501,29 +503,29 @@
                     disabled={busy}
                     onclick={() => void transition(item, 'cancel')}
                   >
-                    取消指令
+                    {t('procedure_cancel_directive')}
                   </Button>
                 {/if}
                 {#if item.status === 'rejected'}
                   <Button variant="outline" size="sm" disabled={busy} onclick={() => revise(item)}>
-                    修改重交
+                    {t('procedure_revise_and_resubmit_2')}
                   </Button>
                 {/if}
                 <Button variant="ghost" size="sm" onclick={() => void toggleHistory(item)}>
-                  {showHistory[item.id] ? '收起修改记录' : '查看修改记录'}
+                  {showHistory[item.id] ? t('procedure_hide_revisions') : t('procedure_view_revisions')}
                 </Button>
               </div>
               {#if showHistory[item.id]}
                 <div class="flex flex-col gap-2 border-t pt-3">
                   {#each revisions[item.id] ?? [] as revision (revision.revision)}
                     <div class="rounded-md bg-muted/60 p-3 text-sm">
-                      <p class="font-medium">第 {revision.revision} 版 · {revision.title}</p>
+                      <p class="font-medium">{t('procedure_directive_revision_title', { value1: revision.revision, value2: revision.title })}</p>
                       <p class="mt-1 whitespace-pre-wrap">{revision.content}</p>
                       {#if revision.decisionNote}
                         <p class="mt-2 text-muted-foreground">
-                          {revision.decision === 'rejected'
-                            ? '驳回'
-                            : '批准'}说明：{revision.decisionNote}
+                          {t('procedure_directive_revision_decision', { value1: revision.decision === 'rejected'
+                            ? t('procedure_reject')
+                            : t('procedure_approve'), value2: revision.decisionNote })}
                         </p>
                       {/if}
                     </div>

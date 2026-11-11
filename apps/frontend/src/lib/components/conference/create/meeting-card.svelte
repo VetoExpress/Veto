@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import { ChevronDown } from '@lucide/svelte'
   import { cn } from '$lib/classes/utils'
   import { Badge } from '$lib/components/ui/badge'
@@ -16,10 +17,10 @@
   <article class="rounded-lg border p-4">
     <div class="flex items-center gap-3">
       <h3 class="min-w-0 flex-1 truncate text-sm font-semibold">{committee.name}</h3>
-      <Badge variant="outline">{committee.seats.length} 个席位</Badge>
+      <Badge variant="outline">{t('procedure_seat_count', { value1: committee.seats.length })}</Badge>
       <Collapsible.Trigger
-        aria-label={open ? '收起席位' : '展开席位'}
-        title={open ? '收起席位' : '展开席位'}
+        aria-label={open ? t('procedure_collapse_seats') : t('procedure_expand_seats')}
+        title={open ? t('procedure_collapse_seats') : t('procedure_expand_seats')}
         class={cn(
           buttonVariants({ variant: 'ghost', size: 'icon' }),
           'transition-transform',
@@ -27,7 +28,7 @@
         )}
       >
         <ChevronDown />
-        <span class="sr-only">{open ? '收起席位' : '展开席位'}</span>
+        <span class="sr-only">{open ? t('procedure_collapse_seats') : t('procedure_expand_seats')}</span>
       </Collapsible.Trigger>
     </div>
 
@@ -48,7 +49,7 @@
             {/if}
             {#if isSingleton && seat.hasVotingRights}
               <Badge variant="secondary" class="bg-blue-500 text-white dark:bg-blue-600">
-                投票权
+                {t('procedure_voting_rights')}
               </Badge>
             {/if}
           </li>

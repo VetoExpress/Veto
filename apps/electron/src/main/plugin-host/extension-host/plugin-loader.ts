@@ -13,12 +13,7 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import { pathToFileURL } from 'url'
-import {
-  createVetoApi,
-  createPluginContext,
-  type VetoApi,
-  type VetoPluginContext,
-} from './api'
+import { createVetoApi, createPluginContext, type VetoApi, type VetoPluginContext } from './api'
 import { registerPluginApi, unregisterPluginApi } from './module-injector'
 import { createLogger } from '../../logger'
 
@@ -71,10 +66,7 @@ const _loaded = new Map<string, LoadedPlugin>()
  *   3. dynamic import 插件入口 → 插件内 import "veto" 被 Module._load 拦截
  *   4. 调用 module.activate(context)
  */
-export async function loadPlugin(
-  pluginPath: string,
-  pluginId?: string,
-): Promise<LoadedPlugin> {
+export async function loadPlugin(pluginPath: string, pluginId?: string): Promise<LoadedPlugin> {
   // 1. 验证
   if (!fs.existsSync(pluginPath) || !fs.statSync(pluginPath).isDirectory()) {
     throw new Error(`Plugin directory not found: ${pluginPath}`)
@@ -120,7 +112,7 @@ export async function loadPlugin(
     extensionPath: pluginPath,
     state: 'loading',
     startedAt: Date.now(),
-    vetoApi,
+    vetoApi
   }
 
   try {
@@ -139,7 +131,7 @@ export async function loadPlugin(
     const context = createPluginContext({
       pluginId: id,
       extensionPath: pluginPath,
-      metadata: pkg.veto ?? {},
+      metadata: pkg.veto ?? {}
     })
 
     await mod.activate(context)
@@ -201,10 +193,18 @@ export async function unloadAll(): Promise<void> {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export function getLoadedPlugins(): ReadonlyArray<{
-  id: string; name: string; version: string; state: string; startedAt: number
+  id: string
+  name: string
+  version: string
+  state: string
+  startedAt: number
 }> {
   return Array.from(_loaded.values()).map((p) => ({
-    id: p.id, name: p.name, version: p.version, state: p.state, startedAt: p.startedAt,
+    id: p.id,
+    name: p.name,
+    version: p.version,
+    state: p.state,
+    startedAt: p.startedAt
   }))
 }
 
@@ -242,6 +242,6 @@ function resolveEntryFile(pluginPath: string, main: string): string {
 
   throw new Error(
     `Cannot resolve plugin entry: "${main}" in ${pluginPath}. ` +
-    `Tried: ${absolute}[.mjs,.js,.cjs] and ${absolute}/index.[m]js`
+      `Tried: ${absolute}[.mjs,.js,.cjs] and ${absolute}/index.[m]js`
   )
 }

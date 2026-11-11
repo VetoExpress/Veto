@@ -1,3 +1,4 @@
+import { message } from "@/i18n/messages"
 import { AuthError, createAuthClient } from "@vetoexpress/auth"
 import type { AccountUpdate } from "@vetoexpress/auth"
 import { desktopAccount, requireAccountResult } from "./platform-session"
@@ -31,7 +32,7 @@ export async function updateAccountProfile(
   const user = api
     ? requireAccountResult(await api.updateProfile(update)).session.user
     : await authClient.patchMe(token, update)
-  if (!user) throw new AuthError("请重新登录", 401)
+  if (!user) throw new AuthError(message("platform_login_again"), 401)
   if (!api) notifyProfileChanged()
   return user
 }
@@ -41,7 +42,7 @@ export async function refreshAccountProfile(token: string) {
   const user = api
     ? requireAccountResult(await api.refresh()).session.user
     : await authClient.fetchMe(token)
-  if (!user) throw new AuthError("请重新登录", 401)
+  if (!user) throw new AuthError(message("platform_login_again"), 401)
   if (!api) notifyProfileChanged()
   return user
 }
@@ -67,7 +68,7 @@ export async function login(email: string, password: string): Promise<string> {
   if (!api) return authClient.login(email, password)
   requireAccountResult(await api.login(email, password))
   const { token } = requireAccountResult(await api.getAccessToken())
-  if (!token) throw new AuthError("登录会话已失效，请重新登录")
+  if (!token) throw new AuthError(message("platform_session_expired"))
   return token
 }
 

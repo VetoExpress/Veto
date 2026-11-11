@@ -1,7 +1,8 @@
 <script lang="ts">
+  import { t, getLocale } from '$lib/i18n'
   import { ArrowLeft, Play, Pause, Gauge, AlertTriangle, Clock } from '@lucide/svelte'
   import { currentBattle, runtimePositions } from '$lib/classes/stores/battle/battle-store'
-  import { gameClock, TIME_SCALES, TIME_SCALE_LABELS } from '$lib/classes/services/engine/game-clock.store'
+  import { gameClock, TIME_SCALES } from '$lib/classes/services/engine/game-clock.store'
   import { cn, type WithElementRef } from '$lib/classes/utils'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
@@ -43,13 +44,7 @@
   )
 
   function formatSimDate(d: Date): string {
-    const Y = d.getFullYear()
-    const M = String(d.getMonth() + 1).padStart(2, '0')
-    const D = String(d.getDate()).padStart(2, '0')
-    const h = String(d.getHours()).padStart(2, '0')
-    const m = String(d.getMinutes()).padStart(2, '0')
-    const s = String(d.getSeconds()).padStart(2, '0')
-    return `${Y}-${M}-${D} ${h}:${m}:${s}`
+    return new Intl.DateTimeFormat(getLocale(), { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(d)
   }
 
   function formatElapsed(d: Date): string {
@@ -71,7 +66,7 @@
       onclick={onback ?? (() => goto(resolve('/')))}
       variant="ghost"
       class="-ml-1 inline-flex items-center justify-center rounded-md p-2 text-stone-600 transition-colors hover:bg-stone-200/50 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-700/50 dark:hover:text-stone-100"
-      title={onback ? '返回会场' : '返回首页'}
+      title={onback ? t('components_back_committee') : t('components_back_home')}
     >
       <ArrowLeft class="h-5 w-5" />
     </Button>
@@ -90,7 +85,7 @@
         class="flex animate-pulse items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700"
       >
         <AlertTriangle size={11} />
-        检测到 {firefightCount} 处交火中
+        {t('components_firefight_count', { count: firefightCount })}
       </span>
     {/if}
 
@@ -100,14 +95,14 @@
         : 'animate-pulse bg-green-400'}"
     ></span>
     <span class="text-xs text-muted-foreground"
-      >{$gameClock.isPaused ? '已暂停' : '推演运行中'}</span
+      >{$gameClock.isPaused ? t('components_paused') : t('components_simulation_running')}</span
     >
 
     <Separator orientation="vertical" class="h-4" />
 
     <Button
       onclick={togglePause}
-      title={$gameClock.isPaused ? '开始推演' : '暂停推演'}
+      title={$gameClock.isPaused ? t('components_start_simulation') : t('components_pause_simulation')}
       variant="outline"
       size="icon"
       class="h-9 w-9 shrink-0 rounded-full border-2 transition-all
@@ -136,7 +131,7 @@
             ? 'border-stone-700 bg-stone-800 text-white shadow-sm hover:bg-stone-900 dark:border-stone-500 dark:bg-stone-700'
             : 'border-stone-200 bg-white text-stone-500 hover:border-stone-400 hover:text-stone-700 dark:border-stone-700 dark:bg-stone-800/60 dark:text-stone-400 dark:hover:border-stone-500 dark:hover:text-stone-300'}"
         >
-          {TIME_SCALE_LABELS[scale]}
+          {scale === 86400 ? t('components_day_per_second') : scale === 3600 ? t('components_hour_per_second') : t('components_minute_per_second')}
         </Button>
       {/each}
       {#if savedCustomScale !== null}
@@ -149,7 +144,7 @@
             ? 'border-stone-700 bg-stone-800 text-white shadow-sm hover:bg-stone-900 dark:border-stone-500 dark:bg-stone-700'
             : 'border-stone-200 bg-white text-stone-500 hover:border-stone-400 hover:text-stone-700 dark:border-stone-700 dark:bg-stone-800/60 dark:text-stone-400 dark:hover:border-stone-500 dark:hover:text-stone-300'}"
         >
-          {savedCustomScale}秒/秒
+          {t('components_seconds_ratio', { ratio: savedCustomScale })}
         </Button>
       {/if}
     </div>

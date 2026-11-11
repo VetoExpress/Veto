@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   /**
    * conference-header.svelte
    * ─────────────────────────
@@ -7,10 +8,10 @@
   import { PHASE_LABELS } from '$lib/classes/services/engine/conference-engine'
   import type { DisplayPhase } from '$lib/classes/types/committee-display'
 
-  const DISPLAY_PHASE_LABELS: Record<DisplayPhase, string> = {
+  const DISPLAY_PHASE_LABELS = $derived<Record<DisplayPhase, string>>({
     ...PHASE_LABELS,
-    motion: '动议'
-  }
+    motion: t('components_motion')
+  })
 
   let {
     venue,
@@ -40,11 +41,11 @@
     {#if phase && phase !== 'preamble' && phase !== 'roll_call'}
       <div class="flex items-center gap-2">
         <div class="rounded-md px-3 py-1 text-center">
-          <div class="text-xs tracking-wider text-white/25">简单多数</div>
+          <div class="text-xs tracking-wider text-white/25">{t('components_simple_majority')}</div>
           <div class="text-2xl font-semibold tabular-nums text-white/70">{simpleMajority}</div>
         </div>
         <div class="rounded-md px-3 py-1 text-center">
-          <div class="text-xs tracking-wider text-white/25">2/3 多数</div>
+          <div class="text-xs tracking-wider text-white/25">{t('components_two_thirds_majority')}</div>
           <div class="text-2xl font-semibold tabular-nums text-white/70">{twoThirds}</div>
         </div>
       </div>

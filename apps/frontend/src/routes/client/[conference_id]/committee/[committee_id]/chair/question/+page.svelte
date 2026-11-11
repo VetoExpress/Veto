@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   /**
    * conference/[conference_id]/question.svelte
    * ─────────────────────────────────────────
@@ -70,7 +71,7 @@
 </script>
 
 <svelte:head>
-  <title>{VETO_NAME} - 问题</title>
+  <title>{t('procedure_point_page_title', { value1: VETO_NAME })}</title>
 </svelte:head>
 
 <div class="flex h-full w-full flex-col bg-background">
@@ -81,7 +82,7 @@
 
     <PageTopBar
       icon={HelpCircle}
-      title="问题"
+      title={t('procedure_point')}
       subtitle={conf?.name}
       iconClass={iconColor}
       backHref={resolve(`/client/${conferenceId}/committee/${committeeId}/chair`)}
@@ -94,7 +95,7 @@
         <div class="rounded-lg border-2 {bgColor} p-8 text-center">
           <div class="flex items-center justify-center gap-2">
             <Icon size={24} class={iconColor} />
-            <span class="text-lg font-semibold {iconColor}">问题</span>
+            <span class="text-lg font-semibold {iconColor}">{t('procedure_point')}</span>
           </div>
 
           <div class="mt-4 space-y-2">
@@ -102,10 +103,7 @@
               {POINT_LABELS[latestPoint.type]}
             </div>
             <div class="text-base text-muted-foreground">
-              由 <span class="font-semibold text-foreground">
-                {proposerDel?.name ?? latestPoint.proposedBySeatId}
-              </span>
-              提出
+              {t('procedure_motion_proposed_by_name', { name: proposerDel?.name ?? latestPoint.proposedBySeatId })}
             </div>
           </div>
         </div>
@@ -117,7 +115,7 @@
             class="min-w-[200px] gap-2 bg-amber-500 hover:bg-amber-600 text-white"
             onclick={handleEnd}
           >
-            结束问题
+            {t('procedure_end_point')}
           </Button>
         </div>
       </div>

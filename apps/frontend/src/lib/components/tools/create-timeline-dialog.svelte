@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, getLocale } from '$lib/i18n'
   import PlusIcon from '@lucide/svelte/icons/plus'
   import ClockIcon from '@lucide/svelte/icons/clock'
   import CalendarIcon from '@lucide/svelte/icons/calendar'
@@ -63,17 +64,14 @@
   const canCreate = $derived(name.trim().length > 0 && selectedDate !== undefined)
 
   function formatDateLabel(): string {
-    if (!selectedDate) return '选择日期'
-    return selectedDate.toDate(getLocalTimeZone()).toLocaleDateString('zh-CN')
+    if (!selectedDate) return t('components_select_date')
+    return selectedDate.toDate(getLocalTimeZone()).toLocaleDateString(getLocale())
   }
 
   function formatPreview(): string {
     if (!selectedDate) return ''
     const d = selectedDate.toDate(getLocalTimeZone())
-    const yyyy = d.getFullYear()
-    const mm = String(d.getMonth() + 1).padStart(2, '0')
-    const dd = String(d.getDate()).padStart(2, '0')
-    return `${yyyy}年${mm}月${dd}日`
+    return new Intl.DateTimeFormat(getLocale(), { year: 'numeric', month: 'long', day: 'numeric' }).format(d)
   }
 </script>
 
@@ -84,28 +82,28 @@
       <Dialog.Header class="pb-1">
         <Dialog.Title class="flex items-center gap-2 text-base font-semibold tracking-wide">
           <ClockIcon size={18} class="text-indigo-500" />
-          新建时间线
+          {t('components_new_timeline')}
         </Dialog.Title>
         <Dialog.Description class="text-xs text-muted-foreground">
-          设置名称与初始模拟时间，创建后进入时间轴模拟器。
+          {t('components_timeline_description')}
         </Dialog.Description>
       </Dialog.Header>
 
       <div class="flex flex-col gap-4 py-4">
         <!-- 名称 -->
         <div class="flex flex-col gap-1.5">
-          <Label for="tl-name" class="text-xs text-muted-foreground">时间线名称</Label>
+          <Label for="tl-name" class="text-xs text-muted-foreground">{t('components_timeline_name')}</Label>
           <Input
             id="tl-name"
             bind:value={name}
-            placeholder="例如：2015年联合国气候变化大会"
+            placeholder={t('components_timeline_example')}
             class="h-9"
           />
         </div>
 
         <!-- 初始模拟时间：shadcn Date Picker + 时间输入 -->
         <div class="flex flex-col gap-1.5">
-          <Label class="text-xs text-muted-foreground">初始模拟时间</Label>
+          <Label class="text-xs text-muted-foreground">{t('components_initial_sim_time')}</Label>
           <div class="flex items-center gap-2">
             <Popover.Root bind:open={calendarOpen}>
               <Popover.Trigger>
@@ -124,6 +122,7 @@
               </Popover.Trigger>
               <Popover.Content class="w-auto overflow-hidden p-0" align="start">
                 <Calendar
+                  locale={getLocale()}
                   type="single"
                   bind:value={selectedDate}
                   captionLayout="dropdown"
@@ -137,14 +136,14 @@
           </div>
           {#if selectedDate}
             <p class="text-xs text-muted-foreground">
-              预览：{formatPreview()}
+              {t('components_date_preview', { date: formatPreview() })}
             </p>
           {/if}
         </div>
 
         <!-- 初始倍率 -->
         <div class="flex flex-col gap-1.5">
-          <Label class="text-xs text-muted-foreground">初始时间倍率</Label>
+          <Label class="text-xs text-muted-foreground">{t('components_initial_ratio')}</Label>
           <div class="flex flex-wrap gap-1.5">
             {#each RATIO_PRESETS as preset}
               <Button
@@ -152,7 +151,7 @@
                 variant={selectedRatio === preset.value ? 'default' : 'outline'}
                 onclick={() => (selectedRatio = preset.value)}
               >
-                {preset.label}
+                {preset.value === 86400 ? t('components_day_per_second') : preset.value === 3600 ? t('components_hour_per_second') : preset.value === 60 ? t('components_minute_per_second') : `${preset.value}x`}
               </Button>
             {/each}
           </div>
@@ -160,10 +159,10 @@
       </div>
 
       <Dialog.Footer class="pt-1">
-        <Button variant="outline" onclick={() => (open = false)}>取消</Button>
+        <Button variant="outline" onclick={() => (open = false)}>{t('components_cancel')}</Button>
         <Button onclick={handleCreate} disabled={!canCreate} class="min-w-[140px] gap-2">
           <PlusIcon size={15} />
-          创建时间线
+          {t('components_create_timeline')}
         </Button>
       </Dialog.Footer>
     </Dialog.Content>

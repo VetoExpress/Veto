@@ -1,35 +1,31 @@
-import { app, BrowserWindow, ipcMain, type IpcMainInvokeEvent } from 'electron'
+import { app, BrowserWindow, ipcMain } from 'electron'
 import { is } from '@electron-toolkit/utils'
 import { AuthError, createAuthClient, type AccountUpdate } from '@vetoexpress/auth'
 import type { AccountResult, AccountSnapshot, AccountTokenResult } from '@vetoexpress/auth/desktop'
 import { createAccountSession, type AccountSession } from '../account-session'
 import { createAccountStorage } from '../account-storage'
-import { getDevServerOrigin } from '../dev-server'
+import { isAccountOrigin, isTrustedAppFrame as trusted } from './trusted-origin'
+import { t, onLocaleChanged } from '../i18n'
+import { LocalizedAccountError, accountErrorMessage } from '../account-i18n'
+import { createLogger } from '../logger'
 
-export function isAccountOrigin(origin: string, development: boolean): boolean {
-  return (
-    origin === 'veto://app' ||
-    origin === 'https://platform.miaoyww.top' ||
-    (development &&
-      [
-        'http://localhost:5173',
-        'http://127.0.0.1:5173',
-        'http://localhost:4174',
-        'http://localhost:3000',
-        getDevServerOrigin()
-      ].includes(origin))
-  )
-}
-
-function trusted(event: IpcMainInvokeEvent) {
-  const frame = event.senderFrame
-  return !!frame && frame === event.sender.mainFrame && isAccountOrigin(frame.origin, is.dev)
-}
+export { isAccountOrigin } from './trusted-origin'
+const log = createLogger('IpcAccount')
+let unsubscribeLocale: (() => void) | undefined
 
 function broadcast(snapshot: AccountSnapshot) {
   for (const window of BrowserWindow.getAllWindows()) {
-    if (isAccountOrigin(window.webContents.mainFrame.origin, is.dev)) {
-      window.webContents.send('veto:account:changed', snapshot)
+    if (window.isDestroyed()) continue
+    try {
+      if (isAccountOrigin(window.webContents.mainFrame.origin, is.dev)) {
+        window.webContents.send('veto:account:changed', snapshot)
+      }
+    } catch (error) {
+      log.warn(
+        'Failed to broadcast account state; remaining windows will still be notified',
+        { windowId: window.id },
+        error
+      )
     }
   }
 }
@@ -45,15 +41,27 @@ export function registerAccountIpc(session?: AccountSession): void {
       createAccountStorage(app.getPath('userData')),
       broadcast
     )
+  unsubscribeLocale?.()
+  unsubscribeLocale = onLocaleChanged(() => {
+    broadcast(account.getSnapshot())
+  })
   const handle = (channel: string, operation: (...args: unknown[]) => Promise<AccountSnapshot>) => {
     ipcMain.handle(channel, async (event, ...args): Promise<AccountResult> => {
-      if (!trusted(event)) return { ok: false, error: '此页面无法访问桌面账号。' }
+      if (!trusted(event)) return { ok: false, error: t('electron_account_access_denied') }
       try {
         return { ok: true, session: await operation(...args) }
       } catch (error) {
+        log.warn('Account IPC operation failed', {
+          channel,
+          errorType: error instanceof Error ? error.name : typeof error,
+          status: error instanceof AuthError ? error.status : undefined
+        })
         return {
           ok: false,
-          error: error instanceof AuthError ? error.message : '账号操作失败，请稍后重试。',
+          error:
+            error instanceof AuthError
+              ? accountErrorMessage(error)
+              : t('electron_account_operation_failed'),
           status: error instanceof AuthError ? error.status : undefined
         }
       }
@@ -64,43 +72,46 @@ export function registerAccountIpc(session?: AccountSession): void {
   handle('veto:account:send-password-code', () => account.sendPasswordCode())
   handle('veto:account:reset-password', (code, password) => {
     if (typeof code !== 'string' || !/^\d{6}$/.test(code.trim()))
-      throw new AuthError('验证码须为 6 位数字')
+      throw new LocalizedAccountError('electron_account_invalid_code')
     if (typeof password !== 'string' || password.length < 6 || password.length > 1024)
-      throw new AuthError('密码应为 6–1024 个字符')
+      throw new LocalizedAccountError('electron_account_invalid_password')
     return account.resetPassword(code.trim(), password)
   })
   handle('veto:account:update-profile', (update) => {
     if (!update || typeof update !== 'object' || Array.isArray(update))
-      throw new AuthError('无效的个人信息')
+      throw new LocalizedAccountError('electron_account_invalid_profile')
     const body = update as Record<string, unknown>
     if (
       !Object.keys(body).length ||
       Object.keys(body).some((key) => !['name', 'avatar'].includes(key))
     )
-      throw new AuthError('无效的个人信息')
+      throw new LocalizedAccountError('electron_account_invalid_profile')
     if (
       body.name !== undefined &&
       (typeof body.name !== 'string' || !body.name.trim() || body.name.trim().length > 200)
     )
-      throw new AuthError('用户名应为 1–200 个字符')
+      throw new LocalizedAccountError('electron_account_invalid_name')
     if (
       body.avatar !== undefined &&
       (typeof body.avatar !== 'string' || body.avatar.length > 699052)
     )
-      throw new AuthError('头像不能超过 512 KB')
+      throw new LocalizedAccountError('electron_account_invalid_avatar')
     return account.updateProfile(body as AccountUpdate)
   })
   handle('veto:account:sign-out', (expectedToken) => {
     if (expectedToken !== undefined && typeof expectedToken !== 'string')
-      throw new AuthError('无效账号凭据')
+      throw new LocalizedAccountError('electron_account_invalid_credentials')
     return account.signOut(expectedToken)
   })
   ipcMain.handle('veto:account:get-access-token', async (event): Promise<AccountTokenResult> => {
-    if (!trusted(event)) return { ok: false, error: '此页面无法访问桌面账号。' }
+    if (!trusted(event)) return { ok: false, error: t('electron_account_access_denied') }
     try {
       return { ok: true, ...(await account.getAccessToken()) }
-    } catch {
-      return { ok: false, error: '无法读取桌面账号会话，请重试。' }
+    } catch (error) {
+      log.warn('Failed to read account token; renderer receives no credentials', {
+        errorType: error instanceof Error ? error.name : typeof error
+      })
+      return { ok: false, error: t('electron_account_session_unavailable') }
     }
   })
   handle('veto:account:adopt-token', (token, onlyIfSignedOut) => {
@@ -110,7 +121,7 @@ export function registerAccountIpc(session?: AccountSession): void {
       token.length > 8192 ||
       (onlyIfSignedOut !== undefined && typeof onlyIfSignedOut !== 'boolean')
     )
-      throw new AuthError('无效账号凭据')
+      throw new LocalizedAccountError('electron_account_invalid_credentials')
     return account.adoptToken(token, onlyIfSignedOut)
   })
   handle('veto:account:login', (email, password) => {
@@ -122,7 +133,7 @@ export function registerAccountIpc(session?: AccountSession): void {
       !password ||
       password.length > 4096
     ) {
-      throw new AuthError('请填写邮箱和密码')
+      throw new LocalizedAccountError('electron_account_login_required_fields')
     }
     return account.login(email, password)
   })

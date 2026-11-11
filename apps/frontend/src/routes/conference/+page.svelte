@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { procedureMessage, renderProcedureMessage, type ProcedureMessage } from '$lib/components/conference/common/message'
+  import { t, getLocale } from '$lib/i18n'
   import { onMount } from 'svelte'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
@@ -54,10 +56,10 @@
   let query = $state('')
   let passwordDialogOpen = $state(false)
   let passwordMembership = $state<CloudMembership | null>(null)
-  let rejoinError = $state('')
+  let rejoinError = $state<ProcedureMessage>('')
   let identityPickerOpen = $state(false)
   let identityPickerMemberships = $state<CloudMembership[]>([])
-  let identityPickerDescription = $state('')
+  let identityPickerDescription = $state<ProcedureMessage>('')
   let identityPickerAction = $state<'rejoin' | 'password'>('rejoin')
 
   const filteredConferences = $derived(
@@ -94,7 +96,7 @@
   }
 
   function formatDate(ts: number): string {
-    return new Date(ts).toLocaleString('zh-CN', { dateStyle: 'short', timeStyle: 'short' })
+    return new Date(ts).toLocaleString(getLocale(), { dateStyle: 'short', timeStyle: 'short' })
   }
 
   function resumeConference(): void {
@@ -125,7 +127,7 @@
       }
 
       rejoinError =
-        error instanceof CloudJoinError ? error.message : '无法重新入会，请检查网络后重试'
+        error instanceof CloudJoinError ? error.message : procedureMessage('procedure_unable_to_rejoin_check_your_connection_and_try_again')
     }
   }
 
@@ -137,8 +139,8 @@
     identityPickerMemberships = memberships
     identityPickerDescription =
       action === 'rejoin'
-        ? `「${conference.name}」在本机保存了多个身份，请选择本次进入的席位。`
-        : `「${conference.name}」在本机保存了多个身份，请选择要修改入会密码的席位。`
+        ? procedureMessage('procedure_multiple_identities_for_value_are_saved_on_this_device_choose_a_seat_to_enter', { value1: conference.name })
+        : procedureMessage('procedure_multiple_identities_for_value_are_saved_on_this_device_choose_a_seat_whose_saved_passw', { value1: conference.name })
     identityPickerAction = action
     identityPickerOpen = true
   }
@@ -146,7 +148,7 @@
   async function rejoinCloudConference(conference: Conference): Promise<void> {
     const memberships = getCloudMembershipsByConferenceId(conference.id)
     if (memberships.length === 0) {
-      rejoinError = '未找到本机保存的云端席位信息，请通过邀请码重新加入。'
+      rejoinError = procedureMessage('procedure_no_saved_cloud_seat_information_was_found_join_again_using_an_invite_code')
       return
     }
 
@@ -171,7 +173,7 @@
   function openCloudPasswordDialog(conference: Conference): void {
     const memberships = getCloudMembershipsByConferenceId(conference.id)
     if (memberships.length === 0) {
-      rejoinError = '未找到本机保存的云端席位信息，请通过邀请码重新加入。'
+      rejoinError = procedureMessage('procedure_no_saved_cloud_seat_information_was_found_join_again_using_an_invite_code')
       return
     }
 
@@ -205,7 +207,7 @@
         <div class="min-w-0">
           <h1 class="text-3xl font-semibold tracking-tight sm:text-4xl">
             <TextAnimate
-              text="继续你的会议节奏"
+              text={t('procedure_pick_up_where_you_left_off')}
               className="font-semibold"
               as="span"
               by="word"
@@ -215,18 +217,18 @@
             />
           </h1>
           <p class="mt-2 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
-            <span>每一场大会, 都值得悉心准备</span>
+            <span>{t('procedure_every_conference_deserves_thoughtful_preparation')}</span>
           </p>
         </div>
 
         <div class="flex shrink-0 gap-2">
           <Button size="lg" variant="outline" onclick={() => joinConferenceDialogOpen.set(true)}>
             <LogIn data-icon="inline-start" />
-            加入大会
+            {t('procedure_join_conference')}
           </Button>
           <Button size="lg" onclick={openCreatePage}>
             <Plus data-icon="inline-start" />
-            创建大会
+            {t('procedure_create_conference')}
             <ArrowRight data-icon="inline-end" />
           </Button>
         </div>
@@ -239,12 +241,12 @@
           </InputGroup.Addon>
           <InputGroup.Input
             bind:value={query}
-            placeholder="搜索大会或委员会..."
-            aria-label="搜索大会或委员会"
+            placeholder={t('procedure_search_conferences_or_committees')}
+            aria-label={t('procedure_search_conferences_or_committees_2')}
           />
         </InputGroup.Root>
         <Badge variant="secondary" class="self-start px-3 py-1 sm:self-auto">
-          {filteredConferences.length + filteredPlatformConferences.length} / {$conferences.length + $platformConferences.conferences.length} 场大会
+          {t('procedure_conference_search_count', { value1: filteredConferences.length + filteredPlatformConferences.length, value2: $conferences.length + $platformConferences.conferences.length })}
         </Badge>
       </div>
     </div>
@@ -257,13 +259,13 @@
           <div class="mb-3 flex items-end justify-between gap-4">
             <div>
               <p class="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                最近打开
+                {t('procedure_recently_opened')}
               </p>
               <h2 id="continue-heading" class="mt-1 text-lg font-semibold tracking-tight">
-                回到上次的现场
+                {t('procedure_return_to_your_last_conference')}
               </h2>
             </div>
-            <Badge variant="outline" class="hidden sm:inline-flex">快速进入</Badge>
+            <Badge variant="outline" class="hidden sm:inline-flex">{t('procedure_quick_access')}</Badge>
           </div>
 
           <Card.Root
@@ -286,12 +288,12 @@
                 <Play class="size-5" />
               </div>
               <div class="min-w-0 flex-1">
-                <p class="text-xs font-medium uppercase tracking-[0.16em] text-primary">继续上次</p>
+                <p class="text-xs font-medium uppercase tracking-[0.16em] text-primary">{t('procedure_continue')}</p>
                 <p class="mt-1 truncate text-lg font-semibold">{lastOpened.name}</p>
                 <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                   <span class="flex items-center gap-1.5">
                     <Building2 class="size-3.5" />
-                    {lastOpened.committees.length} 个会场
+                    {t('procedure_committee_count', { count: lastOpened.committees.length })}
                   </span>
                   <span class="flex items-center gap-1.5">
                     <CalendarDays class="size-3.5" />
@@ -299,10 +301,7 @@
                   </span>
                   <span class="flex items-center gap-1.5">
                     <Users class="size-3.5" />
-                    {lastOpened.committees.reduce(
-                      (count, committee) => count + committee.seats.length,
-                      0
-                    )} 个席位
+                    {t('procedure_seat_count', { value1: lastOpened.committees.reduce((count, committee) => count + committee.seats.length, 0) })}
                   </span>
                 </div>
               </div>
@@ -313,7 +312,7 @@
                   resumeConference()
                 }}
               >
-                进入工作台
+                {t('procedure_open_workspace')}
                 <ArrowRight data-icon="inline-end" />
               </Button>
             </Card.Content>
@@ -322,8 +321,8 @@
       {/if}
 
       {#if lastOpenedPlatform && !query.trim()}
-        <section aria-label="最近打开">
-          <p class="mb-3 text-xs font-medium text-muted-foreground">最近打开 · 云平台大会</p>
+        <section aria-label={t('procedure_recently_opened')}>
+          <p class="mb-3 text-xs font-medium text-muted-foreground">{t('procedure_recently_opened_cloud_conferences')}</p>
           <PlatformConferenceCard conference={lastOpenedPlatform} />
         </section>
       {/if}
@@ -332,31 +331,31 @@
         <div class="mb-3 flex items-end justify-between gap-4">
           <div>
             <p class="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-              你的收藏
+              {t('procedure_your_favorites')}
             </p>
             <h2 id="conference-list-heading" class="mt-1 text-lg font-semibold tracking-tight">
-              所有大会
+              {t('procedure_all_conferences')}
             </h2>
           </div>
           {#if query.trim()}
-            <span class="text-xs text-muted-foreground">搜索结果已实时更新</span>
+            <span class="text-xs text-muted-foreground">{t('procedure_search_results_update_as_you_type')}</span>
           {/if}
         </div>
 
         {#if rejoinError}
           <Alert.Root variant="destructive" class="mb-3">
             <CircleAlert />
-            <Alert.Title>无法重新入会</Alert.Title>
-            <Alert.Description>{rejoinError}</Alert.Description>
+            <Alert.Title>{t('procedure_unable_to_rejoin')}</Alert.Title>
+            <Alert.Description>{renderProcedureMessage(rejoinError)}</Alert.Description>
           </Alert.Root>
         {/if}
 
         {#if $accountStore.user}
           <div class="mb-3 flex items-center justify-between gap-3">
-            <p class="text-sm text-muted-foreground">云平台创建的大会会在平台中打开。</p>
-            <Button variant="outline" size="sm" disabled={$platformConferences.loading} onclick={() => void refreshPlatformConferences()}>刷新云平台大会</Button>
+            <p class="text-sm text-muted-foreground">{t('procedure_conferences_created_on_the_cloud_platform_open_on_the_platform')}</p>
+            <Button variant="outline" size="sm" disabled={$platformConferences.loading} onclick={() => void refreshPlatformConferences()}>{t('procedure_refresh_cloud_conferences')}</Button>
           </div>
-          {#if $platformConferences.loading}<p role="status" class="mb-3 text-sm text-muted-foreground">正在加载云平台大会…</p>{/if}
+          {#if $platformConferences.loading}<p role="status" class="mb-3 text-sm text-muted-foreground">{t('procedure_loading_cloud_conferences')}</p>{/if}
           {#if $platformConferences.error}<p role="alert" class="mb-3 text-sm text-destructive">{$platformConferences.error}</p>{/if}
         {/if}
         {#if filteredConferences.length === 0 && filteredPlatformConferences.length === 0 && !$platformConferences.loading}
@@ -365,11 +364,11 @@
               <Empty.Media variant="icon">
                 <Search class="size-4" />
               </Empty.Media>
-              <Empty.Title>未找到匹配的大会</Empty.Title>
-              <Empty.Description>试试其他关键词，或者清空搜索重新浏览。</Empty.Description>
+              <Empty.Title>{t('procedure_no_matching_conferences')}</Empty.Title>
+              <Empty.Description>{t('procedure_try_another_keyword_or_clear_the_search')}</Empty.Description>
             </Empty.Header>
             <Empty.Content>
-              <Button variant="outline" size="sm" onclick={() => (query = '')}>清空搜索</Button>
+              <Button variant="outline" size="sm" onclick={() => (query = '')}>{t('procedure_clear_search')}</Button>
             </Empty.Content>
           </Empty.Root>
         {:else}
@@ -399,7 +398,7 @@
   <CloudIdentityPickerDialog
     open={identityPickerOpen}
     memberships={identityPickerMemberships}
-    description={identityPickerDescription}
+    description={renderProcedureMessage(identityPickerDescription)}
     onSelect={handleIdentitySelect}
     onOpenChange={(value) => (identityPickerOpen = value)}
   />

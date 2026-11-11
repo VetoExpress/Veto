@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
 	import Button, { type ButtonProps } from '$lib/components/button.svelte';
 	import { useImageCropperCancel } from './image-cropper.svelte.js';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
@@ -30,5 +31,5 @@
 	}}
 >
 	<Trash2Icon />
-	<span>Cancel</span>
+	<span>{t('settings_cancel')}</span>
 </Button>

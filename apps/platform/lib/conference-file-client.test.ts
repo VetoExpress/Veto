@@ -54,16 +54,14 @@ describe("organizer file client", () => {
     const { downloadOrganizerFile } = await import("./conference-client")
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValue(
-          new Response(
-            JSON.stringify({
-              error: { code: "FILES_EXPIRED", message: "文件保存期限已过" },
-            }),
-            { status: 410 }
-          )
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            error: { code: "FILES_EXPIRED", message: "文件保存期限已过" },
+          }),
+          { status: 410 }
         )
+      )
     )
     await expect(
       downloadOrganizerFile("owner-token", "conference-1", {

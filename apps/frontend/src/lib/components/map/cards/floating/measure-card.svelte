@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, formatNumber } from '$lib/i18n'
 	import * as L from 'leaflet';
 	import { Ruler, X, Trash2, MapPin } from '@lucide/svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
@@ -19,8 +20,8 @@
 
 	// 把米转成易读的字符串
 	function formatDist(meters: number): string {
-		if (meters < 1000) return `${Math.round(meters)} m`;
-		return `${(meters / 1000).toFixed(2)} km`;
+		if (meters < 1000) return `${formatNumber(Math.round(meters))} m`;
+		return `${formatNumber(meters / 1000, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} km`;
 	}
 
 	// 计算两点距离（via Leaflet，底层 Haversine）
@@ -191,9 +192,9 @@
 			<div class="flex items-center justify-between">
 				<div class="flex items-center gap-2">
 					<Ruler class="h-4 w-4 text-amber-500" />
-					<span class="text-sm font-medium text-stone-700 dark:text-stone-200">测量距离</span>
+					<span class="text-sm font-medium text-stone-700 dark:text-stone-200">{t('components_measure_distance')}</span>
 					{#if points.length > 0}
-						<Badge variant="secondary" class="h-5 px-1.5 text-[10px]">{points.length} 点</Badge>
+						<Badge variant="secondary" class="h-5 px-1.5 text-[10px]">{t('components_point_count', { count: points.length })}</Badge>
 					{/if}
 				</div>
 				<div class="flex items-center gap-1">
@@ -202,7 +203,7 @@
 							variant="ghost"
 							size="icon"
 							class="h-6 w-6 text-stone-400 hover:text-red-500"
-							title="清除所有点"
+							title={t('components_clear_points')}
 							onclick={clearPoints}
 						>
 							<Trash2 class="h-3.5 w-3.5" />
@@ -212,7 +213,7 @@
 						variant="ghost"
 						size="icon"
 						class="h-6 w-6 text-stone-400 hover:text-stone-700 dark:hover:text-stone-200"
-						title="退出测量"
+						title={t('components_exit_measure')}
 						onclick={cancel}
 					>
 						<X class="h-3.5 w-3.5" />
@@ -225,14 +226,14 @@
 			{#if points.length === 0}
 				<div class="flex items-center gap-2 py-1 text-xs text-stone-400 dark:text-stone-500">
 					<MapPin class="h-3.5 w-3.5" />
-					点击地图添加测量点
+					{t('components_add_measure_point')}
 				</div>
 			{:else}
 				<!-- 各段距离列表 -->
 				<div class="flex max-h-36 flex-col gap-1 overflow-y-auto">
 					{#each segmentDistances as d, i}
 						<div class="flex items-center justify-between rounded-md px-2 py-0.5 text-xs">
-							<span class="text-stone-500 dark:text-stone-400">第 {i + 1} 段</span>
+							<span class="text-stone-500 dark:text-stone-400">{t('components_segment_number', { number: i + 1 })}</span>
 							<span class="font-mono font-medium text-stone-700 dark:text-stone-200"
 								>{formatDist(d)}</span
 							>
@@ -243,7 +244,7 @@
 						<div
 							class="flex items-center justify-between rounded-md px-2 py-0.5 text-xs opacity-60"
 						>
-							<span class="text-amber-500">预览段</span>
+							<span class="text-amber-500">{t('components_preview_segment')}</span>
 							<span class="font-mono font-medium text-amber-500">{formatDist(previewDistance)}</span
 							>
 						</div>
@@ -254,7 +255,7 @@
 
 				<!-- 总距离 -->
 				<div class="flex items-center justify-between px-2">
-					<span class="text-xs font-medium text-stone-600 dark:text-stone-300">总距离</span>
+					<span class="text-xs font-medium text-stone-600 dark:text-stone-300">{t('components_total_distance')}</span>
 					<span class="font-mono text-sm font-bold text-amber-500">
 						{formatDist(previewDistance !== null ? totalDistance + previewDistance : totalDistance)}
 					</span>

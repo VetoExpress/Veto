@@ -7,7 +7,8 @@ export default defineConfig({
   plugins: [svelte()],
   resolve: {
     alias: {
-      '$lib': resolve(import.meta.dirname, 'apps/frontend/src/lib')
+      '$lib': resolve(import.meta.dirname, 'apps/frontend/src/lib'),
+      '@': resolve(import.meta.dirname, 'apps/platform')
     }
   }
 })

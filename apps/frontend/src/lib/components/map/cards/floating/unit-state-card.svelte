@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
 	import { currentBattle, runtimePositions } from '$lib/classes/stores/battle/battle-store';
 	import { mods } from '$lib/classes/services/plugin/mod-registry.svelte';
 	import { pendingRoute } from '$lib/classes/stores/battle/route.store';
@@ -80,17 +81,17 @@
 			onmousedown={onDragStart}
 		>
 			<Activity class="size-4 shrink-0 text-muted-foreground" />
-			<span class="flex-1 text-sm font-semibold tracking-wide">推演单位态势</span>
+			<span class="flex-1 text-sm font-semibold tracking-wide">{t('components_unit_overview')}</span>
 
 			<!-- 状态徽标 -->
 			{#if engagedCount > 0}
 				<span class="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-600 dark:bg-red-900/30 dark:text-red-400">
-					⚔ {engagedCount} 交战
+					{t('components_engaged_count', { count: engagedCount })}
 				</span>
 			{/if}
 			{#if hasPendingRoute}
 				<span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
-					⚠ 待确认路线
+					{t('components_pending_route_icon')}
 				</span>
 			{/if}
 
@@ -109,7 +110,7 @@
 		<!-- 单位列表 -->
 		<ScrollArea class="max-h-[70vh]">
 			{#if placedUnits.length === 0}
-				<p class="py-8 text-center text-xs text-muted-foreground">当前战局暂无已放置单位</p>
+				<p class="py-8 text-center text-xs text-muted-foreground">{t('components_no_placed_units')}</p>
 			{:else}
 				<div class="divide-y divide-border/40">
 					{#each placedUnits as placed (placed.id)}
@@ -147,14 +148,14 @@
 										<span class="text-xs text-muted-foreground">{branchLabel(info.branch)}</span>
 									{/if}
 									{#if hp <= 0}
-										<span class="text-xs font-medium text-muted-foreground">☠ 已阵亡</span>
+										<span class="text-xs font-medium text-muted-foreground">{t('components_destroyed_skull')}</span>
 									{:else if isEngaged}
-									<span class="text-xs font-medium text-red-600 dark:text-red-400">⚔ 交战中</span>
+									<span class="text-xs font-medium text-red-600 dark:text-red-400">{t('components_engaged_icon')}</span>
 									{/if}
 									{#if isPendingForThis}
 									<span class="text-xs font-medium text-amber-600 dark:text-amber-400">
 											<Navigation class="inline size-2.5 mr-0.5" />
-											{$pendingRoute?.type === 'reset' ? '路线重置待确认' : '路线追加待确认'}
+											{$pendingRoute?.type === 'reset' ? t('components_route_reset_pending') : t('components_route_append_pending')}
 										</span>
 									{/if}
 								</div>
@@ -167,11 +168,11 @@
 									</span>
 									<span>{placed.stats.speed} km/h</span>
 									{#if hp <= 0}
-										<span class="text-muted-foreground/60">已无战斗力</span>
+										<span class="text-muted-foreground/60">{t('components_combat_ineffective')}</span>
 									{:else if route.length === 0}
-										<span class="text-muted-foreground/60">原地待命</span>
+										<span class="text-muted-foreground/60">{t('components_standing_by')}</span>
 									{:else}
-										<span class="text-green-600 dark:text-green-400">行进中 · {route.length} 节点剩余</span>
+										<span class="text-green-600 dark:text-green-400">{t('components_remaining_waypoints', { count: route.length })}</span>
 									{/if}
 								</div>
 
@@ -194,7 +195,7 @@
 										>
 									</div>
 									<div class="flex items-center gap-1.5">
-										<span class="w-6 shrink-0 text-[10px] text-muted-foreground">组织</span>
+										<span class="w-6 shrink-0 text-[10px] text-muted-foreground">{t('components_organization_short')}</span>
 										<div class="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
 											<div
 												class="h-full rounded-full transition-all {org / maxOrg < 0.2

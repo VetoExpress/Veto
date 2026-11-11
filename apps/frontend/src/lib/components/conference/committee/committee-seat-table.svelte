@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   /**
    * committee-seat-table.svelte
    * ───────────────────────────
@@ -99,11 +100,11 @@
   <table class="w-full text-sm">
     <thead class="bg-muted/50 text-xs text-muted-foreground">
       <tr>
-        <th class="px-4 py-3 text-left font-medium">席位</th>
-        <th class="px-4 py-3 text-left font-medium">简称</th>
-        <th class="px-4 py-3 text-left font-medium">角色</th>
-        <th class="px-4 py-3 text-left font-medium">访问 key</th>
-        <th class="px-4 py-3 text-right font-medium">操作</th>
+        <th class="px-4 py-3 text-left font-medium">{t('procedure_seat')}</th>
+        <th class="px-4 py-3 text-left font-medium">{t('procedure_abbreviation')}</th>
+        <th class="px-4 py-3 text-left font-medium">{t('procedure_role')}</th>
+        <th class="px-4 py-3 text-left font-medium">{t('procedure_access_key')}</th>
+        <th class="px-4 py-3 text-right font-medium">{t('procedure_actions')}</th>
       </tr>
     </thead>
     <tbody>
@@ -114,7 +115,7 @@
             {#if editingSeatId === seat.id}
               <Input
                 bind:value={editName}
-                aria-label="席位名称"
+                aria-label={t('procedure_seat_name')}
                 onkeydown={(event) => handleEditorKeydown(event, seat)}
               />
             {:else}
@@ -125,8 +126,8 @@
             {#if editingSeatId === seat.id}
               <Input
                 bind:value={editShortName}
-                aria-label="席位简称"
-                placeholder="可选"
+                aria-label={t('procedure_seat_abbreviation')}
+                placeholder={t('procedure_optional')}
                 onkeydown={(event) => handleEditorKeydown(event, seat)}
               />
             {:else}
@@ -134,14 +135,14 @@
             {/if}
           </td>
           <td class="px-4 py-3 text-muted-foreground">{seat.role ?? '-'}</td>
-          <td class="px-4 py-3"><code class="font-mono text-xs">{code || '未生成'}</code></td>
+          <td class="px-4 py-3"><code class="font-mono text-xs">{code || t('procedure_not_generated')}</code></td>
           <td class="px-4 py-3">
             <div class="flex justify-end gap-1">
               <Button
                 variant="ghost"
                 size="icon"
-                title="复制 key"
-                aria-label="复制 key"
+                title={t('procedure_copy_key')}
+                aria-label={t('procedure_copy_key')}
                 disabled={!code}
                 onclick={() => void copyCode(code, seat.id)}
               >
@@ -150,8 +151,8 @@
               <Button
                 variant="ghost"
                 size="icon"
-                title="重新生成 key"
-                aria-label="重新生成 key"
+                title={t('procedure_regenerate_key')}
+                aria-label={t('procedure_regenerate_key')}
                 onclick={() => rotateSeatInviteCode(seat.id)}
               >
                 <RefreshCw />
@@ -160,8 +161,8 @@
                 <Button
                   variant="ghost"
                   size="icon"
-                  title="取消编辑"
-                  aria-label="取消编辑"
+                  title={t('procedure_cancel_editing')}
+                  aria-label={t('procedure_cancel_editing')}
                   onclick={cancelEditing}
                 >
                   <X />
@@ -169,8 +170,8 @@
                 <Button
                   variant="ghost"
                   size="icon"
-                  title="保存席位"
-                  aria-label="保存席位"
+                  title={t('procedure_save_seat')}
+                  aria-label={t('procedure_save_seat')}
                   disabled={!editName.trim()}
                   onclick={() => saveSeat(seat)}
                 >
@@ -180,8 +181,8 @@
                 <Button
                   variant="ghost"
                   size="icon"
-                  title="编辑席位"
-                  aria-label="编辑席位"
+                  title={t('procedure_edit_seat')}
+                  aria-label={t('procedure_edit_seat')}
                   onclick={() => startEditing(seat)}
                 >
                   <Pencil />
@@ -190,12 +191,12 @@
               <Button
                 variant={deleteConfirmSeatId === seat.id ? 'destructive' : 'ghost'}
                 size="sm"
-                title="双击以删除席位"
+                title={t('procedure_double_click_to_delete_seat')}
                 onclick={() => handleDelete(seat)}
               >
                 <Trash2 data-icon="inline-start" />
                 {#key deleteConfirmSeatId === seat.id}
-                  删除
+                  {t('procedure_delete')}
                 {/key}
               </Button>
             </div>
@@ -203,7 +204,7 @@
         </tr>
       {:else}
         <tr>
-          <td colspan="5" class="px-4 py-10 text-center text-muted-foreground">暂无席位</td>
+          <td colspan="5" class="px-4 py-10 text-center text-muted-foreground">{t('procedure_no_seats')}</td>
         </tr>
       {/each}
     </tbody>

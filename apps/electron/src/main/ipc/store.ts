@@ -6,25 +6,51 @@
  */
 
 import { ipcMain } from 'electron'
-import { loadStore, saveStore, deleteStore, migrateFromLocalStorage, type StoreDomain } from '../data/store'
+import type { IpcMainInvokeEvent } from 'electron'
+import {
+  loadStore,
+  saveStore,
+  deleteStore,
+  migrateFromLocalStorage,
+  type StoreDomain
+} from '../data/store'
+import { t } from '../i18n'
+import { createLogger } from '../logger'
+import { isTrustedAppFrame } from './trusted-origin'
+
+const log = createLogger('IpcStore')
+
+function rendererDomain(event: IpcMainInvokeEvent, domain: string): StoreDomain {
+  if (!isTrustedAppFrame(event)) {
+    log.warn('Rejected generic store access from untrusted frame', {
+      origin: event.senderFrame?.origin
+    })
+    throw new Error(t('electron_i18n_access_denied'))
+  }
+  if (!['conferences', 'checkpoints', 'events', 'battles', 'settings', 'tools'].includes(domain)) {
+    log.warn('Rejected access to main-process language preferences through generic store IPC')
+    throw new Error(t('electron_i18n_access_denied'))
+  }
+  return domain as StoreDomain
+}
 
 export function registerStoreIpc(): void {
-  ipcMain.handle('veto:store:load', (_event, domain: string) => {
-    return loadStore(domain as StoreDomain)
+  ipcMain.handle('veto:store:load', (event, domain: string) => {
+    return loadStore(rendererDomain(event, domain))
   })
 
-  ipcMain.handle('veto:store:save', (_event, domain: string, data: unknown) => {
-    saveStore(domain as StoreDomain, data)
+  ipcMain.handle('veto:store:save', (event, domain: string, data: unknown) => {
+    saveStore(rendererDomain(event, domain), data)
     return { success: true }
   })
 
-  ipcMain.handle('veto:store:delete', (_event, domain: string) => {
-    deleteStore(domain as StoreDomain)
+  ipcMain.handle('veto:store:delete', (event, domain: string) => {
+    deleteStore(rendererDomain(event, domain))
     return { success: true }
   })
 
-  ipcMain.handle('veto:store:migrate', (_event, domain: string, jsonData: string) => {
-    migrateFromLocalStorage(domain as StoreDomain, jsonData)
+  ipcMain.handle('veto:store:migrate', (event, domain: string, jsonData: string) => {
+    migrateFromLocalStorage(rendererDomain(event, domain), jsonData)
     return { success: true }
   })
 }

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import { onMount, onDestroy } from 'svelte'
   import { Wrench } from '@lucide/svelte'
   import { resolve } from '$app/paths'
@@ -42,8 +43,8 @@
 <div class="flex flex-col h-[calc(100vh-2.25rem)] w-screen overflow-hidden">
   <PageTopBar
     icon={Wrench}
-    title={timelineName || '时间线'}
-    subtitle="时间线模拟器"
+    title={timelineName || t('procedure_timeline')}
+    subtitle={t('procedure_timeline_simulator')}
     iconClass="text-muted-foreground"
     backHref={resolve(`/client/${conferenceId}/committee/${committeeId}/chair/tools`)}
   />
@@ -54,7 +55,7 @@
       <TimelineControl {engine} />
     {:else}
       <div class="flex items-center justify-center h-full text-muted-foreground">
-        <p>时间线不存在或加载失败</p>
+        <p>{t('procedure_timeline_does_not_exist_or_failed_to_load')}</p>
       </div>
     {/if}
   </div>

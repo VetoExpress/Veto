@@ -1,3 +1,5 @@
+import { t, getLocale } from '$lib/i18n'
+
 const cloudApiBaseUrl = (
   import.meta.env.VITE_CLOUD_API_URL ?? 'https://api.miaoyww.top/v1'
 ).replace(/\/$/, '')
@@ -117,7 +119,7 @@ export class CloudJoinError extends Error {
 export function normalizeInviteCode(value: string): string {
   const characters = value.trim().toUpperCase().replaceAll(/[\s-]/g, '')
   if (!/^[A-HJ-NP-Z2-9]{12}$/.test(characters)) {
-    throw new CloudJoinError('邀请码格式应为 4-4-4')
+    throw new CloudJoinError(t('services_invite_format'))
   }
 
   return [characters.slice(0, 4), characters.slice(4, 8), characters.slice(8)].join('-')
@@ -142,23 +144,23 @@ function responseError(payload: unknown, fallback: string): string {
 
 async function request<T>(path: string, body: unknown): Promise<T> {
   if (!cloudApiBaseUrl) {
-    throw new CloudJoinError('云端服务暂未配置')
+    throw new CloudJoinError(t('services_cloud_unconfigured'))
   }
 
   let response: Response
   try {
     response = await fetch(new URL(path.replace(/^\//, ''), `${cloudApiBaseUrl}/`), {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', 'Accept-Language': getLocale() },
       body: JSON.stringify(body)
     })
   } catch {
-    throw new CloudJoinError('无法连接云端服务')
+    throw new CloudJoinError(t('services_cloud_unavailable'))
   }
 
   const payload = (await response.json().catch(() => null)) as T | unknown | null
   if (!response.ok) {
-    throw new CloudJoinError(responseError(payload, '云端服务请求失败'), response.status)
+    throw new CloudJoinError(responseError(payload, t('services_cloud_request_failed')), response.status)
   }
 
   return payload as T
@@ -185,19 +187,19 @@ export function authenticateCloudSeat(input: CloudAuthenticateInput): Promise<Cl
 }
 
 export async function getCloudChairCommittee(token: string): Promise<CloudChairCommittee> {
-  if (!cloudApiBaseUrl) throw new CloudJoinError('云端服务暂未配置')
+  if (!cloudApiBaseUrl) throw new CloudJoinError(t('services_cloud_unconfigured'))
 
   let response: Response
   try {
     response = await fetch(new URL('veto/chair/committee', `${cloudApiBaseUrl}/`), {
-      headers: { authorization: `Bearer ${token}` }
+      headers: { authorization: `Bearer ${token}`, 'Accept-Language': getLocale() }
     })
   } catch {
-    throw new CloudJoinError('无法连接云端服务')
+    throw new CloudJoinError(t('services_cloud_unavailable'))
   }
   const payload = (await response.json().catch(() => null)) as CloudChairCommittee | unknown | null
   if (!response.ok) {
-    throw new CloudJoinError(responseError(payload, '无法获取主席席位信息'), response.status)
+    throw new CloudJoinError(responseError(payload, t('services_chair_failed')), response.status)
   }
   return payload as CloudChairCommittee
 }

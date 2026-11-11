@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import type { Seat } from '$lib/classes/types/delegate'
   import { Button } from '$lib/components/ui/button'
   import {
@@ -36,15 +37,15 @@
   function copyInviteInfo(): void {
     if (!seat) return
     const text = [
-      `会议 ID: ${conferenceId}`,
-      `席位: ${seat.name}`,
-      `邀请码: ${inviteCode}`,
-      `密码: ${user?.passwordHash ? '使用者已设置' : '未设置，首次认领时需设置密码'}`,
+      t('procedure_conference_id_value', { value1: conferenceId }),
+      t('procedure_seat_value', { value1: seat.name }),
+      t('procedure_invite_code_value', { value1: inviteCode }),
+      t('procedure_password_value', { value1: user?.passwordHash ? t('procedure_set_by_user') : t('procedure_not_set_required_on_first_claim') }),
       ``,
-      `加入方式：`,
-      `1. 打开 Veto 应用`,
-      `2. 在首页点击"加入会议"`,
-      `3. 输入邀请码，首次认领时填写姓名和密码（均为必填）`
+      t('procedure_how_to_join', {  }),
+      t('procedure_1_open_the_veto_app', {  }),
+      t('procedure_2_select_join_conference_on_the_home_page', {  }),
+      t('procedure_3_enter_the_invite_code_on_first_claim_provide_a_name_and_password_both_required', {  })
     ].join('\n')
 
     navigator.clipboard.writeText(text)
@@ -70,25 +71,25 @@
   <Dialog open={true} onOpenChange={() => onClose()}>
     <DialogContent>
       <DialogHeader>
-        <DialogTitle>邀请信息 — {seat.name}</DialogTitle>
+        <DialogTitle>{t('procedure_invitation_title', { value1: seat.name })}</DialogTitle>
         <DialogDescription>
-          将此信息发送给参会者。首次连接时会认领席位并创建用户。
+          {t('procedure_share_this_information_with_participants_their_first_connection_claims_the_seat_and_cr')}
         </DialogDescription>
       </DialogHeader>
 
       <div class="invite-details">
         <div class="detail-row">
-          <span class="detail-label">席位</span>
+          <span class="detail-label">{t('procedure_seat')}</span>
           <span class="detail-value">{seat.name}</span>
         </div>
         {#if seat.role}
           <div class="detail-row">
-            <span class="detail-label">职务</span>
+            <span class="detail-label">{t('procedure_position')}</span>
             <span class="detail-value">{seat.role}</span>
           </div>
         {/if}
         <div class="detail-row">
-          <span class="detail-label">邀请码</span>
+          <span class="detail-label">{t('procedure_invite_code')}</span>
           <div class="code-row">
             <code class="invite-code-large">{inviteCode}</code>
             <Button size="icon-sm" variant="ghost" onclick={copyInviteCode}>
@@ -98,22 +99,22 @@
                 <Copy class="size-4" />
               {/if}
             </Button>
-            <Button size="icon-sm" variant="ghost" title="轮换邀请码" onclick={rotateInviteCode}>
+            <Button size="icon-sm" variant="ghost" title={t('procedure_rotate_invite_code')} onclick={rotateInviteCode}>
               <RefreshCw class="size-4" />
             </Button>
           </div>
         </div>
         <div class="detail-row">
-          <span class="detail-label">会议 ID</span>
+          <span class="detail-label">{t('procedure_conference_id')}</span>
           <span class="detail-value text-xs font-mono">{conferenceId}</span>
         </div>
       </div>
 
       <div class="invite-actions">
-        <Button variant="outline" onclick={onClose}>关闭</Button>
+        <Button variant="outline" onclick={onClose}>{t('procedure_close')}</Button>
         <Button onclick={copyInviteInfo}>
           <Copy class="size-4 mr-1" />
-          复制邀请信息
+          {t('procedure_copy_invitation')}
         </Button>
       </div>
     </DialogContent>

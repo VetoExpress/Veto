@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, formatNumber } from '$lib/i18n'
 	import type { UnitTemplate, PlacedUnit, Faction } from '$lib/classes/types/battle';
 	import { mods } from '$lib/classes/services/plugin/mod-registry.svelte';
 	import { Separator } from '$lib/components/ui/separator/index.js';
@@ -69,7 +70,7 @@
 			<Heart class="h-3.5 w-3.5 flex-shrink-0 text-rose-500 dark:text-rose-400" />
 			<div class="flex flex-1 flex-col gap-0.5">
 				<div class="flex items-center justify-between">
-					<span class="text-[10px] font-medium text-muted-foreground">生命值</span>
+					<span class="text-[10px] font-medium text-muted-foreground">{t('components_health')}</span>
 					<span class="font-mono text-[10px] text-muted-foreground"
 						>{Math.round(liveHp)}/{maxHp}</span
 					>
@@ -84,7 +85,7 @@
 			<Zap class="h-3.5 w-3.5 flex-shrink-0 text-amber-500 dark:text-amber-400" />
 			<div class="flex flex-1 flex-col gap-0.5">
 				<div class="flex items-center justify-between">
-					<span class="text-[10px] font-medium text-muted-foreground">组织度</span>
+					<span class="text-[10px] font-medium text-muted-foreground">{t('components_organization')}</span>
 					<span class="font-mono text-[10px] text-muted-foreground"
 						>{Math.round(liveOrg)}/{maxOrg}</span
 					>
@@ -105,35 +106,35 @@
 	<div class="grid grid-cols-2 gap-x-3 gap-y-1.5">
 		<div class="flex items-center gap-1.5">
 			<Swords class="h-3 w-3 flex-shrink-0 text-orange-500" />
-			<span class="text-[10px] text-muted-foreground">软攻击</span>
+			<span class="text-[10px] text-muted-foreground">{t('components_soft_attack')}</span>
 			<span class="ml-auto font-mono text-[10px] font-semibold text-foreground"
 				>{placed.stats['softAttack'] ?? 0}</span
 			>
 		</div>
 		<div class="flex items-center gap-1.5">
 			<Wrench class="h-3 w-3 flex-shrink-0 text-zinc-500" />
-			<span class="text-[10px] text-muted-foreground">硬攻击</span>
+			<span class="text-[10px] text-muted-foreground">{t('components_hard_attack')}</span>
 			<span class="ml-auto font-mono text-[10px] font-semibold text-foreground"
 				>{placed.stats['hardAttack'] ?? 0}</span
 			>
 		</div>
 		<div class="flex items-center gap-1.5">
 			<PlaneTakeoff class="h-3 w-3 flex-shrink-0 text-sky-500" />
-			<span class="text-[10px] text-muted-foreground">空攻击</span>
+			<span class="text-[10px] text-muted-foreground">{t('components_air_attack')}</span>
 			<span class="ml-auto font-mono text-[10px] font-semibold text-foreground"
 				>{placed.stats['airAttack'] ?? 0}</span
 			>
 		</div>
 		<div class="flex items-center gap-1.5">
 			<ShieldHalf class="h-3 w-3 flex-shrink-0 text-blue-500" />
-			<span class="text-[10px] text-muted-foreground">防御</span>
+			<span class="text-[10px] text-muted-foreground">{t('components_defense')}</span>
 			<span class="ml-auto font-mono text-[10px] font-semibold text-foreground"
 				>{placed.stats['defense'] ?? 0}</span
 			>
 		</div>
 		<div class="col-span-2 flex items-center gap-1.5">
 			<Gauge class="h-3 w-3 flex-shrink-0 text-green-500" />
-			<span class="text-[10px] text-muted-foreground">速度</span>
+			<span class="text-[10px] text-muted-foreground">{t('components_speed')}</span>
 			<span class="ml-auto font-mono text-[10px] font-semibold text-foreground"
 				>{placed.stats['speed'] ?? 0} km/h</span
 			>
@@ -145,14 +146,14 @@
 	<!-- ── 状态 & 坐标 ── -->
 	<div class="flex flex-col gap-1">
 		<div class="flex items-center justify-between gap-4">
-			<span class="text-xs text-muted-foreground">状态</span>
+			<span class="text-xs text-muted-foreground">{t('components_status')}</span>
 			<span class="text-xs font-medium text-foreground">
 			{mods.getLabel('status.' + liveStatus, liveStatus)}</span>
 		</div>
 		<div class="flex items-center justify-between gap-4">
 			<MapPin class="h-3 w-3 text-muted-foreground/50" />
 			<span class="font-mono text-xs text-muted-foreground"
-				>{placed.lat.toFixed(4)}°, {placed.lng.toFixed(4)}°</span
+        >{formatNumber(placed.lat, { minimumFractionDigits: 4, maximumFractionDigits: 4, useGrouping: false })}°, {formatNumber(placed.lng, { minimumFractionDigits: 4, maximumFractionDigits: 4, useGrouping: false })}°</span
 			>
 		</div>
 	</div>

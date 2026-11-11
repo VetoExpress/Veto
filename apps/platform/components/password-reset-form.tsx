@@ -1,4 +1,6 @@
 "use client"
+import { message } from "@/i18n/messages"
+import { usePlatformTranslations } from "@/components/i18n-provider"
 
 import { useEffect, useState, type FormEvent } from "react"
 import { ArrowLeft, KeyRound, Loader2, Mail } from "lucide-react"
@@ -17,6 +19,8 @@ export function PasswordResetForm({
   onCancel: () => void
   onSuccess: (email: string) => void
 }) {
+  const { t, locale } = usePlatformTranslations()
+
   const [stage, setStage] = useState<"email" | "reset">("email")
   const [email, setEmail] = useState("")
   const [code, setCode] = useState("")
@@ -48,11 +52,13 @@ export function PasswordResetForm({
       setCode("")
       setStage("reset")
       setCooldown(RESEND_COOLDOWN_SECONDS)
-      setNotice(
-        "若该邮箱已注册且设置了密码，你将收到验证码。验证码 5 分钟内有效；重发后请使用最新验证码。"
-      )
+      setNotice("platform_recovery_code_notice")
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "发送失败")
+      setError(
+        exception instanceof Error
+          ? exception.message
+          : message("platform_send_failed")
+      )
     } finally {
       setBusy(false)
     }
@@ -67,7 +73,7 @@ export function PasswordResetForm({
     event.preventDefault()
     if (busy || !/^\d{6}$/.test(code) || password.length < 6) return
     if (password !== confirmation) {
-      setError("两次输入的密码不一致")
+      setError("platform_password_mismatch")
       return
     }
     setBusy(true)
@@ -76,7 +82,11 @@ export function PasswordResetForm({
       await resetPassword(email, code, password)
       onSuccess(email)
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "重设密码失败")
+      setError(
+        exception instanceof Error
+          ? exception.message
+          : message("platform_reset_password_failed")
+      )
     } finally {
       setBusy(false)
     }
@@ -87,7 +97,9 @@ export function PasswordResetForm({
       {stage === "email" ? (
         <form className="flex flex-col gap-4" onSubmit={submitEmail}>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="reset-email">注册邮箱</Label>
+            <Label htmlFor="reset-email">
+              {t("platform_registered_email")}
+            </Label>
             <Input
               id="reset-email"
               type="email"
@@ -111,7 +123,9 @@ export function PasswordResetForm({
             ) : (
               <Mail className="size-4" />
             )}
-            {coolingDown ? `重新发送（${cooldown}s）` : "发送验证码"}
+            {coolingDown
+              ? t("platform_resend_countdown", { value1: cooldown })
+              : t("platform_send_code")}
           </Button>
         </form>
       ) : (
@@ -120,20 +134,22 @@ export function PasswordResetForm({
             <p className="font-medium break-all">{email}</p>
             {notice ? (
               <p role="status" className="text-muted-foreground">
-                {notice}
+                {notice.startsWith("platform_") ? t(notice) : notice}
               </p>
             ) : null}
           </div>
           <form className="flex flex-col gap-4" onSubmit={submitPassword}>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="reset-code">验证码</Label>
+              <Label htmlFor="reset-code">
+                {t("platform_verification_code")}
+              </Label>
               <Input
                 id="reset-code"
                 type="text"
                 inputMode="numeric"
                 autoComplete="one-time-code"
                 className="h-12 font-mono tracking-widest"
-                placeholder="6 位数字验证码"
+                placeholder={t("platform_six_digit_numeric_code")}
                 required
                 pattern="[0-9]{6}"
                 maxLength={6}
@@ -149,16 +165,20 @@ export function PasswordResetForm({
                 disabled={busy || coolingDown}
                 onClick={sendCode}
               >
-                {coolingDown ? `重新发送（${cooldown}s）` : "重新发送验证码"}
+                {coolingDown
+                  ? t("platform_resend_countdown", { value1: cooldown })
+                  : t("platform_resend_code")}
               </Button>
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="reset-password">新密码</Label>
+              <Label htmlFor="reset-password">
+                {t("platform_new_password")}
+              </Label>
               <Input
                 id="reset-password"
                 type="password"
                 className="h-12"
-                placeholder="至少 6 位"
+                placeholder={t("platform_password_minimum")}
                 autoComplete="new-password"
                 required
                 minLength={6}
@@ -168,12 +188,14 @@ export function PasswordResetForm({
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="reset-confirmation">确认新密码</Label>
+              <Label htmlFor="reset-confirmation">
+                {t("platform_confirm_new_password")}
+              </Label>
               <Input
                 id="reset-confirmation"
                 type="password"
                 className="h-12"
-                placeholder="再次输入新密码"
+                placeholder={t("platform_repeat_password")}
                 autoComplete="new-password"
                 required
                 minLength={6}
@@ -197,7 +219,7 @@ export function PasswordResetForm({
               ) : (
                 <KeyRound className="size-4" />
               )}
-              重设密码
+              {t("platform_set_password")}
             </Button>
           </form>
           <Button
@@ -214,13 +236,13 @@ export function PasswordResetForm({
               setNotice("")
             }}
           >
-            修改邮箱
+            {t("platform_change_email")}
           </Button>
         </>
       )}
       {error ? (
         <p role="alert" className="text-sm text-destructive">
-          {error}
+          {error.startsWith("platform_") ? t(error) : error}
         </p>
       ) : null}
       <Button
@@ -231,7 +253,7 @@ export function PasswordResetForm({
         onClick={onCancel}
       >
         <ArrowLeft className="size-4" />
-        返回登录
+        {t("platform_back_login")}
       </Button>
     </div>
   )

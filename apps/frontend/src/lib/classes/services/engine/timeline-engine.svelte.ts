@@ -12,6 +12,8 @@
 
 // ─── 类型定义 ──────────────────────────────────────────────────────────
 
+import { t } from '$lib/i18n'
+
 export interface TimelineState {
   /** 现实时间锚点（Date.now()） */
   realAnchor: number
@@ -31,9 +33,9 @@ export interface TimelineState {
 export const RATIO_PRESETS = [
   { value: 1, label: '1x' },
   { value: 10, label: '10x' },
-  { value: 60, label: '1分/秒' },
-  { value: 3600, label: '1时/秒' },
-  { value: 86400, label: '1日/秒' },
+  { value: 60, get label() { return t('services_speed_minute') } },
+  { value: 3600, get label() { return t('services_speed_hour') } },
+  { value: 86400, get label() { return t('services_speed_day') } },
 ] as const
 
 import { emitServiceEvent } from '$lib/classes/services/event-bus-bridge'

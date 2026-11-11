@@ -1,9 +1,10 @@
 <script lang="ts">
+  import { t, getLocale } from '$lib/i18n'
   import { goto } from '$app/navigation'
   import { Trash2, Play, Pencil, Check, X, Clock, Copy } from '@lucide/svelte'
   import type { Timeline } from '$lib/classes/stores/timeline-store'
   import { currentTimelineId, deleteTimeline, renameTimeline } from '$lib/classes/stores/timeline-store'
-  import { showConfirm } from '$lib/classes/stores/app/global-ui-store'
+  import * as AlertDialog from '$lib/components/ui/alert-dialog'
   import { Card, CardHeader, CardTitle, CardAction, CardContent } from '$lib/components/ui/card'
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'
@@ -13,6 +14,7 @@
   let editing = $state(false)
   let editName = $state('')
   let inputRef = $state<HTMLInputElement | null>(null)
+  let deleteTarget = $state<{ id: string; name: string } | null>(null)
 
   const isActive = $derived($currentTimelineId === timeline.id)
 
@@ -24,11 +26,7 @@
 
   function handleDelete(e: MouseEvent): void {
     e.stopPropagation()
-    showConfirm(
-      '确认删除',
-      `将永久删除时间线「${timeline.name}」，此操作无法撤销。是否继续？`,
-      () => deleteTimeline(timeline.id)
-    )
+    deleteTarget = { id: timeline.id, name: timeline.name }
   }
 
   function startEdit(e: MouseEvent): void {
@@ -55,13 +53,7 @@
   }
 
   function formatSimTime(ts: number): string {
-    const d = new Date(ts)
-    const yyyy = d.getFullYear()
-    const mm = String(d.getMonth() + 1).padStart(2, '0')
-    const dd = String(d.getDate()).padStart(2, '0')
-    const hh = String(d.getHours()).padStart(2, '0')
-    const min = String(d.getMinutes()).padStart(2, '0')
-    return `${yyyy}-${mm}-${dd} ${hh}:${min}`
+    return new Intl.DateTimeFormat(getLocale(), { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).format(ts)
   }
 
   let copied = $state(false)
@@ -76,11 +68,11 @@
 
   const ratioLabel = $derived(
     timeline.state.ratio >= 86400
-      ? '1日/秒'
+      ? t('components_day_per_second')
       : timeline.state.ratio >= 3600
-        ? '1时/秒'
+        ? t('components_hour_per_second')
         : timeline.state.ratio >= 60
-          ? '1分/秒'
+          ? t('components_minute_per_second')
           : `${timeline.state.ratio}x`
   )
 
@@ -132,7 +124,7 @@
           variant="ghost"
           size="icon-sm"
           class="shrink-0 text-green-600 hover:bg-green-50 hover:text-green-700 dark:text-green-400 dark:hover:bg-green-900/30 dark:hover:text-green-300"
-          title="保存"
+          title={t('components_save')}
           onclick={(e: MouseEvent) => {
             e.stopPropagation()
             commitEdit()
@@ -144,7 +136,7 @@
           variant="ghost"
           size="icon-sm"
           class="shrink-0"
-          title="取消"
+          title={t('components_cancel')}
           onclick={(e: MouseEvent) => {
             e.stopPropagation()
             cancelEdit()
@@ -159,7 +151,7 @@
           variant="ghost"
           size="icon-sm"
           class="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-          title="重命名"
+          title={t('components_rename')}
           onclick={startEdit}
         >
           <Pencil />
@@ -178,9 +170,9 @@
         }}
       >
         <Play class="size-3" />
-        进入
+        {t('components_enter')}
       </Button>
-      <Button variant="destructive" size="icon-sm" title="删除时间线" onclick={handleDelete}>
+      <Button variant="destructive" size="icon-sm" title={t('components_delete_timeline')} onclick={handleDelete}>
         <Trash2 />
       </Button>
     </CardAction>
@@ -191,25 +183,25 @@
       <div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
         <span class="flex items-center gap-1">
           <Clock class="size-3" />
-          起始：{formatSimTime(timeline.state.simulationAnchor)}
+          {t('components_start_time', { time: formatSimTime(timeline.state.simulationAnchor) })}
         </span>
         <span class="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium">
           {ratioLabel}
         </span>
         <span class="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium">
-          {paused ? '已暂停' : '运行中'}
+          {paused ? t('components_paused') : t('components_running')}
         </span>
       </div>
       {#if !paused}
         <div class="flex items-center gap-1.5">
           <span class="text-xs font-medium text-indigo-600 dark:text-indigo-400">
-            当前：{formatSimTime(liveSimTime)}
+            {t('components_current_time', { time: formatSimTime(liveSimTime) })}
           </span>
           <Button
             variant="ghost"
             size="icon-xs"
             class="size-5 text-muted-foreground hover:text-foreground"
-            title="复制模拟时间"
+            title={t('components_copy_sim_time')}
             onclick={copySimTime}
           >
             {#if copied}
@@ -223,3 +215,21 @@
     </div>
   </CardContent>
 </Card>
+
+<AlertDialog.Root open={deleteTarget !== null} onOpenChange={(open) => { if (!open) deleteTarget = null }}>
+  <AlertDialog.Content>
+    <AlertDialog.Header>
+      <AlertDialog.Title>{t('components_confirm_delete')}</AlertDialog.Title>
+      <AlertDialog.Description>
+        {t('components_delete_timeline_confirmation', { name: deleteTarget?.name ?? '' })}
+      </AlertDialog.Description>
+    </AlertDialog.Header>
+    <AlertDialog.Footer>
+      <AlertDialog.Cancel onclick={() => { deleteTarget = null }}>{t('components_cancel')}</AlertDialog.Cancel>
+      <AlertDialog.Action onclick={() => {
+        if (deleteTarget) deleteTimeline(deleteTarget.id)
+        deleteTarget = null
+      }}>{t('components_delete')}</AlertDialog.Action>
+    </AlertDialog.Footer>
+  </AlertDialog.Content>
+</AlertDialog.Root>

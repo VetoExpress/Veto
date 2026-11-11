@@ -13,7 +13,9 @@ import type {
   ProposerPosition,
   YieldType
 } from './committee'
+import type { MajorityRule, VoteTargetType, ConferenceEntry } from './committee'
 import type { TimerStatus } from './timer'
+import type { Locale } from '@vetoexpress/i18n'
 
 export type DisplayPhase = ConferencePhase | 'motion'
 
@@ -43,6 +45,7 @@ export interface ConferenceDisplaySpeaker {
 }
 
 export interface ConferenceDisplayData {
+  locale?: Locale
   conferenceId: string
   phase: DisplayPhase
   venue: string
@@ -61,7 +64,8 @@ export interface ConferenceDisplayData {
   }>
   votingSession?: {
     targetDescription: string
-    majorityRule: string
+    targetType: VoteTargetType
+    majorityRule: MajorityRule
     tally: { yes: number; no: number; abstain: number; present: number }
     result?: string
     round: number
@@ -115,6 +119,8 @@ export interface ConferenceDisplayData {
     timestamp: number
     eventType: ConferenceActionType
     description: string
+    messageKey?: ConferenceEntry['messageKey']
+    messageValues?: ConferenceEntry['messageValues']
   }>
   yieldPending?: {
     yieldType: YieldType

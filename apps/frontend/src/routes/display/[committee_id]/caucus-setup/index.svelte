@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   /**
    * caucus-setup/index.svelte
    * ─────────────────────────
@@ -25,15 +26,15 @@
         <AutoFitText text={setup.topic} class="font-semibold tracking-wide text-white" />
       {/if}
 
-      <DisplaySectionHeader Icon={Users} label="磋商准备" colorClass="text-[#5B92E5]" />
+      <DisplaySectionHeader Icon={Users} label={t('components_caucus_setup')} colorClass="text-[#5B92E5]" />
 
       <!-- 动议国 -->
       <div class="text-2xl tracking-wider text-white/25">
-        动议国：
+        {t('components_proposer_label')}
         <span class="text-white/50">{setup.proposerName}</span>
         <span class="mx-2 text-white/10">|</span>
         <span class="text-white/30">
-          {setup.proposerPosition === 'first' ? '标首（第一个发言）' : '标尾（最后一个发言）'}
+          {setup.proposerPosition === 'first' ? t('components_proposer_first') : t('components_proposer_last')}
         </span>
       </div>
 
@@ -42,7 +43,7 @@
         speakers={setup.speakerNames.map((d) => ({ seat: d }))}
         max={DISPLAY_MAX_SPEAKERS}
         onlyList={true}
-        emptyText="等待主席团添加发言席位"
+        emptyText={t('components_wait_add_seats')}
       />
     </div>
   {/if}

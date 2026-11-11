@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   /**
    * general-debate-view.svelte
    * ────────────────────────────
@@ -96,9 +97,9 @@
   const yieldNote = $derived.by(() => {
     if (isYieldAnswering) {
       const questioner = conf?.seats.find((seat) => seat.id === yieldPending?.questionerSeatId)
-      return `正在回答来自 ${questioner?.name ?? '未知席位'} 的提问`
+      return t('procedure_answering_a_question_from_value_2', { value1: questioner?.name ?? t('procedure_unknown_seat') })
     }
-    if (!activeSpeakerCanYield && conf?.activeSpeaker) return '（本次发言不可让渡）'
+    if (!activeSpeakerCanYield && conf?.activeSpeaker) return t('procedure_yielding_is_unavailable_for_this_speech')
     return undefined
   })
 
@@ -356,12 +357,12 @@
       {#if isYieldAnswering}
         <div class="mt-4">
           <ActiveSpeakerCard
-            seatName={originalYieldSeat?.name ?? '未知席位'}
+            seatName={originalYieldSeat?.name ?? t('procedure_unknown_seat')}
             remainingSec={timerState.displayRemaining}
             totalSec={yieldPending.allocatedSec}
             isPaused={timerState.isPaused}
             canYield={false}
-            yieldNote={`回答来自 ${questionerYieldSeat?.name ?? '未知席位'} 的提问`}
+            yieldNote={t('procedure_answering_a_question_from_value', { value1: questionerYieldSeat?.name ?? t('procedure_unknown_seat') })}
             onpause={pauseSpeaking}
             onresume={resumeSpeaking}
             onend={() => finishSpeaker()}
@@ -399,7 +400,7 @@
           <div class="flex-1">
             <SeatSelector
               seats={conf.participantSeats}
-              placeholder="搜索席位名称..."
+              placeholder={t('procedure_search_seat_names')}
               onselect={addSpeaker}
               resetOnSelect={true}
               presentOnly={true}
@@ -410,22 +411,22 @@
             <Button
               variant="outline"
               size="default"
-              title="随机抽取一个席位加入发言名单"
+              title={t('procedure_add_a_randomly_selected_seat_to_the_speakers_list')}
               onclick={addRandomSpeaker}
               disabled={availableSeats.length === 0}
             >
               <Shuffle size={14} />
-              随机点出
+              {t('procedure_pick_randomly')}
             </Button>
             <Button
               variant="outline"
               size="default"
-              title="将所有出席席位加入发言名单"
+              title={t('procedure_add_all_present_seats_to_the_speakers_list')}
               onclick={addAllSpeakers}
               disabled={availableSeats.length === 0}
             >
               <ListPlus size={14} />
-              添加全部
+              {t('procedure_add_all')}
             </Button>
           </div>
         </div>
@@ -433,11 +434,11 @@
     {/if}
 
     <WaitingSpeakerList
-      title="发言队列"
+      title={t('procedure_speakers_queue')}
       speakers={waitingSpeakers}
       showIndex={true}
       showDelete={true}
-      emptyMessage="主发言名单为空，请添加席位"
+      emptyMessage={t('procedure_the_speakers_list_is_empty_add_seats_to_continue')}
       disabled={isSpeakerActive}
       ondelete={(id: string) => {
         removeFromSpeakersList(id)
@@ -447,7 +448,7 @@
   {:else}
     <div class="flex flex-col items-center gap-4 text-muted-foreground">
       <Timer size={48} class="opacity-30" />
-      <p class="text-lg font-medium">没有进行中的会议</p>
+      <p class="text-lg font-medium">{t('procedure_no_meeting_in_progress')}</p>
     </div>
   {/if}
 </div>

@@ -10,6 +10,8 @@
 import { ipcMain, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { getAppUrl } from '../dev-server'
+import { bindWindowTitle } from '../desktop-i18n'
+import { t } from '../i18n'
 
 /** Display 窗口的可变引用 */
 export interface DisplayWindowRef {
@@ -49,7 +51,7 @@ export function registerConferenceIpc(displayWindow: DisplayWindowRef): void {
         frame: false,
         center: true,
         autoHideMenuBar: true,
-        title: label || 'VETO 大会 - 显示窗口',
+        title: label || t('electron_window_display_title'),
         webPreferences: {
           preload: join(__dirname, '../preload/index.js'),
           sandbox: false,
@@ -58,6 +60,8 @@ export function registerConferenceIpc(displayWindow: DisplayWindowRef): void {
           spellcheck: false
         }
       })
+
+      if (!label) bindWindowTitle(win, 'electron_window_display_title')
 
       win.on('ready-to-show', () => {
         win.show()

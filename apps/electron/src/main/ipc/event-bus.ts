@@ -13,6 +13,6 @@ export function registerEventBusIpc(): void {
     'veto:event-bus:emit',
     (_event, payload: { type: string; data?: Record<string, unknown> }) => {
       eventBus.emit(payload.type, payload.data ?? {})
-    },
+    }
   )
 }

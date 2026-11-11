@@ -10,6 +10,7 @@ import type { PluginManifest } from '$lib/classes/services/plugin/plugin-db';
 import { registerStatusDefinitions } from '../engine/registry/status-registry';
 import { registerSensorDefinitions } from '../engine/registry/sensor-registry';
 import { createLogger } from '$lib/classes/logger';
+import { defaultLocale, resolveLocale } from '@vetoexpress/i18n';
 
 const log = createLogger('ModRegistry')
 const modLog = createLogger('Mods')
@@ -110,7 +111,7 @@ class Mods {
 
 	private readonly _entries: ModData[] = [];
 	/** 当前语言，默认 zh-CN */
-	private _locale = 'zh-CN';
+	private _locale = $state('zh-CN');
 
 	/** 实际将 mod 数据写入各 Map */
 	private _applyModData(mod: ModData): void {
@@ -149,13 +150,14 @@ class Mods {
 				for (const [locale, keys] of Object.entries(
 					i18nData as Record<string, Record<string, string>>
 				)) {
-					if (!this._i18n.has(locale)) this._i18n.set(locale, new Map());
-					const localeMap = this._i18n.get(locale)!;
+					const normalized = resolveLocale(locale);
+					if (!this._i18n.has(normalized)) this._i18n.set(normalized, new Map());
+					const localeMap = this._i18n.get(normalized)!;
 					for (const [key, val] of Object.entries(keys)) localeMap.set(key, val);
 				}
 			} else {
-				if (!this._i18n.has(this._locale)) this._i18n.set(this._locale, new Map());
-				const localeMap = this._i18n.get(this._locale)!;
+				if (!this._i18n.has(defaultLocale)) this._i18n.set(defaultLocale, new Map());
+				const localeMap = this._i18n.get(defaultLocale)!;
 				for (const [key, val] of Object.entries(i18nData as Record<string, string>))
 					localeMap.set(key, val);
 			}
@@ -283,7 +285,7 @@ class Mods {
 	getLabel(path: string, defaultText?: string): string {
 		const i18n = this.get_activeI18n();
 		return (
-			i18n.get(this._locale)?.get(path) ?? [...i18n.values()][0]?.get(path) ?? defaultText ?? path
+			i18n.get(this._locale)?.get(path) ?? i18n.get(defaultLocale)?.get(path) ?? defaultText ?? path
 		);
 	}
 

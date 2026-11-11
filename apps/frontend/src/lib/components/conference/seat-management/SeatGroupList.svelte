@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import type { SeatGroup } from '$lib/classes/types/delegate'
   import { seatGroups } from '$lib/classes/stores/delegate/delegate-store'
   import { Button } from '$lib/components/ui/button'
@@ -14,11 +15,11 @@
 
   let { onEdit, onSelect, onCreateNew, selectedId }: Props = $props()
 
-  const typeLabels: Record<string, string> = {
-    cabinet: '常规',
+  const typeLabels: Record<string, string> = $derived({
+    cabinet: t('procedure_cabinet'),
     mpc: 'MPC',
     ipc: 'IPC'
-  }
+  })
 
   const typeBadgeVariants: Record<string, 'default' | 'secondary' | 'outline'> = {
     cabinet: 'default',
@@ -30,9 +31,9 @@
 
 <div class="seat-group-list">
   <div class="header">
-    <h3 class="text-lg font-semibold">席位组</h3>
+    <h3 class="text-lg font-semibold">{t('procedure_seat_groups')}</h3>
     <Button size="sm" variant="outline" onclick={onCreateNew}>
-      + 新建席位组
+      {t('procedure_new_seat_group_2')}
     </Button>
   </div>
 
@@ -51,7 +52,7 @@
             </Badge>
           </div>
           <span class="text-xs text-muted-foreground">
-            {group.defaultCapabilities.length} 项默认能力
+            {t('procedure_default_capability_count', { value1: group.defaultCapabilities.length })}
           </span>
         </div>
         <div class="group-actions">
@@ -64,8 +65,8 @@
     {#if $seatGroups.length === 0}
       <div class="empty-state">
         <Users class="size-8 text-muted-foreground" />
-        <p class="text-sm text-muted-foreground">暂无席位组</p>
-        <p class="text-xs text-muted-foreground">创建一个席位组来管理代表席位</p>
+        <p class="text-sm text-muted-foreground">{t('procedure_no_seat_groups')}</p>
+        <p class="text-xs text-muted-foreground">{t('procedure_create_a_seat_group_to_manage_seats')}</p>
       </div>
     {/if}
   </div>

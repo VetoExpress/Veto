@@ -1,4 +1,6 @@
 "use client"
+import { message } from "@/i18n/messages"
+import { usePlatformTranslations } from "@/components/i18n-provider"
 
 import { useEffect, useRef, useState } from "react"
 import type { JSX, KeyboardEvent } from "react"
@@ -40,6 +42,8 @@ export function CommitteeSeatTable({
   allowExistingRemoval = true,
   onChange,
 }: CommitteeSeatTableProps): JSX.Element {
+  const { t, locale } = usePlatformTranslations()
+
   const knownSeats = useRef(new Set(seats.map(seatReference)))
   const deleteTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const copiedTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -151,12 +155,24 @@ export function CommitteeSeatTable({
       <table className="w-full text-sm">
         <thead className="bg-muted/50 text-xs text-muted-foreground">
           <tr>
-            <th className="px-4 py-3 text-left font-medium">席位</th>
-            <th className="px-4 py-3 text-left font-medium">简称</th>
-            <th className="px-4 py-3 text-left font-medium">角色</th>
-            <th className="px-4 py-3 text-left font-medium">投票权</th>
-            <th className="px-4 py-3 text-left font-medium">访问 Key</th>
-            <th className="px-4 py-3 text-center font-medium">操作</th>
+            <th className="px-4 py-3 text-left font-medium">
+              {t("platform_seat")}
+            </th>
+            <th className="px-4 py-3 text-left font-medium">
+              {t("platform_short_name")}
+            </th>
+            <th className="px-4 py-3 text-left font-medium">
+              {t("platform_role")}
+            </th>
+            <th className="px-4 py-3 text-left font-medium">
+              {t("platform_voting_rights")}
+            </th>
+            <th className="px-4 py-3 text-left font-medium">
+              {t("platform_access_key")}
+            </th>
+            <th className="px-4 py-3 text-center font-medium">
+              {t("platform_actions")}
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -173,12 +189,12 @@ export function CommitteeSeatTable({
                     <Input
                       value={editName}
                       disabled={disabled}
-                      aria-label="席位名称"
+                      aria-label={t("platform_seat_name")}
                       onChange={(event) => setEditName(event.target.value)}
                       onKeyDown={(event) => handleEditorKeyDown(event, index)}
                     />
                   ) : (
-                    seat.name || "未命名席位"
+                    seat.name || t("platform_unnamed_seat")
                   )}
                 </td>
                 <td className="px-4 py-3">
@@ -187,8 +203,8 @@ export function CommitteeSeatTable({
                       value={editShortName}
                       disabled={disabled}
                       maxLength={32}
-                      placeholder="可选"
-                      aria-label="席位简称"
+                      placeholder={t("platform_optional")}
+                      aria-label={t("platform_seat_short_name")}
                       onChange={(event) => setEditShortName(event.target.value)}
                       onKeyDown={(event) => handleEditorKeyDown(event, index)}
                     />
@@ -202,22 +218,22 @@ export function CommitteeSeatTable({
                       value={editRole}
                       disabled={disabled}
                       className={selectClassName}
-                      aria-label="席位角色"
+                      aria-label={t("platform_seat_role")}
                       onChange={(event) => setEditRole(event.target.value)}
                       onKeyDown={(event) => handleEditorKeyDown(event, index)}
                     >
-                      <option value="">选择角色</option>
+                      <option value="">{t("platform_select_role")}</option>
                       {allowedRoles.map((allowedRole) => (
                         <option
                           key={roleReference(allowedRole)}
                           value={roleReference(allowedRole)}
                         >
-                          {allowedRole.name || "未命名角色"}
+                          {allowedRole.name || t("platform_unnamed_role")}
                         </option>
                       ))}
                     </select>
                   ) : (
-                    role?.name || "未选择"
+                    role?.name || t("platform_not_selected")
                   )}
                 </td>
                 <td className="px-4 py-3">
@@ -231,17 +247,17 @@ export function CommitteeSeatTable({
                           setEditVotingRights(event.target.checked)
                         }
                       />
-                      有投票权
+                      {t("platform_has_voting_rights")}
                     </label>
                   ) : seat.hasVotingRights ? (
-                    "有"
+                    t("platform_yes")
                   ) : (
-                    "无"
+                    t("platform_no")
                   )}
                 </td>
                 <td className="px-4 py-3">
                   <code className="font-mono text-xs">
-                    {seat.inviteCode || "未生成"}
+                    {seat.inviteCode || t("platform_not_generated")}
                   </code>
                 </td>
                 <td className="px-4 py-3">
@@ -250,8 +266,8 @@ export function CommitteeSeatTable({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      title="复制 Key"
-                      aria-label="复制 Key"
+                      title={t("platform_copy_key")}
+                      aria-label={t("platform_copy_key")}
                       disabled={disabled || !seat.inviteCode}
                       onClick={() =>
                         void copyCode(seat.inviteCode ?? "", reference)
@@ -269,8 +285,8 @@ export function CommitteeSeatTable({
                           type="button"
                           variant="ghost"
                           size="icon"
-                          title="取消编辑"
-                          aria-label="取消编辑"
+                          title={t("platform_cancel_edit")}
+                          aria-label={t("platform_cancel_edit")}
                           disabled={disabled}
                           onClick={cancelEditing}
                         >
@@ -280,8 +296,8 @@ export function CommitteeSeatTable({
                           type="button"
                           variant="ghost"
                           size="icon"
-                          title="保存席位"
-                          aria-label="保存席位"
+                          title={t("platform_save_seat")}
+                          aria-label={t("platform_save_seat")}
                           disabled={disabled || !editName.trim() || !editRole}
                           onClick={() => saveSeat(index)}
                         >
@@ -293,8 +309,8 @@ export function CommitteeSeatTable({
                         type="button"
                         variant="ghost"
                         size="icon"
-                        title="编辑席位"
-                        aria-label="编辑席位"
+                        title={t("platform_edit_seat")}
+                        aria-label={t("platform_edit_seat")}
                         disabled={disabled}
                         onClick={() => startEditing(seat, index)}
                       >
@@ -305,7 +321,9 @@ export function CommitteeSeatTable({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      disabled={disabled || (!allowExistingRemoval && Boolean(seat.id))}
+                      disabled={
+                        disabled || (!allowExistingRemoval && Boolean(seat.id))
+                      }
                       className={
                         deleteConfirm === reference
                           ? "bg-destructive/10 text-destructive hover:bg-destructive/20 hover:text-destructive"
@@ -313,13 +331,13 @@ export function CommitteeSeatTable({
                       }
                       title={
                         deleteConfirm === reference
-                          ? "再次点击确认删除"
-                          : "删除席位"
+                          ? t("platform_click_confirm_delete")
+                          : t("platform_delete_seat")
                       }
                       onClick={() => handleDelete(seat, index)}
                     >
                       <Trash2 aria-hidden="true" />
-                      删除
+                      {t("platform_delete")}
                     </Button>
                   </div>
                 </td>
@@ -332,7 +350,7 @@ export function CommitteeSeatTable({
                 colSpan={6}
                 className="px-4 py-10 text-center text-muted-foreground"
               >
-                暂无席位
+                {t("platform_no_seats")}
               </td>
             </tr>
           ) : null}

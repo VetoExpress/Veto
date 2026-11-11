@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import type { ConferenceDisplayData } from '$lib/classes/types/conference'
   import { formatTime } from '$lib/classes/formatters/time-formater'
   import { Coffee, MessageSquare, User } from '@lucide/svelte'
@@ -28,7 +29,7 @@
           status={data.currentSpeaker.status}
         />
       {:else}
-        <SpeakerQueueDisplay {speakers} max={DISPLAY_MAX_SPEAKERS} title="有主持的核心磋商" />
+        <SpeakerQueueDisplay {speakers} max={DISPLAY_MAX_SPEAKERS} title={t('components_moderated_caucus')} />
       {/if}
     </div>
   {:else if caucusTimer.type === 'individual'}
@@ -37,7 +38,7 @@
     <div class="flex flex-col items-center gap-10">
       <DisplaySectionHeader
         Icon={User}
-        label={isPaused ? '计时已暂停' : '个人演讲'}
+        label={isPaused ? t('components_timer_paused') : t('components_individual_speech')}
         colorClass={isPaused ? 'text-[#C9A84C]/50' : 'text-[#5B92E5]'}
       />
 
@@ -66,15 +67,15 @@
       caucusTimer.type === 'moderated_debate' || caucusTimer.type === 'unmoderated_debate'}
     {@const countdownLabel =
       caucusTimer.type === 'moderated_debate'
-        ? '有主持的辩论'
+        ? t('components_moderated_debate')
         : caucusTimer.type === 'unmoderated_debate'
-          ? '自由辩论'
-          : '自由磋商'}
+          ? t('components_unmoderated_debate')
+          : t('components_unmoderated_caucus')}
     {@const CountdownIcon = isDebate ? MessageSquare : Coffee}
     <div class="flex flex-col items-center gap-10">
       <DisplaySectionHeader
         Icon={CountdownIcon}
-        label={isPaused ? '计时已暂停' : countdownLabel}
+        label={isPaused ? t('components_timer_paused') : countdownLabel}
         colorClass={isPaused ? 'text-[#C9A84C]/50' : 'text-[#C9A84C]'}
       />
 

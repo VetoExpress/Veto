@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, formatDate } from '$lib/i18n'
   import {
     Trash2,
     Play,
@@ -53,7 +54,7 @@
 
   function seatLabel(membership: CloudMembership): string {
     if (membership.isChair) {
-      return membership.chairCommitteeName ? `主席 · ${membership.chairCommitteeName}` : '主席'
+      return membership.chairCommitteeName ? t('settings_chair_committee', { name: membership.chairCommitteeName }) : t('settings_chair')
     }
     const committeePrefix = memberships.length > 1 ? `${membership.committeeName} · ` : ''
     return `${committeePrefix}${membership.seatName} · ${membership.roleName}`
@@ -72,10 +73,10 @@
     e.stopPropagation()
     const isCloudConference = conference.source === 'cloud'
     showConfirm(
-      isCloudConference ? '确认从本机移除' : '确认删除',
+      isCloudConference ? t('settings_remove_local_confirm') : t('settings_confirm_delete'),
       isCloudConference
-        ? `将从本机移除大会「${conference.name}」及保存的席位信息，不会删除云端大会。是否继续？`
-        : `将永久删除大会「${conference.name}」，此操作无法撤销。是否继续？`,
+        ? t('settings_remove_conference_named', { name: conference.name })
+        : t('settings_delete_conference_named', { name: conference.name }),
       () => (isCloudConference ? onDelete?.(conference) : deleteConference(conference.id))
     )
   }
@@ -103,9 +104,6 @@
     else if (e.key === 'Escape') cancelEdit()
   }
 
-  function formatDate(ts: number): string {
-    return new Date(ts).toLocaleString('zh-CN', { dateStyle: 'short', timeStyle: 'short' })
-  }
 </script>
 
 <Card
@@ -127,7 +125,7 @@
           variant="ghost"
           size="icon-sm"
           class="shrink-0 text-green-600 hover:bg-green-50 hover:text-green-700 dark:text-green-400 dark:hover:bg-green-900/30 dark:hover:text-green-300"
-          title="保存"
+          title={t('settings_save')}
           onclick={(e: MouseEvent) => {
             e.stopPropagation()
             commitEdit()
@@ -139,7 +137,7 @@
           variant="ghost"
           size="icon-sm"
           class="shrink-0"
-          title="取消"
+          title={t('settings_cancel')}
           onclick={(e: MouseEvent) => {
             e.stopPropagation()
             cancelEdit()
@@ -150,16 +148,16 @@
       {:else}
         <span class="truncate font-semibold">{conference.name}</span>
         {#if conference.source === 'cloud'}
-          <Badge variant="outline" class="shrink-0">云端</Badge>
+          <Badge variant="outline" class="shrink-0">{t('settings_cloud')}</Badge>
         {:else if conference.mode === 'singleton'}
-          <Badge variant="outline" class="shrink-0">单例</Badge>
+          <Badge variant="outline" class="shrink-0">{t('settings_singleton')}</Badge>
         {/if}
         {#if conference.source !== 'cloud'}
           <Button
             variant="ghost"
             size="icon-sm"
             class="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-            title="重命名"
+            title={t('settings_rename')}
             onclick={startEdit}
           >
             <Pencil />
@@ -180,16 +178,16 @@
       >
         <Play class="size-3" />
         {conference.source === 'cloud'
-          ? '重新入会'
+          ? t('settings_rejoin')
           : conference.mode === 'singleton'
-            ? '主持'
-            : '进入'}
+            ? t('settings_chair_action')
+            : t('settings_enter')}
       </Button>
       {#if conference.source === 'cloud'}
         <Button
           variant="ghost"
           size="icon-sm"
-          title="重新填写密码"
+          title={t('settings_password_reenter')}
           onclick={(e: MouseEvent) => {
             e.stopPropagation()
             onUpdatePassword?.(conference)
@@ -202,7 +200,7 @@
         <Button
           variant="destructive"
           size="icon-sm"
-          title={conference.source === 'cloud' ? '从本机移除' : '删除大会'}
+          title={conference.source === 'cloud' ? t('settings_remove_local') : t('settings_delete_conference')}
           onclick={handleDelete}
         >
           <Trash2 />
@@ -216,7 +214,7 @@
       <div class="mb-1.5 flex flex-wrap items-center gap-1.5">
         <span class="flex items-center gap-1 text-xs text-muted-foreground">
           <Armchair class="size-3" />
-          {memberships.length > 1 ? '本机身份' : '当前席位'}
+          {memberships.length > 1 ? t('settings_local_identities') : t('settings_current_seat')}
         </span>
         {#each memberships as membership, index (membership.seatId)}
           <Badge
@@ -224,7 +222,7 @@
             class="max-w-56 truncate text-[11px]"
             title={
               memberships.length > 1 && index === 0
-                ? `最近使用：${seatLabel(membership)}`
+                ? t('settings_recent_identity', { name: seatLabel(membership) })
                 : seatLabel(membership)
             }
           >
@@ -236,15 +234,15 @@
     <div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
       <span class="flex items-center gap-1">
         <Building2 class="size-3" />
-        {conference.committees.length} 个会场
+        {t('settings_committee_count', { count: conference.committees.length })}
       </span>
       <span class="flex items-center gap-1">
         <CalendarDays class="size-3" />
-        {formatDate(conference.createdAt)}
+        {formatDate(conference.createdAt, { dateStyle: 'short', timeStyle: 'short' })}
       </span>
       <span class="flex items-center gap-1">
         <Users class="size-3" />
-        {conference.committees.reduce((count, committee) => count + committee.seats.length, 0)} 个席位
+        {t('settings_seat_count', { count: conference.committees.reduce((count, committee) => count + committee.seats.length, 0) })}
       </span>
     </div>
   </CardContent>

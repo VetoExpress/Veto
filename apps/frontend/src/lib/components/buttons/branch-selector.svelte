@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
 	import { Tabs } from 'bits-ui';
 	import { registry, mods } from '$lib/classes/services/plugin/mod-registry.svelte';
 	import { cn } from '$lib/classes/utils';
@@ -45,7 +46,7 @@
 			'flex rounded-lg bg-muted p-1',
 			orientation === 'vertical' ? 'h-auto w-full flex-col gap-0.5' : 'h-8 w-full flex-row'
 		)}
-		aria-label="军种选择"
+		aria-label={t('components_branch_selector')}
 	>
 		{#each branches as branch (branch.id)}
 			<Tabs.Trigger

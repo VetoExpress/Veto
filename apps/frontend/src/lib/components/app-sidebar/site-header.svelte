@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import SidebarIcon from '@lucide/svelte/icons/sidebar'
   import * as Sidebar from '$lib/components/ui/sidebar/index.js'
   import { Button } from '$lib/components/ui/button/index.js'
@@ -8,7 +9,7 @@
 
 <header class="sticky top-0 z-50 flex w-full items-center border-b bg-background">
   <div class="flex h-(--header-height) w-full items-center gap-2 px-4">
-    <Button class="size-8" variant="ghost" size="icon" onclick={sidebar.toggle}>
+    <Button class="size-8" variant="ghost" size="icon" onclick={sidebar.toggle} aria-label={t('settings_toggle_sidebar')}>
       <SidebarIcon />
     </Button>
     <Separator orientation="vertical" class="me-2 h-4" />

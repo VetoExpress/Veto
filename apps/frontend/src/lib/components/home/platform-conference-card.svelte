@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, formatDate } from '$lib/i18n'
   import { Building2, CalendarDays, ExternalLink, Users } from '@lucide/svelte'
   import type { PlatformConference } from '$lib/classes/clients/account-conference-client'
   import { openPlatformConference } from '$lib/classes/stores/conference/platform-conference-store'
@@ -24,17 +25,17 @@
     <div class="flex items-start justify-between gap-3">
       <div class="flex min-w-0 flex-wrap items-center gap-2">
         <h3 class="truncate font-semibold">{conference.name}</h3>
-        <Badge variant="secondary">云平台</Badge>
-        <Badge variant="outline">{({ draft: '草稿', active: '进行中', closed: '已结束' })[conference.lifecycle]}</Badge>
+        <Badge variant="secondary">{t('settings_cloud_platform')}</Badge>
+        <Badge variant="outline">{({ draft: t('settings_draft'), active: t('settings_active'), closed: t('settings_closed') })[conference.lifecycle]}</Badge>
       </div>
-      <Button size="sm" variant="outline" class="shrink-0" onclick={(event) => { event.stopPropagation(); openPlatformConference(conference) }}>打开云平台<ExternalLink data-icon="inline-end" /></Button>
+      <Button size="sm" variant="outline" class="shrink-0" onclick={(event) => { event.stopPropagation(); openPlatformConference(conference) }}>{t('settings_open_platform')}<ExternalLink data-icon="inline-end" /></Button>
     </div>
     {#if conference.organizer}<p class="text-sm text-muted-foreground">{conference.organizer}</p>{/if}
     {#if conference.description}<p class="text-sm text-muted-foreground">{conference.description}</p>{/if}
     <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-        <span class="flex items-center gap-1"><Building2 class="size-3" />{conference.committeeCount !== undefined ? `${conference.committeeCount} 个会场` : '会场数暂不可用'}</span>
-        <span class="flex items-center gap-1.5"><CalendarDays class="size-3" />{new Date(conference.createdAt).toLocaleString('zh-CN', { dateStyle: 'short', timeStyle: 'short' })}</span>
-        <span class="flex items-center gap-1"><Users class="size-3" />{conference.seatCount !== undefined ? `${conference.seatCount} 个席位` : '席位数暂不可用'}</span>
+        <span class="flex items-center gap-1"><Building2 class="size-3" />{conference.committeeCount !== undefined ? t('settings_committee_count', { count: conference.committeeCount }) : t('settings_committee_count_unavailable')}</span>
+        <span class="flex items-center gap-1.5"><CalendarDays class="size-3" />{formatDate(conference.createdAt, { dateStyle: 'short', timeStyle: 'short' })}</span>
+        <span class="flex items-center gap-1"><Users class="size-3" />{conference.seatCount !== undefined ? t('settings_seat_count', { count: conference.seatCount }) : t('settings_seat_count_unavailable')}</span>
     </div>
   </Card.Content>
 </Card.Root>

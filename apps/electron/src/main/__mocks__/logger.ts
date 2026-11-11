@@ -7,7 +7,7 @@ export function createLogger(_tag: string) {
     info: () => {},
     warn: () => {},
     error: () => {},
-    debug: () => {},
+    debug: () => {}
   }
 }
 
@@ -18,9 +18,9 @@ export const log = {
     info: () => {},
     warn: () => {},
     error: () => {},
-    debug: () => {},
+    debug: () => {}
   }),
   transports: { file: { level: '' } },
   hooks: [],
-  initialize: () => {},
+  initialize: () => {}
 }

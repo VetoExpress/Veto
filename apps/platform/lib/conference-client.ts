@@ -1,3 +1,4 @@
+import { message } from "@/i18n/messages"
 import { clearApiCache, readApiCache, writeApiCache } from "./api-cache"
 
 const apiBaseUrl = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "")
@@ -27,23 +28,23 @@ export type CommitteeType = "cabinet" | "mpc" | "ipc"
 export type SystemRoleCode = "staff" | "mpc_press" | "ipc"
 
 export const CAPABILITY_LABELS: Record<Capability, string> = {
-  view_conference: "查看会议状态",
-  view_news: "查看全局新闻",
-  view_situation: "查看全局局势",
-  view_files: "查看文件",
-  review_files: "审核文件",
-  draft_news: "起草新闻草稿",
-  review_news: "审核新闻",
-  submit_directive: "提交指令",
-  process_directive: "处理指令",
-  send_files: "发送文件",
-  publish_situation: "发布局势更新",
-  withdraw_news: "撤回新闻",
-  withdraw_situation: "撤回局势更新",
-  withdraw_files: "撤回文件",
-  control_conference: "控制会议流程",
-  control_timeline: "控制大会时间线",
-  draft_resolution: "起草决议",
+  view_conference: message("platform_capability_view_conference"),
+  view_news: message("platform_capability_view_news"),
+  view_situation: message("platform_capability_view_situation"),
+  view_files: message("platform_capability_view_files"),
+  review_files: message("platform_capability_review_files"),
+  draft_news: message("platform_capability_draft_news"),
+  review_news: message("platform_capability_review_news"),
+  submit_directive: message("platform_capability_submit_directive"),
+  process_directive: message("platform_capability_process_directive"),
+  send_files: message("platform_capability_send_files"),
+  publish_situation: message("platform_capability_publish_situation"),
+  withdraw_news: message("platform_capability_withdraw_news"),
+  withdraw_situation: message("platform_capability_withdraw_situation"),
+  withdraw_files: message("platform_capability_withdraw_files"),
+  control_conference: message("platform_capability_control_conference"),
+  control_timeline: message("platform_capability_control_timeline"),
+  draft_resolution: message("platform_capability_draft_resolution"),
 }
 
 export interface CapabilityGroup {
@@ -55,7 +56,7 @@ export interface CapabilityGroup {
 export const CAPABILITY_GROUPS: CapabilityGroup[] = [
   {
     id: "view",
-    label: "查看",
+    label: "platform_view",
     capabilities: [
       "view_conference",
       "view_news",
@@ -65,7 +66,7 @@ export const CAPABILITY_GROUPS: CapabilityGroup[] = [
   },
   {
     id: "content",
-    label: "文件与新闻",
+    label: "platform_files_and_news",
     capabilities: [
       "draft_news",
       "review_news",
@@ -76,12 +77,12 @@ export const CAPABILITY_GROUPS: CapabilityGroup[] = [
   },
   {
     id: "directive",
-    label: "指令",
+    label: "platform_directives",
     capabilities: ["submit_directive", "process_directive"],
   },
   {
     id: "publish",
-    label: "发布与撤回",
+    label: "platform_publish_withdraw",
     capabilities: [
       "publish_situation",
       "withdraw_news",
@@ -91,7 +92,7 @@ export const CAPABILITY_GROUPS: CapabilityGroup[] = [
   },
   {
     id: "control",
-    label: "会议控制",
+    label: "platform_conference_control",
     capabilities: ["control_conference", "control_timeline"],
   },
 ]
@@ -192,13 +193,30 @@ export interface OrganizerSeatAccess {
   user: { id: string; displayName: string; claimedAt: string } | null
 }
 
-export async function listOrganizerSeatAccess(token: string, id: string): Promise<OrganizerSeatAccess[]> {
-  const result = await apiRequest<{ ok: true; seats: OrganizerSeatAccess[] }>(token, `${conferencePath(id)}/seat-access`, { refreshCache: true, cache: "no-store" })
+export async function listOrganizerSeatAccess(
+  token: string,
+  id: string
+): Promise<OrganizerSeatAccess[]> {
+  const result = await apiRequest<{ ok: true; seats: OrganizerSeatAccess[] }>(
+    token,
+    `${conferencePath(id)}/seat-access`,
+    { refreshCache: true, cache: "no-store" }
+  )
   return result.seats
 }
 
-export async function resetOrganizerSeatUser(token: string, id: string, seatId: string, userId: string, reason: string): Promise<void> {
-  await apiRequest(token, `${conferencePath(id)}/seats/${encodeURIComponent(seatId)}/reset-user`, { method: "POST", body: JSON.stringify({ userId, reason }) })
+export async function resetOrganizerSeatUser(
+  token: string,
+  id: string,
+  seatId: string,
+  userId: string,
+  reason: string
+): Promise<void> {
+  await apiRequest(
+    token,
+    `${conferencePath(id)}/seats/${encodeURIComponent(seatId)}/reset-user`,
+    { method: "POST", body: JSON.stringify({ userId, reason }) }
+  )
 }
 
 export interface SeatCommitteeSession {
@@ -274,7 +292,7 @@ async function apiRequest<T>(
   init: ApiRequestInit = {}
 ): Promise<T> {
   if (!apiBaseUrl) {
-    throw new ConferenceApiError("API 服务暂未配置")
+    throw new ConferenceApiError(message("platform_api_not_configured"))
   }
 
   const method = (init.method ?? "GET").toUpperCase()
@@ -309,7 +327,7 @@ async function apiRequest<T>(
         }
       )
     } catch {
-      throw new ConferenceApiError("无法连接大会服务")
+      throw new ConferenceApiError(message("platform_conference_unreachable"))
     }
 
     const payload = (await response.json().catch(() => null)) as
@@ -320,11 +338,14 @@ async function apiRequest<T>(
         payload && typeof payload === "object" && "error" in payload
           ? payload.error
           : undefined
-      throw new ConferenceApiError(error?.message ?? "请求失败", {
-        status: response.status,
-        code: error?.code,
-        fields: error?.fields,
-      })
+      throw new ConferenceApiError(
+        error?.message ?? message("platform_request_failed"),
+        {
+          status: response.status,
+          code: error?.code,
+          fields: error?.fields,
+        }
+      )
     }
 
     if (shouldCache && payload !== null) {
@@ -455,9 +476,9 @@ export const CONFERENCE_LIFECYCLE_LABELS: Record<
   ConferenceSummary["lifecycle"],
   string
 > = {
-  draft: "草稿",
-  active: "进行中",
-  closed: "已结束",
+  draft: message("platform_draft"),
+  active: message("platform_active"),
+  closed: message("platform_closed"),
 }
 
 export async function configureConferenceRuntime(
@@ -654,7 +675,8 @@ export async function downloadOrganizerFile(
   conferenceId: string,
   file: OrganizerFile
 ): Promise<void> {
-  if (!apiBaseUrl) throw new ConferenceApiError("API 服务暂未配置")
+  if (!apiBaseUrl)
+    throw new ConferenceApiError(message("platform_api_not_configured"))
   let response: Response
   try {
     response = await fetch(
@@ -670,16 +692,19 @@ export async function downloadOrganizerFile(
       }
     )
   } catch {
-    throw new ConferenceApiError("无法连接大会服务")
+    throw new ConferenceApiError(message("platform_conference_unreachable"))
   }
   if (!response.ok) {
     const payload = (await response.json().catch(() => null)) as {
       error?: { message?: string; code?: string }
     } | null
-    throw new ConferenceApiError(payload?.error?.message ?? "下载文件失败", {
-      status: response.status,
-      code: payload?.error?.code,
-    })
+    throw new ConferenceApiError(
+      payload?.error?.message ?? message("platform_download_failed"),
+      {
+        status: response.status,
+        code: payload?.error?.code,
+      }
+    )
   }
   const url = URL.createObjectURL(await response.blob())
   const anchor = document.createElement("a")

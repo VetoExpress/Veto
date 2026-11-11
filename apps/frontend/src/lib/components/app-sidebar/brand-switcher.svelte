@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import { ChevronsUpDown, Grip, House, LayoutGrid } from '@lucide/svelte'
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js'
   import * as Sidebar from '$lib/components/ui/sidebar/index.js'
@@ -26,7 +27,7 @@
   const committee = $derived(committeeName ?? $currentCommittee?.name)
 
   let title = $derived(committee ?? conference ?? VETO_NAME)
-  let subTitle = $derived(committee && conference ? conference : '会议系统')
+  let subTitle = $derived(committee && conference ? conference : t('settings_conference_system'))
 </script>
 
 <Sidebar.Menu>
@@ -58,10 +59,10 @@
         side="bottom"
         sideOffset={4}
       >
-        <DropdownMenu.Label class="text-xs text-muted-foreground">导航</DropdownMenu.Label>
+        <DropdownMenu.Label class="text-xs text-muted-foreground">{t('settings_navigation')}</DropdownMenu.Label>
         <DropdownMenu.Item onclick={() => goto(resolve('/'))} class="gap-2 p-2">
           <House size={16} />
-          首页
+          {t('settings_home')}
         </DropdownMenu.Item>
         {#if !isElectron()}
           <DropdownMenu.Item
@@ -69,7 +70,7 @@
             class="gap-2 p-2"
           >
             <Grip size={16} />
-            官网
+            {t('settings_official_site')}
           </DropdownMenu.Item>
         {/if}
         <DropdownMenu.Item
@@ -77,7 +78,7 @@
           class="gap-2 p-2"
         >
           <LayoutGrid size={16} />
-          云平台
+          {t('settings_cloud_platform')}
         </DropdownMenu.Item>
       </DropdownMenu.Content>
     </DropdownMenu.Root>

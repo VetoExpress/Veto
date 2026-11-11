@@ -1,5 +1,10 @@
 import { AuthError, type AuthClient, type AuthUser, type AccountUpdate } from '@vetoexpress/auth'
 import type { AccountSnapshot } from '@vetoexpress/auth/desktop'
+import { t } from './i18n'
+import { accountErrorKey, LocalizedAccountError } from './account-i18n'
+import { createLogger } from './logger'
+
+const log = createLogger('AccountSession')
 
 export interface StoredAccount {
   token: string
@@ -30,8 +35,24 @@ export function createAccountSession(
     return result
   }
 
-  function publish(persistent: boolean, warning: string | null = null) {
-    snapshot = { user: account?.user ?? null, persistent, warning }
+  function publish(
+    persistent: boolean,
+    warningKey: Parameters<typeof t>[0] | null = null,
+    warningText: string | null = null
+  ) {
+    if (warningKey)
+      log.warn('Account state requires user attention', {
+        warningKey,
+        persistent,
+        signedIn: !!account
+      })
+    snapshot = {
+      user: account?.user ?? null,
+      persistent,
+      get warning() {
+        return warningKey ? t(warningKey) : warningText
+      }
+    }
     changed(snapshot)
     return snapshot
   }
@@ -43,19 +64,25 @@ export function createAccountSession(
       const updated = { token: account.token, user }
       const persistent = await storage.save(updated)
       account = updated
-      return publish(
-        persistent,
-        persistent ? null : '当前设备无法安全保存登录状态，关闭应用后需重新登录。'
-      )
+      return publish(persistent, persistent ? null : 'electron_account_persistence_unavailable')
     } catch (error) {
+      log.warn(
+        'Account verification failed; retaining cached state unless credentials were rejected',
+        {
+          errorType: error instanceof Error ? error.name : typeof error,
+          status: error instanceof AuthError ? error.status : undefined
+        }
+      )
       if (error instanceof AuthError && error.status === 401) {
         await storage.clear()
         account = null
-        return publish(false, '登录已失效，请重新登录。')
+        return publish(false, 'electron_account_expired')
       }
       return publish(
         snapshot.persistent,
-        error instanceof Error ? error.message : '暂时无法验证账号，请稍后重试。'
+        accountErrorKey(error) ??
+          (error instanceof Error ? null : 'electron_account_verification_unavailable'),
+        error instanceof Error ? error.message : null
       )
     }
   }
@@ -63,9 +90,18 @@ export function createAccountSession(
   const restored = serial(async () => {
     try {
       account = await storage.load()
-    } catch {
-      await storage.clear()
-      return publish(false, '无法恢复已保存的登录状态，请重新登录。')
+    } catch (error) {
+      log.warn('Failed to restore account; clearing saved credentials', {
+        errorType: error instanceof Error ? error.name : typeof error
+      })
+      try {
+        await storage.clear()
+      } catch (clearError) {
+        log.warn('Failed to remove unreadable saved account; continuing signed out', {
+          errorType: clearError instanceof Error ? clearError.name : typeof clearError
+        })
+      }
+      return publish(false, 'electron_account_restore_failed')
     }
     if (!account) return snapshot
     publish(true)
@@ -73,6 +109,7 @@ export function createAccountSession(
   })
 
   return {
+    getSnapshot: (): AccountSnapshot => ({ ...snapshot }),
     getAccessToken: () =>
       serial(async () => ({ session: snapshot, token: account?.token ?? null })),
     adoptToken: (token: string, onlyIfSignedOut = false) =>
@@ -82,10 +119,7 @@ export function createAccountSession(
         const next = { token, user }
         const persistent = await storage.save(next)
         account = next
-        return publish(
-          persistent,
-          persistent ? null : '当前设备无法安全保存登录状态，关闭应用后需重新登录。'
-        )
+        return publish(persistent, persistent ? null : 'electron_account_persistence_unavailable')
       }),
     getSession: async () => {
       await restored
@@ -99,34 +133,34 @@ export function createAccountSession(
         const next = { token, user }
         const persistent = await storage.save(next)
         account = next
-        return publish(
-          persistent,
-          persistent ? null : '当前设备无法安全保存登录状态，关闭应用后需重新登录。'
-        )
+        return publish(persistent, persistent ? null : 'electron_account_persistence_unavailable')
       }),
     refresh: () => serial(check),
     sendPasswordCode: () =>
       serial(async () => {
-        if (!account) throw new AuthError('请先登录', 401)
+        if (!account) throw new LocalizedAccountError('electron_account_sign_in_required', 401)
         await client.forgotPassword(account.user.email)
         return snapshot
       }),
     resetPassword: (code: string, password: string) =>
       serial(async () => {
-        if (!account) throw new AuthError('请先登录', 401)
+        if (!account) throw new LocalizedAccountError('electron_account_sign_in_required', 401)
         await client.resetPassword(account.user.email, code, password)
         // Password recovery revokes every server session, including this device.
         account = null
         try {
           await storage.clear()
-        } catch {
-          /* Saved credentials are already invalid on the server. */
+        } catch (error) {
+          log.warn(
+            'Failed to clear saved credentials after password reset; server session is already revoked',
+            { errorType: error instanceof Error ? error.name : typeof error }
+          )
         }
-        return publish(false, '密码已重置，请使用新密码重新登录。')
+        return publish(false, 'electron_account_password_reset')
       }),
     updateProfile: (update: AccountUpdate) =>
       serial(async () => {
-        if (!account) throw new AuthError('请先登录', 401)
+        if (!account) throw new LocalizedAccountError('electron_account_sign_in_required', 401)
         let user: AuthUser
         try {
           user = await client.patchMe(account.token, update)
@@ -134,7 +168,7 @@ export function createAccountSession(
           if (error instanceof AuthError && error.status === 401) {
             await storage.clear()
             account = null
-            publish(false, '登录已失效，请重新登录。')
+            publish(false, 'electron_account_expired')
           }
           throw error
         }
@@ -143,13 +177,12 @@ export function createAccountSession(
         let persistent = false
         try {
           persistent = await storage.save(account)
-        } catch {
-          /* Preserve the live session. */
+        } catch (error) {
+          log.warn('Failed to save updated account; preserving live session', {
+            errorType: error instanceof Error ? error.name : typeof error
+          })
         }
-        return publish(
-          persistent,
-          persistent ? null : '账号已更新，但本机无法保存登录状态，关闭应用后需重新登录。'
-        )
+        return publish(persistent, persistent ? null : 'electron_account_updated_not_saved')
       }),
     signOut: (expectedToken?: string) =>
       serial(async () => {

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   /**
    * motion/index.svelte
    * ──────────────────────
@@ -61,23 +62,23 @@
       case 'moderated_caucus':
         return { title: am?.topic ?? '' }
       case 'unmoderated_caucus':
-        return { title: '自由磋商' }
+        return { title: t('components_unmoderated_caucus') }
       case 'moderated_debate':
-        return { title: am?.topic ?? '有主持的辩论' }
+        return { title: am?.topic ?? t('components_moderated_debate') }
       case 'unmoderated_debate':
-        return { title: '自由辩论' }
+        return { title: t('components_unmoderated_debate') }
       case 'modify_speaking_time':
-        return { title: '修改发言时间' }
+        return { title: t('components_modify_speaking_time') }
       case 'suspend_meeting':
-        return { title: '暂时休会' }
+        return { title: t('components_suspend_meeting') }
       case 'close_meeting':
-        return { title: '闭幕' }
+        return { title: t('components_close_meeting') }
       case 'closure_debate':
-        return { title: '结束辩论' }
+        return { title: t('components_close_debate') }
       case 'open_speakers_list':
-        return { title: '开启主发言名单' }
+        return { title: t('components_open_speakers_list') }
       case 'change_attendance':
-        return { title: '更改出席状态' }
+        return { title: t('components_change_attendance') }
       case 'substantive_vote':
         return { title: am?.documentName ?? '' }
       default:
@@ -90,7 +91,7 @@
 
 <DisplayPage>
   {#if motionStage === 'voting' && activeMotion}
-    <DisplaySectionHeader {Icon} label="动议表决" colorClass="text-[#5B92E5]" />
+    <DisplaySectionHeader {Icon} label={t('components_motion_vote')} colorClass="text-[#5B92E5]" />
 
     <div class="mt-5 flex flex-col items-center gap-2">
       <AutoFitText
@@ -100,40 +101,36 @@
     </div>
 
     <div class="mt-3 text-3xl tracking-wider text-white/40">
-      由 <span class="text-white/70">{activeMotion.proposedBy?.name}</span>
-       提出
+      {t('components_proposed_by', { name: activeMotion.proposedBy?.name ?? '' })}
     </div>
 
     {#if activeMotion.type === 'moderated_caucus'}
       <div class="mt-15 space-y-2 text-2xl tracking-wider text-white/25">
         {#if activeMotion.totalTimeSec}
           <p>
-            总时长：
-            <span class="text-white/45">{activeMotion.totalTimeSec} 秒</span>
+            {t('components_total_duration', { seconds: activeMotion.totalTimeSec })}
           </p>
         {/if}
         {#if activeMotion.speakingTimePerPersonSec}
           <p>
-            每人发言：
-            <span class="text-white/45">{activeMotion.speakingTimePerPersonSec} 秒</span>
+            {t('components_speaker_duration', { seconds: activeMotion.speakingTimePerPersonSec })}
           </p>
         {/if}
       </div>
     {:else if (activeMotion.type === 'unmoderated_caucus' || activeMotion.type === 'moderated_debate' || activeMotion.type === 'unmoderated_debate') && activeMotion.totalTimeSec}
       <div class="mt-5 text-2xl tracking-wider text-white/25">
-        时长：
-        <span class="text-white/45">{activeMotion.totalTimeSec} 秒</span>
+        {t('components_duration', { seconds: activeMotion.totalTimeSec })}
       </div>
     {:else if activeMotion.type === 'modify_speaking_time' && activeMotion.newTimeSec != null}
       <div class="mt-5 text-2xl tracking-wider text-white/25">
-        修改发言时间为 <span class="text-white/45">{activeMotion.newTimeSec} 秒</span>
+        {t('components_new_speaking_time', { seconds: activeMotion.newTimeSec })}
       </div>
     {/if}
   {:else if motionStage === 'result' && activeMotion}
     {@const isApproved = activeMotion.status === 'approved'}
     <DisplaySectionHeader
       {Icon}
-      label={isApproved ? '表决通过' : '表决否决'}
+      label={isApproved ? t('components_vote_approved') : t('components_vote_rejected')}
       colorClass={isApproved ? 'text-emerald-400' : 'text-red-400'}
     />
 
@@ -142,7 +139,7 @@
         ? 'text-emerald-400'
         : 'text-red-400'}"
     >
-      {isApproved ? '通过' : '否决'}
+      {isApproved ? t('components_adopted') : t('components_rejected')}
     </div>
 
     <div class="mt-4 font-semibold tracking-wide text-white">
@@ -152,8 +149,7 @@
       />
     </div>
     <div class="mt-3 text-3xl tracking-wider text-white/40">
-      由 <span class="text-white/70">{activeMotion.proposedBy?.name}</span>
-       提出
+      {t('components_proposed_by', { name: activeMotion.proposedBy?.name ?? '' })}
     </div>
   {/if}
 </DisplayPage>

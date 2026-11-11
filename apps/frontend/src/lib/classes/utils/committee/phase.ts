@@ -1,12 +1,15 @@
 import type { ConferencePhase } from '$lib/classes/types/committee'
+import { getLocalizedLabels } from '../../../../../../shared/action-types'
+import { t } from '$lib/i18n'
+import type { MessageKey } from '@vetoexpress/i18n'
 
 /** Allowed phase transitions for the Chair-owned committee procedure state. */
 export const VALID_TRANSITIONS: Record<ConferencePhase, ConferencePhase[]> = {
   preamble: ['roll_call'],
-  roll_call: ['pending_speakers_list', 'preamble'],
+  roll_call: ['pending_speakers_list', 'voting', 'preamble'],
   pending_speakers_list: ['general_debate', 'suspended', 'closed'],
-  general_debate: ['caucus', 'voting', 'suspended', 'closed'],
-  caucus: ['general_debate', 'caucus', 'voting', 'suspended', 'closed'],
+  general_debate: ['caucus', 'roll_call', 'voting', 'suspended', 'closed'],
+  caucus: ['general_debate', 'caucus', 'roll_call', 'voting', 'suspended', 'closed'],
   voting: ['general_debate', 'caucus', 'voting', 'suspended', 'closed'],
   caucus_setup: ['caucus', 'general_debate', 'suspended', 'closed'],
   suspended: ['pending_speakers_list', 'general_debate', 'closed'],
@@ -14,17 +17,18 @@ export const VALID_TRANSITIONS: Record<ConferencePhase, ConferencePhase[]> = {
 }
 
 /** Human-readable labels for Chair and Display procedure surfaces. */
-export const PHASE_LABELS: Record<ConferencePhase, string> = {
-  preamble: '会前准备',
-  roll_call: '点名',
-  pending_speakers_list: '等待开启主发言名单',
-  general_debate: '一般性辩论',
-  caucus: '磋商',
-  voting: '投票表决',
-  caucus_setup: '磋商准备',
-  suspended: '休会',
-  closed: '闭幕'
+export const PHASE_MESSAGE_KEYS: Record<ConferencePhase, MessageKey> = {
+  preamble: 'domain_phase_preamble',
+  roll_call: 'domain_phase_roll_call',
+  pending_speakers_list: 'domain_phase_pending_speakers_list',
+  general_debate: 'domain_phase_general_debate',
+  caucus: 'domain_phase_caucus',
+  voting: 'domain_phase_voting',
+  caucus_setup: 'domain_phase_caucus_setup',
+  suspended: 'domain_phase_suspended',
+  closed: 'domain_phase_closed'
 }
+export const PHASE_LABELS = getLocalizedLabels(PHASE_MESSAGE_KEYS, t)
 
 /** Return whether a phase transition is valid. Unknown phases are rejected. */
 export function canTransition(from: ConferencePhase, to: ConferencePhase): boolean {
@@ -40,7 +44,7 @@ export function transitionPhase(
   to: ConferencePhase
 ): ConferencePhase | Error {
   if (!canTransition(from, to)) {
-    return new Error(`非法阶段转换: ${from} → ${to}`)
+    return new Error(t('domain_invalid_phase_transition', { from, to }))
   }
   return to
 }

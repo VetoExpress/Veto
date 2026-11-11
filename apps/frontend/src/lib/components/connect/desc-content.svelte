@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import TextAnimate from '$lib/components/ui/text-animate.svelte'
   import TypingAnimation from '$lib/components/ui/typing-animation.svelte'
 
@@ -29,7 +30,7 @@
 
     {#if heroStage >= 2}
       <TextAnimate
-        text="管理你的会议, 并与其他成员协作. 让模拟联合国会议的组织变得更简单, 更高效."
+        text={t('components_connect_description')}
         as="p"
         className="mt-6 max-w-md text-lg text-muted-foreground"
         startOnView={false}
@@ -41,37 +42,37 @@
       <div class="mt-10 flex gap-6 text-sm text-muted-foreground">
         <div>
           <TextAnimate
-            text="一站式"
+            text={t('components_one_stop')}
             as="div"
             animation="blurInUp"
             className="text-2xl font-bold text-foreground"
             startOnView={false}
           />
-          <TextAnimate text="会务管理" as="div" delay={150} startOnView={false} />
+          <TextAnimate text={t('components_conference_management')} as="div" delay={150} startOnView={false} />
         </div>
 
         <div>
           <TextAnimate
-            text="实时"
+            text={t('components_realtime')}
             as="div"
             delay={150}
             animation="blurInUp"
             className="text-2xl font-bold text-foreground"
             startOnView={false}
           />
-          <TextAnimate text="局势同步" as="div" delay={300} startOnView={false} />
+          <TextAnimate text={t('components_situation_sync')} as="div" delay={300} startOnView={false} />
         </div>
 
         <div>
           <TextAnimate
-            text="全流程"
+            text={t('components_end_to_end')}
             as="div"
             delay={300}
             animation="blurInUp"
             className="text-2xl font-bold text-foreground"
             startOnView={false}
           />
-          <TextAnimate text="数字化管理" as="div" delay={450} startOnView={false} />
+          <TextAnimate text={t('components_digital_management')} as="div" delay={450} startOnView={false} />
         </div>
       </div>
     {/if}

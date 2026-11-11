@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import { Package, ShieldCheck, User } from '@lucide/svelte'
   import type { ModData } from '$lib/classes/types/battle'
   import { registry } from '$lib/classes/services/plugin/mod-registry.svelte'
@@ -39,10 +40,10 @@
       <div class="min-w-0">
         <div class="flex items-center gap-1.5">
           <span class="truncate text-sm font-semibold text-foreground"
-            >{entry.metadata?.name ?? entry.metadata?.id ?? '未知 Mod'}</span
+            >{entry.metadata?.name ?? entry.metadata?.id ?? t('settings_unknown_mod')}</span
           >
           {#if systemSource}
-            <Badge variant="secondary" class="shrink-0 text-[10px]">系统</Badge>
+            <Badge variant="secondary" class="shrink-0 text-[10px]">{t('settings_system')}</Badge>
           {/if}
         </div>
         <div class="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
@@ -55,7 +56,7 @@
             </span>
           {/if}
           {#if !entry.metadata?.version && !entry.metadata?.author}
-            <span class="italic">无版本信息</span>
+            <span class="italic">{t('settings_no_version')}</span>
           {/if}
         </div>
       </div>
@@ -76,19 +77,19 @@
       {#if branchCount > 0}
         <span
           class="rounded-md border border-border bg-muted/50 px-2 py-0.5 text-[11px] text-muted-foreground"
-          >{branchCount} 个军种</span
+          >{t('settings_branch_count', { count: branchCount })}</span
         >
       {/if}
       {#if categoryCount > 0}
         <span
           class="rounded-md border border-border bg-muted/50 px-2 py-0.5 text-[11px] text-muted-foreground"
-          >{categoryCount} 个大类</span
+          >{t('settings_category_count', { count: categoryCount })}</span
         >
       {/if}
       {#if templateCount > 0}
         <span
           class="rounded-md border border-border bg-muted/50 px-2 py-0.5 text-[11px] text-muted-foreground"
-          >{templateCount} 个单位模板</span
+          >{t('settings_template_count', { count: templateCount })}</span
         >
       {/if}
     </div>

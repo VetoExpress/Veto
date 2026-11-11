@@ -5,8 +5,7 @@
 import type { SeatAccess, User, News, SeatGroup, SituationUpdate } from './delegate'
 import type { RoleTemplate } from './event'
 import type { Committee } from './committee'
-import { ACTION_LABELS } from '../../../../../shared/action-types'
-import { MOTION_LABELS, POINT_LABELS } from './committee'
+import { ACTION_LABELS, MOTION_LABELS, POINT_LABELS } from './committee'
 
 export type { Attendance, ParticipantSeat, Seat, SeatView } from './delegate'
 
@@ -27,6 +26,7 @@ export type {
   MajorityThresholds,
   ModifySpeakingTimeMotion,
   Motion,
+  MotionProposal,
   MotionStatus,
   MotionType,
   OpenSpeakersListMotion,

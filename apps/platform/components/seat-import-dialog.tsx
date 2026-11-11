@@ -1,4 +1,6 @@
 "use client"
+import { message } from "@/i18n/messages"
+import { usePlatformTranslations } from "@/components/i18n-provider"
 
 import { useRef, useState } from "react"
 import type { ChangeEvent, JSX } from "react"
@@ -34,8 +36,9 @@ interface SeatImportDialogProps {
 function errorMessage(error: unknown, fallback: string): string {
   if (!(error instanceof SeatImportError))
     return error instanceof Error ? error.message : fallback
-  if (error.code === "empty_workbook") return "文件中没有可读取的 Sheet"
-  if (error.code === "sheet_not_found") return "找不到所选 Sheet"
+  if (error.code === "empty_workbook") return message("platform_empty_workbook")
+  if (error.code === "sheet_not_found")
+    return message("platform_sheet_not_found")
   if (error.code === "no_valid_rows") return fallback
   return fallback
 }
@@ -46,6 +49,8 @@ export function SeatImportDialog({
   roleLabel,
   onImport,
 }: SeatImportDialogProps): JSX.Element {
+  const { t, locale } = usePlatformTranslations()
+
   const inputRef = useRef<HTMLInputElement>(null)
   const [step, setStep] = useState<ImportStep | null>(null)
   const [mode, setMode] = useState<ImportMode>("excel")
@@ -58,7 +63,7 @@ export function SeatImportDialog({
 
   const hasUnmatchedRole = rows.some(
     (row) =>
-      row.roleName && roleLabel(row.roleName, activeTarget) === "未匹配角色"
+      row.roleName && roleLabel(row.roleName, activeTarget) === "unmatched"
   )
 
   function clear(): void {
@@ -104,7 +109,7 @@ export function SeatImportDialog({
       setError("")
       setStep("sheet")
     } catch (cause) {
-      setError(errorMessage(cause, "Excel 文件读取失败"))
+      setError(errorMessage(cause, message("platform_read_excel_failed")))
       setStep("format")
     }
   }
@@ -117,7 +122,9 @@ export function SeatImportDialog({
       setStep("preview")
     } catch (cause) {
       setRows([])
-      setError(errorMessage(cause, "没有读取到有效数据，请检查表格内容"))
+      setError(
+        errorMessage(cause, message("platform_no_valid_spreadsheet_rows"))
+      )
     }
   }
 
@@ -128,7 +135,7 @@ export function SeatImportDialog({
       setStep("preview")
     } catch (cause) {
       setRows([])
-      setError(errorMessage(cause, "没有读取到有效数据，请按格式逐行输入"))
+      setError(errorMessage(cause, message("platform_no_valid_text_rows")))
     }
   }
 
@@ -154,7 +161,8 @@ export function SeatImportDialog({
         disabled={disabled}
         onClick={() => openFormat("excel")}
       >
-        <FileSpreadsheet aria-hidden="true" />从 Excel 导入
+        <FileSpreadsheet aria-hidden="true" />
+        {t("platform_import_excel")}
       </Button>
       <Button
         type="button"
@@ -164,7 +172,7 @@ export function SeatImportDialog({
         onClick={() => openFormat("text")}
       >
         <FileText aria-hidden="true" />
-        从文本导入
+        {t("platform_import_text")}
       </Button>
 
       <Dialog
@@ -186,65 +194,75 @@ export function SeatImportDialog({
             <>
               <DialogHeader>
                 <DialogTitle>
-                  {mode === "excel" ? "从 Excel 导入席位" : "从文本导入席位"}
+                  {mode === "excel"
+                    ? t("platform_import_excel_seats")
+                    : t("platform_import_text_seats")}
                 </DialogTitle>
                 <DialogDescription>
-                  开始读取前，请确认导入内容符合以下格式。
+                  {t("platform_import_format_hint")}
                 </DialogDescription>
               </DialogHeader>
 
               {mode === "excel" ? (
                 <div className="flex flex-col gap-3 text-sm text-muted-foreground">
-                  <p>第一行作为表头，从第二行开始读取：</p>
+                  <p>{t("platform_spreadsheet_header_hint")}</p>
                   <div className="overflow-x-auto rounded-lg border">
                     <table className="w-full min-w-lg text-sm">
                       <thead className="bg-muted/50 text-left text-xs">
                         <tr>
-                          <th className="px-3 py-2 font-medium">A 列</th>
                           <th className="px-3 py-2 font-medium">
-                            B 列（可选）
+                            {t("platform_column_a")}
                           </th>
                           <th className="px-3 py-2 font-medium">
-                            C 列（可选）
+                            {t("platform_column_b")}
+                          </th>
+                          <th className="px-3 py-2 font-medium">
+                            {t("platform_column_c")}
                           </th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr className="border-t text-foreground">
-                          <td className="px-3 py-2">席位名称</td>
-                          <td className="px-3 py-2">席位简称</td>
-                          <td className="px-3 py-2">席位类型（角色名称）</td>
+                          <td className="px-3 py-2">
+                            {t("platform_seat_name")}
+                          </td>
+                          <td className="px-3 py-2">
+                            {t("platform_seat_short_name")}
+                          </td>
+                          <td className="px-3 py-2">
+                            {t("platform_seat_type_role_name")}
+                          </td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
-                  <p>选择文件后还需要选择要读取的 Sheet。</p>
+                  <p>{t("platform_choose_sheet_hint")}</p>
                 </div>
               ) : (
                 <div className="flex flex-col gap-2 text-sm text-muted-foreground">
-                  <p>每行一个席位，格式为：</p>
+                  <p>{t("platform_text_format_intro")}</p>
                   <code className="rounded-lg bg-muted px-3 py-2 text-foreground">
-                    席位名称[,席位简称][,席位类型]
+                    {t("platform_text_import_format")}
                   </code>
-                  <p>
-                    席位简称和席位类型都可以省略；需要跳过简称填写类型时，请保留空字段，例如：席位名称,,席位类型。
-                  </p>
-                  <p>分隔符支持逗号、中文逗号、分号、中文分号和 |。</p>
+                  <p>{t("platform_text_optional_fields_hint")}</p>
+                  <p>{t("platform_text_delimiters_hint")}</p>
                 </div>
               )}
 
               {error ? (
                 <p role="alert" className="text-sm text-destructive">
-                  {error}
+                  {error.startsWith("platform_") ? t(error) : error}
                 </p>
               ) : null}
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={close}>
-                  取消
+                  {t("platform_cancel")}
                 </Button>
                 <Button type="button" onClick={continueFromFormat}>
                   <Upload aria-hidden="true" />
-                  {mode === "excel" ? "选择文件" : "继续输入"}
+                  {mode === "excel"
+                    ? t("platform_choose_file")
+                    : t("platform_continue_input")}
                 </Button>
               </DialogFooter>
             </>
@@ -253,33 +271,33 @@ export function SeatImportDialog({
           {step === "text" ? (
             <>
               <DialogHeader>
-                <DialogTitle>粘贴文本席位</DialogTitle>
+                <DialogTitle>{t("platform_paste_seats")}</DialogTitle>
                 <DialogDescription>
-                  每行一个席位，支持逗号、分号或 | 分隔。
+                  {t("platform_text_import_hint")}
                 </DialogDescription>
               </DialogHeader>
               <textarea
                 className="min-h-56 resize-y rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                 value={text}
-                placeholder="席位名称[,席位简称][,席位类型]"
-                aria-label="席位文本"
+                placeholder={t("platform_text_import_format")}
+                aria-label={t("platform_seat_text")}
                 onChange={(event) => setText(event.target.value)}
               />
               {error ? (
                 <p role="alert" className="text-sm text-destructive">
-                  {error}
+                  {error.startsWith("platform_") ? t(error) : error}
                 </p>
               ) : null}
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={close}>
-                  取消
+                  {t("platform_cancel")}
                 </Button>
                 <Button
                   type="button"
                   disabled={!text.trim()}
                   onClick={readText}
                 >
-                  读取并预览
+                  {t("platform_read_preview")}
                 </Button>
               </DialogFooter>
             </>
@@ -288,15 +306,15 @@ export function SeatImportDialog({
           {step === "sheet" ? (
             <>
               <DialogHeader>
-                <DialogTitle>选择 Sheet</DialogTitle>
+                <DialogTitle>{t("platform_choose_sheet")}</DialogTitle>
                 <DialogDescription>
-                  请选择要读取的工作表，第一行将作为表头跳过。
+                  {t("platform_sheet_header_hint")}
                 </DialogDescription>
               </DialogHeader>
               <select
                 className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                 value={selectedSheet}
-                aria-label="工作表"
+                aria-label={t("platform_worksheet")}
                 onChange={(event) => {
                   setSelectedSheet(event.target.value)
                   setError("")
@@ -310,19 +328,19 @@ export function SeatImportDialog({
               </select>
               {error ? (
                 <p role="alert" className="text-sm text-destructive">
-                  {error}
+                  {error.startsWith("platform_") ? t(error) : error}
                 </p>
               ) : null}
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={close}>
-                  取消
+                  {t("platform_cancel")}
                 </Button>
                 <Button
                   type="button"
                   disabled={!selectedSheet}
                   onClick={readSelectedSheet}
                 >
-                  读取并预览
+                  {t("platform_read_preview")}
                 </Button>
               </DialogFooter>
             </>
@@ -331,36 +349,52 @@ export function SeatImportDialog({
           {step === "preview" ? (
             <>
               <DialogHeader>
-                <DialogTitle>导入数据预览</DialogTitle>
+                <DialogTitle>{t("platform_import_preview")}</DialogTitle>
                 <DialogDescription>
-                  确认后将把以下 {rows.length} 条席位追加到当前委员会。
+                  {t("platform_import_count_start")}
+                  {rows.length}
+                  {t("platform_import_count_end")}
                 </DialogDescription>
               </DialogHeader>
               {target ? (
                 <p className="text-sm text-muted-foreground">
-                  导入到：{target.label}
+                  {t("platform_import_target")}
+                  {target.label}
                 </p>
               ) : null}
               <div className="max-h-[50dvh] overflow-auto rounded-lg border">
                 <table className="w-full min-w-2xl text-left text-sm">
                   <thead className="sticky top-0 bg-muted/95 text-xs text-muted-foreground">
                     <tr>
-                      <th className="px-3 py-2 font-medium">席位名称</th>
-                      <th className="px-3 py-2 font-medium">席位简称</th>
-                      <th className="px-3 py-2 font-medium">席位类型</th>
-                      <th className="px-3 py-2 font-medium">匹配角色</th>
+                      <th className="px-3 py-2 font-medium">
+                        {t("platform_seat_name")}
+                      </th>
+                      <th className="px-3 py-2 font-medium">
+                        {t("platform_seat_short_name")}
+                      </th>
+                      <th className="px-3 py-2 font-medium">
+                        {t("platform_seat_type")}
+                      </th>
+                      <th className="px-3 py-2 font-medium">
+                        {t("platform_matched_role")}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {rows.map((row, index) => (
                       <tr key={`${row.name}-${index}`} className="border-t">
-                        <td className="px-3 py-2">{row.name || "（空）"}</td>
+                        <td className="px-3 py-2">
+                          {row.name || t("platform_empty")}
+                        </td>
                         <td className="px-3 py-2">{row.shortName || "—"}</td>
                         <td className="px-3 py-2">
-                          {row.roleName || "自动匹配"}
+                          {row.roleName || t("platform_automatic_match")}
                         </td>
                         <td className="px-3 py-2 text-muted-foreground">
-                          {roleLabel(row.roleName ?? "", activeTarget)}
+                          {roleLabel(row.roleName ?? "", activeTarget) ===
+                          "unmatched"
+                            ? t("platform_unmatched_role")
+                            : roleLabel(row.roleName ?? "", activeTarget)}
                         </td>
                       </tr>
                     ))}
@@ -369,19 +403,19 @@ export function SeatImportDialog({
               </div>
               {hasUnmatchedRole ? (
                 <p role="alert" className="text-sm text-destructive">
-                  存在无法匹配到当前委员会的席位类型，导入后请在席位列表中重新选择角色。
+                  {t("platform_unmatched_roles_hint")}
                 </p>
               ) : null}
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={close}>
-                  取消
+                  {t("platform_cancel")}
                 </Button>
                 <Button
                   type="button"
                   disabled={rows.length === 0 || disabled}
                   onClick={confirmImport}
                 >
-                  确认导入
+                  {t("platform_confirm_import")}
                 </Button>
               </DialogFooter>
             </>

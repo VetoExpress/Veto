@@ -27,6 +27,8 @@ import { getAppUrl } from './dev-server'
 import { scheduleLaunchTelemetry } from './telemetry'
 import type { PluginInstance } from './plugin-discovery'
 import type { DisplayWindowRef } from './ipc/conference'
+import { bindWindowTitle, initializeDesktopI18n } from './desktop-i18n'
+import { t } from './i18n'
 
 const log = createLogger('Main')
 
@@ -71,6 +73,7 @@ function createWindow(): void {
     frame: false,
     center: true,
     autoHideMenuBar: true,
+    title: t('electron_window_main_title'),
     icon,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -80,6 +83,8 @@ function createWindow(): void {
       spellcheck: false
     }
   })
+
+  bindWindowTitle(mainWindow, 'electron_window_main_title')
 
   mainWindow.on('ready-to-show', () => {
     if (mainWindow) mainWindow.show()
@@ -220,6 +225,7 @@ function registerProtocol(): void {
 app.whenReady().then(async () => {
   // 初始化日志
   initializeLogging()
+  initializeDesktopI18n()
   scheduleLaunchTelemetry()
 
   electronApp.setAppUserModelId('com.electron')

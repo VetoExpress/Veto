@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import CalendarDaysIcon from '@lucide/svelte/icons/calendar-days'
   import GaugeIcon from '@lucide/svelte/icons/gauge'
   import ShieldIcon from '@lucide/svelte/icons/shield'
@@ -43,11 +44,11 @@
 <div class="flex flex-col gap-0">
   <!-- 战局代号 -->
   <section class="px-1 py-3">
-    <Label for="battle-name" class="mb-2 block text-xs text-muted-foreground">战局代号</Label>
+    <Label for="battle-name" class="mb-2 block text-xs text-muted-foreground">{t('settings_battle_codename')}</Label>
     <Input
       id="battle-name"
       bind:value={draft.name}
-      placeholder="输入战局名称..."
+      placeholder={t('settings_battle_name_placeholder')}
       class="h-9"
       onkeydown={handleKeydown}
     />
@@ -59,17 +60,17 @@
   <section class="px-1 py-3">
     <div class="mb-3 flex items-center gap-1.5">
       <CalendarDaysIcon size={12} class="text-muted-foreground" />
-      <span class="text-[11px] font-medium tracking-widest text-muted-foreground uppercase">时间参数</span>
+      <span class="text-[11px] font-medium tracking-widest text-muted-foreground uppercase">{t('settings_time_parameters')}</span>
     </div>
     <div class="grid grid-cols-2 gap-3">
       <div>
-        <Label class="mb-1.5 block text-xs text-muted-foreground">模拟日期</Label>
+        <Label class="mb-1.5 block text-xs text-muted-foreground">{t('settings_simulation_date')}</Label>
         <DatePicker bind:value={draft.startDate} class="h-9 w-full text-sm" />
       </div>
       <div>
         <Label class="mb-1.5 block text-xs text-muted-foreground">
           <GaugeIcon size={11} class="mr-1 inline text-muted-foreground" />
-          时间流速 (模拟秒/真实秒)
+          {t('settings_time_scale')}
         </Label>
         <Input
           type="number"
@@ -97,7 +98,7 @@
   <!-- 地图比例尺 -->
   <section class="px-1 py-3">
     <Label for="pixels-per-km" class="mb-1.5 block text-xs text-muted-foreground">
-      地图比例尺 (px/km)
+      {t('settings_map_scale')}
     </Label>
     <Input
       id="pixels-per-km"
@@ -116,7 +117,7 @@
   <section class="px-1 py-3">
     <div class="mb-3 flex items-center gap-1.5">
       <ShieldIcon size={12} class="text-muted-foreground" />
-      <span class="text-[11px] font-medium tracking-widest text-muted-foreground uppercase">视觉标准</span>
+      <span class="text-[11px] font-medium tracking-widest text-muted-foreground uppercase">{t('settings_visual_standard')}</span>
     </div>
     <div class="flex gap-2">
       <Button
@@ -130,7 +131,7 @@
         onclick={() => (draft.iconStyle = 'nato')}
       >
         <ShieldIcon size={13} />
-        北约标准
+        {t('settings_nato')}
       </Button>
       <Button
         variant="outline"
@@ -143,7 +144,7 @@
         onclick={() => (draft.iconStyle = 'simple')}
       >
         <LayersIcon size={13} />
-        简约图标
+        {t('settings_simple_icons')}
       </Button>
     </div>
   </section>
@@ -155,19 +156,19 @@
     <section class="px-1 py-3">
       <div class="mb-3 flex items-center gap-1.5">
         <PuzzleIcon size={12} class="text-muted-foreground" />
-        <span class="text-[11px] font-medium tracking-widest text-muted-foreground uppercase">Mod 配置</span>
+        <span class="text-[11px] font-medium tracking-widest text-muted-foreground uppercase">{t('settings_mod_configuration')}</span>
       </div>
 
       {#if factionPlugins.length > 0}
         <div class="mb-2">
-          <Label class="mb-1.5 block text-xs text-muted-foreground">阵营包</Label>
+          <Label class="mb-1.5 block text-xs text-muted-foreground">{t('settings_type_faction')}</Label>
           <div class="flex flex-wrap gap-1.5">
             <Button
               size="sm"
               variant={!draft.selectedFaction ? 'default' : 'outline'}
               onclick={() => (draft.selectedFaction = null)}
             >
-              基础
+              {t('settings_base')}
             </Button>
             {#each factionPlugins as p (p.id)}
               <Button

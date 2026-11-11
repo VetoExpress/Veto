@@ -2,6 +2,7 @@
  * plugin-registry.ts — 拉取远程注册表、下载 .vmod 包、注入 ModRegistry。
  */
 import JSZip from 'jszip';
+import { t } from '$lib/i18n';
 import type { PluginManifest, InstalledPlugin } from './plugin-db';
 import { registry } from '$lib/classes/services/plugin/mod-registry.svelte';
 import type { ModData, ModMetadata } from '$lib/classes/types/battle';
@@ -116,7 +117,7 @@ const STARS_URL = 'https://raw.githubusercontent.com/VetoExpress/veto-plugins/ma
 /** 拉取远程注册表列表 */
 export async function fetchPluginRegistry(): Promise<PluginManifest[]> {
 	const res = await fetch(REGISTRY_URL);
-	if (!res.ok) throw new Error(`获取注册表失败：HTTP ${res.status}`);
+	if (!res.ok) throw new Error(t('components_plugin_registry_http_error', { status: res.status }));
 	return res.json() as Promise<PluginManifest[]>;
 }
 
@@ -211,7 +212,7 @@ export async function processModPackage(
 	});
 
 	if (!result.success) {
-		throw new Error(result.error ?? '安装插件失败');
+		throw new Error(result.error ?? t('components_plugin_install_failed'));
 	}
 
 	// 6. 构建记录并注入运行时 ModRegistry
@@ -235,17 +236,17 @@ export async function processModPackage(
 export async function installPlugin(manifest: PluginManifest): Promise<InstalledPlugin> {
 	console.log('Installing plugin ', manifest);
 	if (!manifest.download_url) {
-		throw new Error(`插件 "${manifest.name}" 缺少 download_url，无法下载`);
+		throw new Error(t('components_plugin_download_url_missing', { name: manifest.name }));
 	}
 
 	const res = await fetch(manifest.download_url);
-	if (!res.ok) throw new Error(`下载插件失败：HTTP ${res.status}`);
+	if (!res.ok) throw new Error(t('components_plugin_download_http_error', { status: res.status }));
 	const blob = await res.blob();
 
 	if (manifest.hash) {
 		const actual = await sha256Hex(blob);
 		if (actual !== manifest.hash) {
-			throw new Error(`插件 "${manifest.name}" 哈希校验失败，文件可能已损坏或被篡改`);
+			throw new Error(t('components_plugin_hash_mismatch', { name: manifest.name }));
 		}
 	}
 
@@ -253,7 +254,7 @@ export async function installPlugin(manifest: PluginManifest): Promise<Installed
 	try {
 		zip = await JSZip.loadAsync(blob);
 	} catch {
-		throw new Error(`插件 "${manifest.name}" 解压失败：文件格式不正确`);
+		throw new Error(t('components_plugin_invalid_archive', { name: manifest.name }));
 	}
 
 	return processModPackage(zip, manifest);

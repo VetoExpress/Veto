@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "$lib/components/ui/alert-dialog";
   import { alertDialogStore, hideAlert } from "$lib/classes/stores/app/global-ui-store";
   import { get } from "svelte/store";
@@ -20,10 +21,10 @@
     </AlertDialogHeader>
     <AlertDialogFooter>
       {#if state.onConfirm}
-        <AlertDialogCancel onclick={hideAlert}>取消</AlertDialogCancel>
-        <AlertDialogAction onclick={handleConfirm}>确认</AlertDialogAction>
+        <AlertDialogCancel onclick={hideAlert}>{t('components_cancel')}</AlertDialogCancel>
+        <AlertDialogAction onclick={handleConfirm}>{t('components_confirm')}</AlertDialogAction>
       {:else}
-        <AlertDialogAction onclick={hideAlert}>确定</AlertDialogAction>
+        <AlertDialogAction onclick={hideAlert}>{t('components_ok')}</AlertDialogAction>
       {/if}
     </AlertDialogFooter>
   </AlertDialogContent>

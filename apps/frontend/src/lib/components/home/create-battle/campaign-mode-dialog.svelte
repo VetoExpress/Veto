@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import PlusIcon from '@lucide/svelte/icons/plus'
   import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left'
   import SearchIcon from '@lucide/svelte/icons/search'
@@ -82,6 +83,7 @@
         class="absolute end-4 top-4 z-10 opacity-70 transition-opacity hover:opacity-100"
         variant="ghost"
         size="icon"
+        aria-label={t('settings_close')}
         onclick={onclose}
       >
         <XIcon size={18} />
@@ -91,8 +93,8 @@
         <!-- 左侧栏：搜索 + 战役列表 -->
         <div class="flex w-[280px] shrink-0 flex-col bg-muted/50">
           <div class="px-5 pt-5 pb-3">
-            <h1 class="text-[22px] font-bold leading-none tracking-tight">新建战役推演</h1>
-            <p class="mt-1.5 text-sm text-muted-foreground">选定战役，为战局命名后即可进入推演。</p>
+            <h1 class="text-[22px] font-bold leading-none tracking-tight">{t('settings_new_campaign')}</h1>
+            <p class="mt-1.5 text-sm text-muted-foreground">{t('settings_campaign_name_hint')}</p>
           </div>
 
           <!-- 搜索框 -->
@@ -102,7 +104,7 @@
                 size={14}
                 class="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
               />
-              <Input bind:value={searchQuery} placeholder="搜索战役..." class="h-8 pl-8 text-xs" />
+              <Input bind:value={searchQuery} placeholder={t('settings_search_campaigns')} class="h-8 pl-8 text-xs" />
             </div>
           </div>
 
@@ -113,9 +115,9 @@
             <div class="mb-1.5 flex items-center gap-1.5 px-1">
               <FlagIcon size={11} class="text-muted-foreground" />
               <span class="text-[11px] font-medium text-muted-foreground">
-                可用战役
+                {t('settings_available_campaigns')}
                 {#if searchQuery.trim()}
-                  <span class="text-muted-foreground/60"> · {filteredCampaigns.length} 个匹配</span>
+                  <span class="text-muted-foreground/60"> · {t('settings_match_count', { count: filteredCampaigns.length })}</span>
                 {/if}
               </span>
             </div>
@@ -126,14 +128,14 @@
                   <Empty.Media>
                     <PackageIcon size={28} class="text-muted-foreground" />
                   </Empty.Media>
-                  <Empty.Title class="text-sm">暂无可用战役</Empty.Title>
-                  <Empty.Description class="text-xs">请先安装战役插件包</Empty.Description>
+                  <Empty.Title class="text-sm">{t('settings_no_campaigns')}</Empty.Title>
+                  <Empty.Description class="text-xs">{t('settings_install_campaign_hint')}</Empty.Description>
                 </Empty.Root>
               </div>
             {:else if filteredCampaigns.length === 0}
               <div class="flex flex-col items-center justify-center gap-1 py-8 text-center">
                 <SearchIcon size={24} class="text-muted-foreground/40" />
-                <p class="text-xs text-muted-foreground">未找到匹配的战役</p>
+                <p class="text-xs text-muted-foreground">{t('settings_no_campaign_matches')}</p>
               </div>
             {:else}
               <ScrollArea class="flex-1 -mr-2 pr-2">
@@ -154,7 +156,7 @@
           <div class="flex flex-col gap-1 px-5 pb-5 pt-2">
             <Button variant="outline" class="w-full" onclick={onclose}>
               <ArrowLeftIcon size={14} class="mr-1" />
-              返回模式选择
+              {t('settings_back_modes')}
             </Button>
           </div>
         </div>
@@ -168,12 +170,12 @@
                 <!-- 命名框 -->
                 <div>
                   <Label for="campaign-name" class="mb-2 block text-sm font-medium">
-                    为这场推演命名
+                    {t('settings_name_simulation')}
                   </Label>
                   <Input
                     id="campaign-name"
                     bind:value={name}
-                    placeholder={`输入名称...（如：${selectedCampaignMeta.manifest.name} 第一回合）`}
+                    placeholder={t('settings_campaign_name_placeholder', { name: selectedCampaignMeta.manifest.name })}
                     class="h-10 text-sm"
                     onkeydown={handleKeydown}
                   />
@@ -196,7 +198,7 @@
                   size="lg"
                 >
                   <PlusIcon size={16} />
-                  开始推演
+                  {t('settings_start_simulation')}
                 </Button>
               </div>
             </div>
@@ -206,9 +208,9 @@
                 <Empty.Media>
                   <FlagIcon size={36} class="text-muted-foreground/30" />
                 </Empty.Media>
-                <Empty.Title class="text-base">选择战役</Empty.Title>
+                <Empty.Title class="text-base">{t('settings_choose_campaign')}</Empty.Title>
                 <Empty.Description class="text-sm">
-                  从左侧列表中选择一个预设战役查看详情
+                  {t('settings_choose_campaign_hint')}
                 </Empty.Description>
               </Empty.Root>
             </div>

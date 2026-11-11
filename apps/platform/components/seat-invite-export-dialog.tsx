@@ -1,4 +1,6 @@
 "use client"
+import { message } from "@/i18n/messages"
+import { usePlatformTranslations } from "@/components/i18n-provider"
 
 import { useState } from "react"
 import type { JSX } from "react"
@@ -37,17 +39,19 @@ function download(data: BlobPart, mimeType: string, filename: string): void {
 export function SeatInviteExportDialog({
   filenameBase,
   rows,
-  description = "导出已生成的邀请码，包含席位名称、简称和角色。",
+  description = "platform_export_invites_hint",
   missingCount = 0,
   disabled = false,
 }: SeatInviteExportDialogProps): JSX.Element {
+  const { t, locale } = usePlatformTranslations()
+
   const [open, setOpen] = useState(false)
   const [error, setError] = useState("")
   const [exporting, setExporting] = useState(false)
   const filename =
-    (filenameBase.trim() || "席位")
+    (filenameBase.trim() || t("platform_seat"))
       .replace(/[<>:"/\\|?*\x00-\x1f]/g, "_")
-      .replace(/[. ]+$/g, "") || "席位"
+      .replace(/[. ]+$/g, "") || t("platform_seat")
 
   async function exportFile(format: "text" | "excel"): Promise<void> {
     if (!rows.length || exporting) return
@@ -58,20 +62,20 @@ export function SeatInviteExportDialog({
         await import("@vetoexpress/utils/seat-invite-export")
       if (format === "text") {
         download(
-          `\uFEFF${createSeatInviteText(rows)}`,
+          `\uFEFF${createSeatInviteText(rows, locale)}`,
           "text/plain;charset=utf-8",
-          `${filename}-邀请码.txt`
+          t("platform_invite_text_filename", { value1: filename })
         )
       } else {
         download(
-          createSeatInviteWorkbook(rows),
+          createSeatInviteWorkbook(rows, locale),
           "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          `${filename}-邀请码.xlsx`
+          t("platform_invite_excel_filename", { value1: filename })
         )
       }
       setOpen(false)
     } catch {
-      setError("导出失败，请重试。")
+      setError("platform_export_failed")
     } finally {
       setExporting(false)
     }
@@ -90,25 +94,32 @@ export function SeatInviteExportDialog({
         }}
       >
         <Download aria-hidden="true" />
-        导出邀请码
+        {t("platform_export_invites")}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="w-[calc(100%-2rem)] sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>导出邀请码</DialogTitle>
-            <DialogDescription>{description}</DialogDescription>
+            <DialogTitle>{t("platform_export_invites")}</DialogTitle>
+            <DialogDescription>
+              {description.startsWith("platform_")
+                ? t(description)
+                : description}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 text-sm">
-            <p>可导出 {rows.length} 个席位的邀请码。</p>
+            <p>
+              {t("platform_export_count_start")}
+              {rows.length}
+              {t("platform_export_count_end")}
+            </p>
             {missingCount > 0 ? (
               <p className="text-muted-foreground">
-                {missingCount}{" "}
-                个席位尚未生成邀请码，将不会出现在文件中。请先保存以生成新席位的邀请码。
+                {missingCount} {t("platform_missing_invites_hint")}
               </p>
             ) : null}
             {error ? (
               <p role="alert" className="text-destructive">
-                {error}
+                {error.startsWith("platform_") ? t(error) : error}
               </p>
             ) : null}
           </div>
@@ -118,7 +129,7 @@ export function SeatInviteExportDialog({
               variant="outline"
               onClick={() => setOpen(false)}
             >
-              取消
+              {t("platform_cancel")}
             </Button>
             <Button
               type="button"
@@ -126,14 +137,14 @@ export function SeatInviteExportDialog({
               disabled={!rows.length || exporting}
               onClick={() => void exportFile("text")}
             >
-              导出文本
+              {t("platform_export_text")}
             </Button>
             <Button
               type="button"
               disabled={!rows.length || exporting}
               onClick={() => void exportFile("excel")}
             >
-              导出 Excel
+              {t("platform_export_excel")}
             </Button>
           </DialogFooter>
         </DialogContent>

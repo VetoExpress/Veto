@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   /**
    * yield-resolution-panel.svelte
    * ──────────────────────────────
@@ -62,11 +63,11 @@
   const yieldLabel = $derived.by(() => {
     switch (yp.yieldType) {
       case 'delegate':
-        return '让渡给代表'
+        return t('procedure_yield_to_delegate')
       case 'question':
-        return '让渡给提问'
+        return t('procedure_yield_to_questions')
       case 'comment':
-        return '让渡给评论'
+        return t('procedure_yield_to_comments')
     }
   })
 
@@ -86,12 +87,11 @@
       <MessageCircle size={18} class="text-indigo-500" />
     {/if}
     <span class="text-sm font-semibold text-foreground">{yieldLabel}</span>
-    <span class="ml-auto text-xs text-muted-foreground">剩余 {remainingFormatted}</span>
+    <span class="ml-auto text-xs text-muted-foreground">{t('procedure_yield_remaining', { value1: remainingFormatted })}</span>
   </div>
 
   <p class="mb-4 text-sm text-muted-foreground">
-    {originalSeat?.name ?? '未知席位'} 将剩余 <strong>{remainingFormatted}</strong>
-    {yieldLabel}
+    {t('procedure_yield_time_description', { name: originalSeat?.name ?? t('procedure_unknown_seat'), remaining: remainingFormatted, type: yieldLabel ?? '' })}
   </p>
 
   <Separator class="mb-4" />
@@ -99,10 +99,10 @@
   <!-- ═══ 让渡给代表：选择目标席位 ═══ -->
   {#if yp.yieldType === 'delegate' && !hasQuestioner}
     <div class="space-y-3">
-      <p class="text-xs text-muted-foreground">请选择接收剩余时间的席位（不可再次让渡）：</p>
+      <p class="text-xs text-muted-foreground">{t('procedure_choose_the_seat_receiving_the_remaining_time_no_further_yielding')}</p>
       <SeatSelector
         seats={participantSeats}
-        placeholder="搜索目标席位..."
+        placeholder={t('procedure_search_target_seats')}
         onselect={handleSelectDelegate}
         resetOnSelect={true}
         excludeIds={excludeOriginalId}
@@ -115,7 +115,7 @@
           onclick={handleNoResponse}
         >
           <SkipForward size={12} class="mr-1" />
-          改为让渡给主席
+          {t('procedure_yield_to_chair_instead')}
         </Button>
       </div>
     </div>
@@ -124,35 +124,35 @@
   {:else if yp.yieldType === 'question' && !hasQuestioner}
     <div class="space-y-3">
       <p class="text-xs text-muted-foreground">
-        主席口头呼吁场下提问后，选择举手提问的席位（提问不占用时间）：
+        {t('procedure_after_inviting_questions_verbally_choose_a_seat_with_a_raised_hand_questions_do_not_us')}
       </p>
       <SeatSelector
         seats={participantSeats}
-        placeholder="搜索提问席位..."
+        placeholder={t('procedure_search_questioning_seats')}
         onselect={handleSelectQuestioner}
         resetOnSelect={true}
         excludeIds={excludeOriginalId}
       />
       <Button size="sm" variant="outline" class="h-8 text-xs" onclick={handleNoResponse}>
         <X size={12} class="mr-1" />
-        无人提问（让渡给主席）
+        {t('procedure_no_questions_yield_to_chair')}
       </Button>
     </div>
 
     <!-- ═══ 让渡给评论 ═══ -->
   {:else if yp.yieldType === 'comment' && !hasQuestioner}
     <div class="space-y-3">
-      <p class="text-xs text-muted-foreground">主席口头呼吁场下评论后，选择举手评论的席位：</p>
+      <p class="text-xs text-muted-foreground">{t('procedure_after_inviting_comments_verbally_choose_a_seat_with_a_raised_hand')}</p>
       <SeatSelector
         seats={participantSeats}
-        placeholder="搜索评论席位..."
+        placeholder={t('procedure_search_commenting_seats')}
         onselect={handleSelectCommenter}
         resetOnSelect={true}
         excludeIds={excludeOriginalId}
       />
       <Button size="sm" variant="outline" class="h-8 text-xs" onclick={handleNoResponse}>
         <X size={12} class="mr-1" />
-        无人评论（让渡给主席）
+        {t('procedure_no_comments_yield_to_chair')}
       </Button>
     </div>
 
@@ -161,14 +161,14 @@
     <div class="space-y-3 text-center">
       <div class="rounded-md bg-indigo-100 px-4 py-3 dark:bg-indigo-900/30">
         <p class="text-sm font-medium text-indigo-700 dark:text-indigo-400">
-          {questionerSeat?.name ?? '未知席位'} 正在提问
+          {t('procedure_questioner_speaking', { value1: questionerSeat?.name ?? t('procedure_unknown_seat') })}
         </p>
         <p class="mt-1 text-xs text-muted-foreground">
-          提问不占用时间，提问完成后 {originalSeat?.name ?? '原发言席位'} 将使用剩余 {remainingFormatted} 回答问题
+          {t('procedure_yield_question_explanation', { value1: originalSeat?.name ?? t('procedure_the_original_speaker'), value2: remainingFormatted })}
         </p>
       </div>
       <p class="text-xs text-muted-foreground">
-        提问方已指定，请恢复计时让发言人回答。发言人不可再次让渡。
+        {t('procedure_the_questioner_is_selected_resume_the_timer_for_the_speaker_to_answer_further_yielding')}
       </p>
     </div>
   {/if}

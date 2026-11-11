@@ -1,12 +1,13 @@
 import { writable } from 'svelte/store';
 import { bootstrapStore, saveToStore, deleteFromStore } from '../../helpers/store-bridge';
 import { syncAcrossWindows } from '../../helpers/cross-window-sync';
+import { resolveLocale, type Locale } from '@vetoexpress/i18n';
 
 export interface GlobalSettings {
 	/** 新建战局时的默认图标风格 */
 	defaultIconStyle: 'nato' | 'simple';
 	/** 界面语言 */
-	language: 'zh-cn' | 'en';
+	language: Locale;
 	/** 主题模式 */
 	theme: 'light' | 'dark' | 'system';
 	/** Display 窗口主展示区 X 偏移（px） */
@@ -19,7 +20,7 @@ export interface GlobalSettings {
 
 const DEFAULTS: GlobalSettings = {
 	defaultIconStyle: 'nato',
-	language: 'zh-cn',
+	language: 'zh-CN',
 	theme: 'system',
 	displayOffsetX: 0,
 	displayOffsetY: 0,
@@ -32,7 +33,7 @@ function createGlobalSettings() {
 
 	// 异步启动：从文件加载（文件是权威来源，同步到 localStorage）
 	bootstrapStore<GlobalSettings>('settings', DEFAULTS).then((data) => {
-		set(data);
+		set({ ...DEFAULTS, ...data, language: resolveLocale(data.language) });
 	});
 
 	// 跨窗口同步：其他窗口修改设置后自动更新本地 store

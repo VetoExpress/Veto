@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   /**
    * question/index.svelte
    * ──────────────────────
@@ -28,10 +29,10 @@
       <SeatNameDisplay name={proposer.name} shortName={proposer.shortName ?? ''} />
       {#if hasType}
         <div class="mt-4 text-4xl tracking-wide text-white/40">
-          提出 {label}
+          {t('components_point_raised', { point: label })}
         </div>
       {:else}
-        <div class="mt-4 text-5xl tracking-wide text-white/30">提出问题</div>
+        <div class="mt-4 text-5xl tracking-wide text-white/30">{t('components_raise_point')}</div>
       {/if}
     </div>
   {/if}

@@ -1,4 +1,6 @@
 "use client"
+import { message } from "@/i18n/messages"
+import { usePlatformTranslations } from "@/components/i18n-provider"
 
 import * as React from "react"
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
@@ -53,6 +55,8 @@ function DialogContent({
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean
 }): React.JSX.Element {
+  const { t, locale } = usePlatformTranslations()
+
   return (
     <DialogPortal>
       <DialogOverlay />
@@ -77,7 +81,7 @@ function DialogContent({
             }
           >
             <XIcon />
-            <span className="sr-only">关闭</span>
+            <span className="sr-only">{t("platform_close")}</span>
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Popup>
@@ -106,6 +110,8 @@ function DialogFooter({
 }: React.ComponentProps<"div"> & {
   showCloseButton?: boolean
 }): React.JSX.Element {
+  const { t, locale } = usePlatformTranslations()
+
   return (
     <div
       data-slot="dialog-footer"
@@ -118,7 +124,7 @@ function DialogFooter({
       {children}
       {showCloseButton && (
         <DialogPrimitive.Close render={<Button variant="outline" />}>
-          关闭
+          {t("platform_close")}
         </DialogPrimitive.Close>
       )}
     </div>

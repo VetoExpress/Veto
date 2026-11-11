@@ -6,6 +6,9 @@
  * Cloud Service and a UserClient renderer.
  */
 
+import { translate, type Locale, type MessageKey } from '../../packages/i18n/src/index.js'
+import { getLocalizedLabels } from './action-types'
+
 // ---------------------------------------------------------------------------
 // Authorization and identities
 // ---------------------------------------------------------------------------
@@ -50,24 +53,30 @@ export const CAPABILITIES: readonly Capability[] = [
   'draft_resolution'
 ] as const
 
-export const CAPABILITY_LABELS: Record<Capability, string> = {
-  view_conference: '查看会议状态',
-  view_news: '查看全局新闻',
-  view_situation: '查看全局局势',
-  view_files: '查看文件',
-  review_files: '审核文件',
-  draft_news: '起草新闻草稿',
-  review_news: '审核新闻',
-  submit_directive: '提交指令',
-  process_directive: '处理指令',
-  send_files: '发送文件',
-  publish_situation: '发布局势更新',
-  withdraw_news: '撤回已发布新闻',
-  withdraw_situation: '撤回已发布局势更新',
-  withdraw_files: '撤回已发布文件',
-  control_conference: '控制会议流程',
-  control_timeline: '控制大会时间线',
-  draft_resolution: '起草决议'
+export const CAPABILITY_MESSAGE_KEYS: Record<Capability, MessageKey> = {
+  view_conference: 'domain_capability_view_conference',
+  view_news: 'domain_capability_view_news',
+  view_situation: 'domain_capability_view_situation',
+  view_files: 'domain_capability_view_files',
+  review_files: 'domain_capability_review_files',
+  draft_news: 'domain_capability_draft_news',
+  review_news: 'domain_capability_review_news',
+  submit_directive: 'domain_capability_submit_directive',
+  process_directive: 'domain_capability_process_directive',
+  send_files: 'domain_capability_send_files',
+  publish_situation: 'domain_capability_publish_situation',
+  withdraw_news: 'domain_capability_withdraw_news',
+  withdraw_situation: 'domain_capability_withdraw_situation',
+  withdraw_files: 'domain_capability_withdraw_files',
+  control_conference: 'domain_capability_control_conference',
+  control_timeline: 'domain_capability_control_timeline',
+  draft_resolution: 'domain_capability_draft_resolution'
+}
+
+export const CAPABILITY_LABELS = getLocalizedLabels(CAPABILITY_MESSAGE_KEYS)
+
+export function getCapabilityLabels(locale: Locale): Record<Capability, string> {
+  return getLocalizedLabels(CAPABILITY_MESSAGE_KEYS, (key) => translate(key, {}, locale))
 }
 
 export type CommitteeType = 'cabinet' | 'mpc' | 'ipc'

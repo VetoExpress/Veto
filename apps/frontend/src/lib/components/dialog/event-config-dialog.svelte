@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
 	import { fly } from 'svelte/transition';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
@@ -84,17 +85,13 @@
 			<div class="flex items-center gap-2.5">
 				<Zap size={15} class="shrink-0 text-amber-500" />
 				<div>
-					<p class="text-sm font-semibold">突发事件配置</p>
+					<p class="text-sm font-semibold">{t('components_event_config')}</p>
 					<p class="text-xs text-muted-foreground">
-						已启用
-						<Badge variant="secondary" class="mx-0.5 h-4 px-1.5 text-[10px]"
-							>{enabledCount} / {localDraft.length}</Badge
-						>
-						项
+						{t('components_enabled_events', { enabled: enabledCount, total: localDraft.length })}
 					</p>
 				</div>
 			</div>
-			<Button variant="ghost" size="icon" class="h-7 w-7 shrink-0" onclick={close}>
+      <Button variant="ghost" size="icon" class="h-7 w-7 shrink-0" onclick={close} aria-label={t('components_close')}>
 				<X size={14} />
 			</Button>
 		</div>
@@ -116,12 +113,12 @@
 				<Card.Root class="mt-1 border-dashed shadow-none">
 					<Card.Header class="pb-2">
 						<Card.Title class="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-							新增自定义事件
+							{t('components_custom_event')}
 						</Card.Title>
 					</Card.Header>
 					<Card.Content class="flex flex-col gap-3">
 						<Input
-							placeholder="事件名称"
+							placeholder={t('components_event_name')}
 							bind:value={newLabel}
 							class="h-8 text-sm"
 							onkeydown={(e: KeyboardEvent) => {
@@ -130,7 +127,7 @@
 						/>
 						<div class="space-y-1.5">
 							<div class="flex items-center justify-between">
-								<Label class="text-xs text-muted-foreground">初始触发概率</Label>
+								<Label class="text-xs text-muted-foreground">{t('components_initial_probability')}</Label>
 								<span
 									class="font-mono text-xs font-semibold text-amber-600 tabular-nums dark:text-amber-400"
 								>
@@ -155,7 +152,7 @@
 							disabled={!newLabel.trim()}
 						>
 							<Plus size={13} />
-							添加事件
+							{t('components_add_event')}
 						</Button>
 					</Card.Content>
 				</Card.Root>
@@ -166,8 +163,8 @@
 
 		<!-- 底部操作 -->
 		<div class="flex shrink-0 gap-2 bg-background/100 px-4 py-3">
-			<Button variant="outline" class="flex-1" onclick={close}>取消</Button>
-			<Button class="flex-1" onclick={handleApply}>应用事件预设</Button>
+			<Button variant="outline" class="flex-1" onclick={close}>{t('components_cancel')}</Button>
+			<Button class="flex-1" onclick={handleApply}>{t('components_apply_events')}</Button>
 		</div>
 	</div>
 {/if}

@@ -1,16 +1,15 @@
 import type { Metadata } from "next"
 
-import { siteName } from "@/lib/site"
+import { localizedMetadata } from "@/i18n/metadata"
 
-export const metadata: Metadata = {
-  title: {
-    default: "大会管理",
-    template: `%s | ${siteName}`,
-  },
-  robots: {
-    index: false,
-    follow: false,
-  },
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    ...(await localizedMetadata("platform_conferences")),
+    robots: {
+      index: false,
+      follow: false,
+    },
+  }
 }
 
 export default function ConferencesLayout({

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   /**
    * moderated-caucus-view.svelte
    * ─────────────────────────────
@@ -246,7 +247,7 @@
 <div class="flex w-full flex-col gap-4">
   {#if conf}
     <div class="flex items-center gap-3 text-sm text-muted-foreground">
-      <span>总剩余</span>
+      <span>{t('procedure_total_remaining')}</span>
       <span class="font-mono font-semibold text-foreground">
         {formatTime(totalBudgetRemaining)}
       </span>
@@ -265,11 +266,10 @@
     {@const perTime = activeSpeaker?.allocatedTimeSec ?? 60}
     {@const maxCapacity = Math.floor(totalBudgetRemaining / perTime)}
     <div class="text-center text-xs {maxCapacity === 0 ? 'text-red-400' : 'text-muted-foreground'}">
-      剩余时间尚可容纳 <span class="font-semibold">{maxCapacity}</span>
-      人（{formatTime(totalBudgetRemaining)} ÷ {perTime}秒/人）{#if maxCapacity === 0}<span
+      {t('procedure_caucus_remaining_capacity', { speakers: maxCapacity, remaining: formatTime(totalBudgetRemaining), seconds: perTime })}{#if maxCapacity === 0}<span
           class="ml-1 text-red-400"
         >
-          — 当前发言人结束后将自动终止磋商
+          {t('procedure_the_caucus_ends_automatically_after_the_current_speaker')}
         </span>{/if}
     </div>
 
@@ -297,12 +297,12 @@
     {:else}
       <div class="flex flex-col items-center gap-4 text-muted-foreground">
         <Timer size={48} class="opacity-30" />
-        <p class="text-lg font-medium">等待发言...</p>
+        <p class="text-lg font-medium">{t('procedure_waiting_for_a_speaker')}</p>
       </div>
     {/if}
 
     <WaitingSpeakerList
-      title="发言队列"
+      title={t('procedure_speakers_queue')}
       speakers={waitingSpeakers}
       showIndex={false}
       showDelete={false}
@@ -310,18 +310,18 @@
 
     {#if isListExhausted}
       <div class="text-center text-sm text-muted-foreground">
-        名单已走完，
+        {t('procedure_the_list_is_complete')}
         {#if totalBudgetRemaining > 5}
-          返回磋商准备以添加更多发言人
+          {t('procedure_return_to_caucus_setup_to_add_more_speakers')}
         {:else}
-          磋商即将结束
+          {t('procedure_caucus_ending_soon')}
         {/if}
       </div>
     {/if}
   {:else}
     <div class="flex flex-col items-center gap-4 text-muted-foreground">
       <Timer size={48} class="opacity-30" />
-      <p class="text-lg font-medium">没有进行中的会议</p>
+      <p class="text-lg font-medium">{t('procedure_no_meeting_in_progress')}</p>
     </div>
   {/if}
 </div>

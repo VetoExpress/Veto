@@ -5,6 +5,7 @@
  * 合并自 pending-route.store.ts 和 unit-command.store.ts。
  */
 import { writable, get } from 'svelte/store';
+import { t } from '$lib/i18n';
 import { addRoutePoint, clearRoute, insertRoutePoint, addLog, runtimePositions } from './battle-store';
 
 // ── 待确认路线（绘制模式） ──────────────────────────────────────────
@@ -113,7 +114,7 @@ export function applyCrisisCommand() {
 	if (!cmd) return;
 	addRoutePoint(cmd.placedId, cmd.lat, cmd.lng);
 	addLog(
-		` 指令确认：${cmd.unitName} 添加路线节点 (${cmd.lat.toFixed(4)}°N, ${cmd.lng.toFixed(4)}°E)`
+		t('components_battle_route_command_confirmed', { unit: cmd.unitName, lat: cmd.lat.toFixed(4), lng: cmd.lng.toFixed(4) })
 	);
 	pendingCrisisCommand.set(null);
 }
@@ -122,7 +123,7 @@ export function applyCrisisCommand() {
 export function cancelCrisisCommand() {
 	const cmd = get(pendingCrisisCommand);
 	if (cmd) {
-		addLog(` 指令取消：${cmd.unitName} 路线节点 (${cmd.lat.toFixed(4)}°N, ${cmd.lng.toFixed(4)}°E) 已撤销`);
+		addLog(t('components_battle_route_command_cancelled', { unit: cmd.unitName, lat: cmd.lat.toFixed(4), lng: cmd.lng.toFixed(4) }));
 	}
 	pendingCrisisCommand.set(null);
 }

@@ -1,4 +1,6 @@
 "use client"
+import { message } from "@/i18n/messages"
+import { usePlatformTranslations } from "@/components/i18n-provider"
 
 import { useEffect, useRef, useState, type FormEvent } from "react"
 import { Camera, Check, LogOut, RefreshCw, ShieldCheck } from "lucide-react"
@@ -46,6 +48,8 @@ export function AccountProfile({
   token: string
   onSignOut: () => void
 }) {
+  const { t, locale } = usePlatformTranslations()
+
   const [name, setName] = useState(user.name)
   const [avatar, setAvatar] = useState(user.avatar)
   const [avatarData, setAvatarData] = useState<string>()
@@ -115,7 +119,7 @@ export function AccountProfile({
       })
       .catch(() => {
         if (!cancelled) {
-          setError("无法读取图片，请重新选择。")
+          setError("platform_image_read_failed")
           setSource("")
         }
       })
@@ -134,7 +138,11 @@ export function AccountProfile({
     } catch (caught) {
       if (caught instanceof AuthError && caught.status === 401) onSignOut()
       else
-        setError(caught instanceof Error ? caught.message : "操作失败，请重试")
+        setError(
+          caught instanceof Error
+            ? caught.message
+            : message("platform_operation_failed")
+        )
     } finally {
       setBusy(false)
     }
@@ -142,11 +150,11 @@ export function AccountProfile({
   function save(event: FormEvent) {
     event.preventDefault()
     if (!name.trim()) {
-      setError("请填写用户名")
+      setError("platform_enter_username")
       return
     }
     if (name.trim() === user.name && !avatarData) {
-      setNotice("没有需要保存的更改")
+      setNotice("platform_no_changes")
       return
     }
     void run(async () => {
@@ -157,21 +165,21 @@ export function AccountProfile({
       setName(updated.name)
       setAvatar(updated.avatar)
       setAvatarData(undefined)
-      setNotice("个人信息已更新")
+      setNotice("platform_profile_updated")
     })
   }
   function reset(event: FormEvent) {
     event.preventDefault()
     if (password.length < 6 || password.length > 1024) {
-      setError("密码应为 6–1024 个字符")
+      setError("platform_password_length")
       return
     }
     if (password !== confirmation) {
-      setError("两次输入的密码不一致")
+      setError("platform_password_mismatch")
       return
     }
     if (!/^\d{6}$/.test(code.trim())) {
-      setError("请输入邮箱收到的 6 位验证码")
+      setError("platform_enter_email_code")
       return
     }
     void run(async () => {
@@ -190,12 +198,12 @@ export function AccountProfile({
           role="alert"
           className="rounded-lg border border-destructive/30 p-4 text-sm text-destructive"
         >
-          {error}
+          {error.startsWith("platform_") ? t(error) : error}
         </p>
       )}
       {notice && (
         <p role="status" className="rounded-lg border p-4 text-sm">
-          {notice}
+          {notice.startsWith("platform_") ? t(notice) : notice}
         </p>
       )}
       <Card>
@@ -213,7 +221,7 @@ export function AccountProfile({
                 event.target.value = ""
                 if (!selected) return
                 if (!selected.type.startsWith("image/")) {
-                  setError("请选择支持的图片文件。")
+                  setError("platform_supported_image_required")
                   return
                 }
                 setCrop({ zoom: 1, x: 0, y: 0 })
@@ -223,7 +231,7 @@ export function AccountProfile({
             <Button
               variant="ghost"
               className="group relative size-20 rounded-full p-0"
-              aria-label="更换头像"
+              aria-label={t("platform_change_avatar")}
               disabled={busy}
               onClick={() => file.current?.click()}
             >
@@ -241,14 +249,14 @@ export function AccountProfile({
                 <h2 className="text-xl font-semibold break-all">{user.name}</h2>
                 <Badge variant="secondary">
                   <Check />
-                  已登录
+                  {t("platform_logged_in")}
                 </Badge>
               </div>
               <p className="text-sm break-all text-muted-foreground">
                 {user.email}
               </p>
               <p className="text-xs text-muted-foreground">
-                点击头像更换图片，裁剪后自动压缩 · 最大 512 KB
+                {t("platform_avatar_hint")}
               </p>
             </div>
           </div>
@@ -258,13 +266,13 @@ export function AccountProfile({
         <Card>
           <CardHeader>
             <CardTitle role="heading" aria-level={2}>
-              个人信息
+              {t("platform_personal_information")}
             </CardTitle>
-            <CardDescription>管理你的显示名称和账号资料。</CardDescription>
+            <CardDescription>{t("platform_profile_intro")}</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-5">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="platform-name">用户名</Label>
+              <Label htmlFor="platform-name">{t("platform_username")}</Label>
               <Input
                 id="platform-name"
                 value={name}
@@ -273,19 +281,21 @@ export function AccountProfile({
                 disabled={busy}
               />
               <p className="text-xs text-muted-foreground">
-                用于展示你的身份，最多 200 个字符。
+                {t("platform_username_hint")}
               </p>
             </div>
             <div className="grid gap-5 sm:grid-cols-2">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="platform-email">邮箱</Label>
+                <Label htmlFor="platform-email">{t("platform_email")}</Label>
                 <Input id="platform-email" value={user.email} readOnly />
                 <p className="text-xs text-muted-foreground">
-                  注册邮箱，暂不支持修改。
+                  {t("platform_email_readonly")}
                 </p>
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="platform-organization">所属模联</Label>
+                <Label htmlFor="platform-organization">
+                  {t("platform_organization")}
+                </Label>
                 <Input
                   id="platform-organization"
                   value={user.organization}
@@ -297,11 +307,16 @@ export function AccountProfile({
           <CardFooter className="flex-wrap justify-between gap-3">
             <p className="text-xs text-muted-foreground">
               {user.created_at
-                ? `注册于 ${new Date(user.created_at).toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric" })}`
-                : "头像与用户名将在保存后更新。"}
+                ? t("platform_registered_at", {
+                    value1: new Date(user.created_at).toLocaleDateString(
+                      locale,
+                      { year: "numeric", month: "long", day: "numeric" }
+                    ),
+                  })
+                : t("platform_profile_save_hint")}
             </p>
             <Button type="submit" disabled={busy}>
-              保存修改
+              {t("platform_save_changes")}
             </Button>
           </CardFooter>
         </Card>
@@ -315,13 +330,13 @@ export function AccountProfile({
               className="flex items-center gap-2"
             >
               <ShieldCheck />
-              安全设置
+              {t("platform_security_settings")}
             </CardTitle>
-            <CardDescription>通过注册邮箱的验证码重置密码。</CardDescription>
+            <CardDescription>{t("platform_security_intro")}</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-5">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="platform-code">邮箱验证码</Label>
+              <Label htmlFor="platform-code">{t("platform_email_code")}</Label>
               <div className="flex gap-2">
                 <Input
                   id="platform-code"
@@ -330,7 +345,7 @@ export function AccountProfile({
                   inputMode="numeric"
                   autoComplete="one-time-code"
                   maxLength={6}
-                  placeholder="6 位验证码"
+                  placeholder={t("platform_six_digit_code")}
                   disabled={busy}
                 />
                 <Button
@@ -341,32 +356,40 @@ export function AccountProfile({
                     void run(async () => {
                       await sendAccountPasswordCode(user.email)
                       setDeadline(Date.now() + 60000)
-                      setNotice("验证码已发送到注册邮箱，5 分钟内有效")
+                      setNotice("platform_password_code_sent")
                     })
                   }}
                 >
-                  {cooldown ? `${cooldown} 秒后重发` : "发送验证码"}
+                  {cooldown
+                    ? t("platform_resend_seconds", { value1: cooldown })
+                    : t("platform_send_code")}
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                验证码将发送至 {user.email}，5 分钟内有效。
+                {t("platform_code_will_send_to")}
+                {user.email}
+                {t("platform_code_expiry_suffix")}
               </p>
             </div>
             <div className="grid gap-5 sm:grid-cols-2">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="platform-password">新密码</Label>
+                <Label htmlFor="platform-password">
+                  {t("platform_new_password")}
+                </Label>
                 <Input
                   id="platform-password"
                   type="password"
                   autoComplete="new-password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  placeholder="至少 6 位字符"
+                  placeholder={t("platform_password_min_characters")}
                   disabled={busy}
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="platform-confirmation">确认新密码</Label>
+                <Label htmlFor="platform-confirmation">
+                  {t("platform_confirm_new_password")}
+                </Label>
                 <Input
                   id="platform-confirmation"
                   type="password"
@@ -380,14 +403,14 @@ export function AccountProfile({
           </CardContent>
           <CardFooter className="flex-wrap justify-between gap-3">
             <p className="text-xs text-muted-foreground">
-              重置后，所有设备需使用新密码重新登录。
+              {t("platform_password_reset_sessions_hint")}
             </p>
             <Button
               variant="outline"
               type="submit"
               disabled={busy || !password || !confirmation}
             >
-              重置密码
+              {t("platform_reset_password")}
             </Button>
           </CardFooter>
         </Card>
@@ -395,9 +418,9 @@ export function AccountProfile({
       <Card>
         <CardHeader>
           <CardTitle role="heading" aria-level={2}>
-            登录状态
+            {t("platform_login_status")}
           </CardTitle>
-          <CardDescription>管理当前账号的登录状态。</CardDescription>
+          <CardDescription>{t("platform_session_intro")}</CardDescription>
         </CardHeader>
         <CardFooter className="flex-wrap gap-2">
           <Button
@@ -409,16 +432,16 @@ export function AccountProfile({
                 setName(updated.name)
                 setAvatar(updated.avatar)
                 setAvatarData(undefined)
-                setNotice("账号信息已刷新")
+                setNotice("platform_account_refreshed")
               })
             }}
           >
             <RefreshCw />
-            刷新账号信息
+            {t("platform_refresh_account")}
           </Button>
           <Button variant="destructive" disabled={busy} onClick={onSignOut}>
             <LogOut />
-            退出登录
+            {t("platform_logout")}
           </Button>
         </CardFooter>
       </Card>
@@ -430,9 +453,9 @@ export function AccountProfile({
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>裁剪头像</DialogTitle>
+            <DialogTitle>{t("platform_crop_avatar")}</DialogTitle>
             <DialogDescription>
-              拖动头像或调整位置和缩放，预览圆形头像。
+              {t("platform_crop_avatar_hint")}
             </DialogDescription>
           </DialogHeader>
           <canvas
@@ -440,7 +463,7 @@ export function AccountProfile({
             width={256}
             height={256}
             className="mx-auto size-64 touch-none rounded-full bg-muted"
-            aria-label="头像裁剪预览"
+            aria-label={t("platform_avatar_crop_preview")}
             onPointerDown={(event) => {
               event.currentTarget.setPointerCapture(event.pointerId)
               drag.current = { x: event.clientX, y: event.clientY, crop }
@@ -469,13 +492,13 @@ export function AccountProfile({
           />
           {(
             [
-              ["zoom", "缩放", 1, 3],
-              ["x", "水平位置", -1, 1],
-              ["y", "垂直位置", -1, 1],
+              ["zoom", t("platform_zoom"), 1, 3],
+              ["x", t("platform_horizontal_position"), -1, 1],
+              ["y", t("platform_vertical_position"), -1, 1],
             ] as const
           ).map(([key, label, min, max]) => (
             <div key={key} className="flex flex-col gap-2">
-              <Label htmlFor={`crop-${key}`}>{label}</Label>
+              <Label htmlFor={`crop-${key}`}>{t(label)}</Label>
               <input
                 id={`crop-${key}`}
                 type="range"
@@ -496,7 +519,7 @@ export function AccountProfile({
               disabled={busy}
               onClick={() => setSource("")}
             >
-              取消
+              {t("platform_cancel")}
             </Button>
             <Button
               disabled={busy}
@@ -509,7 +532,7 @@ export function AccountProfile({
                 })
               }}
             >
-              裁剪
+              {t("platform_crop")}
             </Button>
           </DialogFooter>
         </DialogContent>

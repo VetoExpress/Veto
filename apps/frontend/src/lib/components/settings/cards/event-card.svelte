@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import { Switch } from '$lib/components/ui/switch/index.js'
   import { Button } from '$lib/components/ui/button/index.js'
   import type { EventSetting } from '$lib/classes/types/battle'
@@ -13,44 +14,43 @@
   } from '@lucide/svelte/icons'
 
   interface EventMeta {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    icon: any
+    icon: typeof AlertTriangleIcon
     description: string
     colorClass: string
   }
 
-  const EVENT_META: Record<string, EventMeta> = {
+  const EVENT_META: Record<string, EventMeta> = $derived({
     natural_disaster: {
       icon: AlertTriangleIcon,
-      description: '地震、洪水、台风等自然灾害波及作战区域，影响机动与后勤',
+      description: t('settings_event_natural_description'),
       colorClass: 'text-orange-400'
     },
     refugee_crisis: {
       icon: UsersIcon,
-      description: '大规模难民潮涌入，阻塞交通线并引发人道主义压力',
+      description: t('settings_event_refugee_description'),
       colorClass: 'text-yellow-400'
     },
     electronic_warfare: {
       icon: RadioIcon,
-      description: 'GPS 欺骗、通信干扰及雷达压制，降低蓝军态势感知',
+      description: t('settings_event_electronic_description'),
       colorClass: 'text-sky-400'
     },
     local_conflict: {
       icon: SwordsIcon,
-      description: '第三方武装突发冲突，扰乱战场侧翼秩序',
+      description: t('settings_event_conflict_description'),
       colorClass: 'text-red-400'
     },
     supply_disruption: {
       icon: PackageXIcon,
-      description: '关键补给线路遭袭，前线物资补给告急',
+      description: t('settings_event_supply_description'),
       colorClass: 'text-purple-400'
     },
     civilian_uprising: {
       icon: FlameIcon,
-      description: '后方民众暴动并占领基础设施，威胁纵深稳定',
+      description: t('settings_event_uprising_description'),
       colorClass: 'text-rose-400'
     }
-  }
+  })
 
   let {
     event = $bindable<EventSetting>({
@@ -94,7 +94,7 @@
           </p>
         {:else}
           <p class="text-[11px] text-stone-400 mt-1 leading-snug dark:text-muted-foreground">
-            自定义事件
+            {t('settings_event_custom')}
           </p>
         {/if}
       </div>
@@ -105,7 +105,7 @@
           type="button"
           class="rounded p-0.5 text-stone-300 hover:text-red-400 hover:bg-red-50 transition-colors dark:text-stone-600 dark:hover:text-red-400 dark:hover:bg-red-900/30"
           onclick={ondelete}
-          aria-label="删除事件"
+          aria-label={t('settings_event_delete')}
         >
           <Trash2Icon size={13} />
         </button>
@@ -117,7 +117,7 @@
   <!-- 概率滑块（始终显示） -->
   <div class="space-y-1.5">
     <div class="flex justify-between items-center">
-      <span class="text-[11px] text-muted-foreground">触发概率</span>
+      <span class="text-[11px] text-muted-foreground">{t('settings_event_probability')}</span>
       <span class="text-xs font-mono font-semibold text-amber-600 tabular-nums dark:text-amber-400"
         >{event.probability}%</span
       >
@@ -132,9 +132,9 @@
       class="prob-slider w-full cursor-pointer"
     />
     <div class="flex justify-between text-[10px] text-stone-400 select-none">
-      <span>极低</span>
-      <span>中等</span>
-      <span>必然</span>
+      <span>{t('settings_probability_low')}</span>
+      <span>{t('settings_probability_medium')}</span>
+      <span>{t('settings_probability_certain')}</span>
     </div>
   </div>
 </div>

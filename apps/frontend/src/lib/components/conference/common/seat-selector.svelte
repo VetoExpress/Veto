@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   /**
    * seat-selector.svelte
    * ────────────────────────────
@@ -31,7 +32,7 @@
   let {
     seats,
     value = $bindable(null),
-    placeholder = '搜索席位...',
+    placeholder,
     class: className = '',
     presentOnly = false,
     resetOnSelect = false,
@@ -151,7 +152,7 @@
         <SearchIcon class="size-4 shrink-0 opacity-50" />
         <CommandPrimitive.Input
           bind:value={query}
-          {placeholder}
+          placeholder={placeholder ?? t('procedure_search_seats')}
           class="placeholder:text-muted-foreground flex h-9 w-full bg-transparent py-3 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50"
           onfocus={() => (open = true)}
           onblur={() => setTimeout(() => (open = false), 200)}

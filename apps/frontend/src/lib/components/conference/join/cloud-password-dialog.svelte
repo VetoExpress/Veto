@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { procedureMessage, renderProcedureMessage, type ProcedureMessage } from '$lib/components/conference/common/message'
+  import { t } from '$lib/i18n'
   import { CircleAlert } from '@lucide/svelte'
 
   import { CloudJoinError } from '$lib/classes/clients/cloud-join-client'
@@ -27,7 +29,7 @@
   let currentPassword = $state('')
   let nextPassword = $state('')
   let confirmPassword = $state('')
-  let requestError = $state('')
+  let requestError = $state<ProcedureMessage>('')
   let isSubmitting = $state(false)
 
   const passwordsDoNotMatch = $derived(
@@ -73,7 +75,7 @@
       await updateCloudMembershipPassword(membership, nextPassword)
       onOpenChange(false)
     } catch (error) {
-      requestError = error instanceof CloudJoinError ? error.message : '无法保存入会密码，请重试'
+      requestError = error instanceof CloudJoinError ? error.message : procedureMessage('procedure_unable_to_save_joining_password_try_again')
     } finally {
       isSubmitting = false
     }
@@ -84,57 +86,57 @@
   <Dialog.Content class="sm:max-w-md" showCloseButton={!isSubmitting}>
     <form onsubmit={handleSubmit} class="contents">
       <Dialog.Header>
-        <Dialog.Title>重新填写入会密码</Dialog.Title>
+        <Dialog.Title>{t('procedure_update_saved_joining_password')}</Dialog.Title>
         <Dialog.Description>
-          这里只修改本机保存的入会密码，不会修改云端席位密码。
+          {t('procedure_this_changes_the_password_saved_on_this_device_only_the_cloud_seat_password_remains_th')}
         </Dialog.Description>
       </Dialog.Header>
 
       <Field.FieldGroup>
         <Field.Field>
-          <Field.FieldLabel for="cloud-current-password">当前密码</Field.FieldLabel>
+          <Field.FieldLabel for="cloud-current-password">{t('procedure_current_password')}</Field.FieldLabel>
           <Input
             id="cloud-current-password"
             bind:value={currentPassword}
             type="text"
             readonly
-            placeholder="未在本机找到密码"
+            placeholder={t('procedure_no_password_saved_on_this_device')}
           />
         </Field.Field>
 
         <Field.Field data-invalid={!nextPassword}>
-          <Field.FieldLabel for="cloud-next-password">新的入会密码</Field.FieldLabel>
+          <Field.FieldLabel for="cloud-next-password">{t('procedure_new_joining_password')}</Field.FieldLabel>
           <Input
             id="cloud-next-password"
             bind:value={nextPassword}
             type="password"
             maxlength={128}
             autocomplete="new-password"
-            placeholder="请输入新的入会密码"
+            placeholder={t('procedure_enter_a_new_joining_password')}
             aria-invalid={!nextPassword}
             disabled={isSubmitting}
             required
           />
           {#if !nextPassword}
-            <Field.FieldError>请填写新的入会密码</Field.FieldError>
+            <Field.FieldError>{t('procedure_enter_a_new_joining_password_2')}</Field.FieldError>
           {/if}
         </Field.Field>
 
         <Field.Field data-invalid={passwordsDoNotMatch}>
-          <Field.FieldLabel for="cloud-confirm-password">确认新密码</Field.FieldLabel>
+          <Field.FieldLabel for="cloud-confirm-password">{t('procedure_confirm_new_password')}</Field.FieldLabel>
           <Input
             id="cloud-confirm-password"
             bind:value={confirmPassword}
             type="password"
             maxlength={128}
             autocomplete="new-password"
-            placeholder="请再次输入新的入会密码"
+            placeholder={t('procedure_enter_the_new_joining_password_again')}
             aria-invalid={passwordsDoNotMatch}
             disabled={isSubmitting}
             required
           />
           {#if passwordsDoNotMatch}
-            <Field.FieldError>两次输入的密码不一致</Field.FieldError>
+            <Field.FieldError>{t('procedure_passwords_do_not_match')}</Field.FieldError>
           {/if}
         </Field.Field>
       </Field.FieldGroup>
@@ -142,19 +144,19 @@
       {#if requestError}
         <Alert.Root variant="destructive">
           <CircleAlert />
-          <Alert.Title>无法保存密码</Alert.Title>
-          <Alert.Description>{requestError}</Alert.Description>
+          <Alert.Title>{t('procedure_unable_to_save_password')}</Alert.Title>
+          <Alert.Description>{renderProcedureMessage(requestError)}</Alert.Description>
         </Alert.Root>
       {/if}
 
       <Dialog.Footer>
-        <Button type="button" variant="outline" onclick={() => onOpenChange(false)}>取消</Button>
+        <Button type="button" variant="outline" onclick={() => onOpenChange(false)}>{t('procedure_cancel')}</Button>
         <Button type="submit" disabled={isSubmitting || !nextPassword || passwordsDoNotMatch}>
           {#if isSubmitting}
-            <Spinner data-icon="inline-start" aria-label="正在保存" />
-            正在保存
+            <Spinner data-icon="inline-start" aria-label={t('procedure_saving_2')} />
+            {t('procedure_saving_2')}
           {:else}
-            保存密码
+            {t('procedure_save_password')}
           {/if}
         </Button>
       </Dialog.Footer>

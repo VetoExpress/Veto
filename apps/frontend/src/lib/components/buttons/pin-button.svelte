@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
 	import { Button } from '$lib/components/ui/button';
 	import { Pin, PinOff } from '@lucide/svelte';
 	import { rightBarPinned } from '$lib/classes/stores/battle/battle-ui-store';
@@ -8,7 +9,7 @@
 	}
 </script>
 
-<Button variant="ghost" size="icon" onclick={togglePin} title="切换侧边栏固定">
+<Button variant="ghost" size="icon" onclick={togglePin} title={t('components_toggle_pin')}>
 	{#if $rightBarPinned}
 		<Pin />
 	{:else}

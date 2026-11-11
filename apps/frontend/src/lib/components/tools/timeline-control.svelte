@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, getLocale } from '$lib/i18n'
   import { Play, Pause, SkipForward, Copy, Check } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'
@@ -21,22 +22,11 @@
   // ── 格式化函数 ──────────────────────────────────────────────────────
 
   function formatSimTime(ts: number): string {
-    const d = new Date(ts)
-    const yyyy = d.getFullYear()
-    const mm = String(d.getMonth() + 1).padStart(2, '0')
-    const dd = String(d.getDate()).padStart(2, '0')
-    const hh = String(d.getHours()).padStart(2, '0')
-    const min = String(d.getMinutes()).padStart(2, '0')
-    const ss = String(d.getSeconds()).padStart(2, '0')
-    return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`
+    return new Intl.DateTimeFormat(getLocale(), { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(ts)
   }
 
   function formatRealTime(ts: number): string {
-    const d = new Date(ts)
-    const hh = String(d.getHours()).padStart(2, '0')
-    const min = String(d.getMinutes()).padStart(2, '0')
-    const ss = String(d.getSeconds()).padStart(2, '0')
-    return `${hh}:${min}:${ss}`
+    return new Intl.DateTimeFormat(getLocale(), { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(ts)
   }
 
   /** 将 JS 时间戳转为 datetime-local 输入格式 */
@@ -87,18 +77,18 @@
 
 <div class="veto-card flex flex-col gap-6 p-6 max-w-2xl mx-auto">
   <!-- 标题 -->
-  <h2 class="text-lg font-semibold text-foreground">会议时间轴模拟器</h2>
+  <h2 class="text-lg font-semibold text-foreground">{t('components_timeline_simulator')}</h2>
 
   <!-- 时间显示区 -->
   <div class="rounded-lg border border-border/50 bg-card/60 p-6 backdrop-blur-md">
     <div class="text-center">
       <div class="flex items-center justify-center gap-2 mb-1">
-        <p class="text-sm text-muted-foreground">当前模拟时间</p>
+        <p class="text-sm text-muted-foreground">{t('components_current_sim_time')}</p>
         <Button
           variant="ghost"
           size="icon-xs"
           class="size-5 text-muted-foreground hover:text-foreground"
-          title="复制模拟时间"
+          title={t('components_copy_sim_time')}
           onclick={copySimTime}
         >
           {#if copied}
@@ -112,7 +102,7 @@
         {formatSimTime(engine.currentSimTime)}
       </p>
       <p class="mt-2 text-sm text-muted-foreground font-mono">
-        实时 · {formatRealTime(engine.currentRealTime)}
+        {t('components_real_time', { time: formatRealTime(engine.currentRealTime) })}
       </p>
     </div>
   </div>
@@ -127,17 +117,17 @@
     >
       {#if engine.paused}
         <Play size={18} />
-        开始
+        {t('components_start')}
       {:else}
         <Pause size={18} />
-        暂停
+        {t('components_pause')}
       {/if}
     </Button>
   </div>
 
   <!-- 时间倍率 -->
   <div class="flex flex-col gap-2">
-    <Label class="text-sm font-medium">时间倍率</Label>
+    <Label class="text-sm font-medium">{t('components_time_ratio')}</Label>
     <div class="flex flex-wrap gap-1.5">
       {#each RATIO_PRESETS as preset}
         <Button
@@ -145,7 +135,7 @@
           variant={engine.ratio === preset.value ? 'default' : 'outline'}
           onclick={() => engine.setRatio(preset.value)}
         >
-          {preset.label}
+          {preset.value === 86400 ? t('components_day_per_second') : preset.value === 3600 ? t('components_hour_per_second') : preset.value === 60 ? t('components_minute_per_second') : `${preset.value}x`}
         </Button>
       {/each}
     </div>
@@ -154,13 +144,13 @@
   <!-- 自定义倍率 -->
   <div class="flex items-end gap-2">
     <div class="flex flex-1 flex-col gap-1.5">
-      <Label for="custom-ratio" class="text-sm font-medium">自定义倍率</Label>
+      <Label for="custom-ratio" class="text-sm font-medium">{t('components_custom_ratio')}</Label>
       <Input
         id="custom-ratio"
         type="number"
         min="1"
         step="1"
-        placeholder="输入倍率..."
+        placeholder={t('components_ratio_input')}
         bind:value={customRatioInput}
         oninput={(e) => {
           const input = e.currentTarget as HTMLInputElement
@@ -169,7 +159,7 @@
         onkeydown={(e) => e.key === 'Enter' && applyCustomRatio()}
       />
     </div>
-    <Button size="sm" variant="outline" onclick={applyCustomRatio}>应用</Button>
+    <Button size="sm" variant="outline" onclick={applyCustomRatio}>{t('components_apply')}</Button>
   </div>
 
   <!-- 分隔 -->
@@ -177,23 +167,23 @@
 
   <!-- 手动跳转 -->
   <div class="flex flex-col gap-2">
-    <Label class="text-sm font-medium">跳转到指定时间</Label>
+    <Label class="text-sm font-medium">{t('components_jump_to_time')}</Label>
     <div class="flex items-end gap-2">
       <div class="flex flex-1 flex-col gap-1.5">
         <Input type="datetime-local" bind:value={jumpTarget} onfocus={updateJumpTarget} />
       </div>
       <Button size="sm" variant="outline" onclick={applyJump}>
         <SkipForward size={16} class="mr-1" />
-        跳转
+        {t('components_jump')}
       </Button>
     </div>
     <p class="text-xs text-muted-foreground">
-      当前：{formatSimTime(engine.currentSimTime)}
+      {t('components_current_time', { time: formatSimTime(engine.currentSimTime) })}
     </p>
   </div>
 
   <!-- 重置 -->
   <div class="flex justify-end">
-    <Button variant="ghost" size="sm" onclick={() => engine.reset()}>重置到默认值</Button>
+    <Button variant="ghost" size="sm" onclick={() => engine.reset()}>{t('components_reset_defaults')}</Button>
   </div>
 </div>

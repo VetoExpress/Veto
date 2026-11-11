@@ -1,6 +1,7 @@
 import type { Committee } from '$lib/classes/types/committee'
 import type { ParticipantSeat } from '$lib/classes/types/delegate'
 import { PHASE_LABELS } from './phase'
+import { t } from '$lib/i18n'
 
 type ChairCommitteeState = Pick<Committee, 'phase' | 'activeSpeaker' | 'activeCaucus'>
 
@@ -79,7 +80,7 @@ function getChairScreen(committee: ChairCommitteeState): ChairScreen {
       return { kind: 'caucus_setup' }
     case 'caucus':
       if (!committee.activeCaucus) {
-        return { kind: 'invalid', message: '会议处于磋商阶段，但缺少进行中的磋商数据' }
+        return { kind: 'invalid', message: t('domain_missing_caucus') }
       }
       switch (committee.activeCaucus.type) {
         case 'moderated':
@@ -111,9 +112,9 @@ export function getChairPresentation(committee: ChairCommitteeState): ChairPrese
     canProposeMotion: hasPrimaryAction && !isTimerActive && !isMotionInProgress,
     canProposePoint: committee.phase !== 'closed',
     motionDisabledReason: isTimerActive
-      ? '发言计时进行中，无法提出动议'
+      ? t('domain_motion_disabled_speaker')
       : isMotionInProgress
-        ? '磋商进行中，无法提出新动议'
+        ? t('domain_motion_disabled_caucus')
         : '',
     canResumeMeeting: committee.phase === 'suspended' || committee.phase === 'closed'
   }

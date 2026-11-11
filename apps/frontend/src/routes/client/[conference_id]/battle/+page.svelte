@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
   import { page } from '$app/stores'
@@ -29,14 +30,14 @@
   }
 </script>
 
-<svelte:head><title>军事推演 · {conferenceName || VETO_NAME}</title></svelte:head>
+<svelte:head><title>{t('procedure_simulation_page_title', { value1: conferenceName || VETO_NAME })}</title></svelte:head>
 
 <div class="flex h-svh flex-col overflow-hidden">
   <header class="flex h-9 shrink-0 items-center gap-2 pl-2">
-    <Button variant="ghost" size="icon-sm" onclick={goBack} title="返回会场" class="no-drag">
+    <Button variant="ghost" size="icon-sm" onclick={goBack} title={t('procedure_back_to_committee')} class="no-drag">
       <ArrowLeft />
     </Button>
-    <span class="truncate text-xs font-medium">{conferenceName} · 军事推演</span>
+    <span class="truncate text-xs font-medium">{t('procedure_simulation_conference_title', { value1: conferenceName })}</span>
     <div class="drag-region h-full min-w-0 flex-1"></div>
     <WindowControls />
   </header>

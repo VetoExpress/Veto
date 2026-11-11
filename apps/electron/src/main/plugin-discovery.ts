@@ -96,11 +96,7 @@ export interface PresetManifest extends BaseManifest {
 
 /** 所有插件清单的联合类型 */
 export type PluginManifest =
-  | FactionManifest
-  | CampaignManifest
-  | UtilityManifest
-  | DependencyManifest
-  | PresetManifest
+  FactionManifest | CampaignManifest | UtilityManifest | DependencyManifest | PresetManifest
 
 /** 插件实例（扫描发现后的内存表示） */
 export interface PluginInstance {
@@ -193,7 +189,7 @@ export function scanPluginDirectory(): PluginInstance[] {
         manifest,
         path: instancePath,
         disabled: false,
-        incompatible: false,
+        incompatible: false
       })
     } catch (err) {
       log.error(`Failed to read manifest for ${entry.name}:`, err)
@@ -205,10 +201,7 @@ export function scanPluginDirectory(): PluginInstance[] {
 }
 
 /** 按插件类型解析资源文件路径 */
-function resolveInstancePaths(
-  pluginDir: string,
-  manifest: PluginManifest,
-): PluginInstance['path'] {
+function resolveInstancePaths(pluginDir: string, manifest: PluginManifest): PluginInstance['path'] {
   const i18nPath = path.join(pluginDir, 'i18n')
   const assetsPath = path.join(pluginDir, 'assets')
 
@@ -223,15 +216,11 @@ function resolveInstancePaths(
     facilities: undefined as string | undefined,
     events: undefined as string | undefined,
     seats: undefined as string | undefined,
-    service: undefined as string | undefined,
+    service: undefined as string | undefined
   }
 
   // 处理 definitions（faction / campaign / preset 有该字段）
-  if (
-    manifest.type === 'faction' ||
-    manifest.type === 'campaign' ||
-    manifest.type === 'preset'
-  ) {
+  if (manifest.type === 'faction' || manifest.type === 'campaign' || manifest.type === 'preset') {
     const def = 'definitions' in manifest ? manifest.definitions : undefined
     const resolved = resolveDefinitions(pluginDir, def)
     if (resolved) {
@@ -257,11 +246,7 @@ function resolveInstancePaths(
   }
 
   // 处理席位预设（faction / campaign / preset）
-  if (
-    manifest.type === 'faction' ||
-    manifest.type === 'campaign' ||
-    manifest.type === 'preset'
-  ) {
+  if (manifest.type === 'faction' || manifest.type === 'campaign' || manifest.type === 'preset') {
     const seatsFile = 'seats' in manifest ? manifest.seats : undefined
     base.seats = resolveCampaignFile(pluginDir, seatsFile, 'seats.json')
   }
@@ -272,7 +257,7 @@ function resolveInstancePaths(
 /** 解析 definitions 路径：单文件 / 目录 / manifest 声明 */
 function resolveDefinitions(
   pluginDir: string,
-  declared: string | Record<string, unknown> | undefined,
+  declared: string | Record<string, unknown> | undefined
 ): { path: string; isDir: boolean } | null {
   const filePath = path.join(pluginDir, 'definitions.json')
   const dirPath = path.join(pluginDir, 'definitions')
@@ -296,7 +281,7 @@ function resolveDefinitions(
 function resolveCampaignFile(
   pluginDir: string,
   manifestPath: string | undefined,
-  defaultName: string,
+  defaultName: string
 ): string | undefined {
   if (manifestPath) {
     const fullPath = path.join(pluginDir, manifestPath)

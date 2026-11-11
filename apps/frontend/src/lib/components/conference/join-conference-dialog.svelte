@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { procedureMessage, renderProcedureMessage, type ProcedureMessage } from '$lib/components/conference/common/message'
+  import { t } from '$lib/i18n'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
   import { CircleAlert, ClipboardPaste, X } from '@lucide/svelte'
@@ -33,12 +35,12 @@
   let stage = $state<JoinStage>('invite')
   let inviteCode = $state('')
   let target = $state<CloudJoinTarget | null>(null)
-  let validationError = $state('')
+  let validationError = $state<ProcedureMessage>('')
   let isValidating = $state(false)
   let flowMode = $state<'claim' | 'authenticate'>('claim')
   let membership = $state<CloudMembership | null>(null)
   let storedPassword = $state<string | null>(null)
-  let confirmError = $state('')
+  let confirmError = $state<ProcedureMessage>('')
   let isRejoining = $state(false)
 
   function getInviteCode(): string {
@@ -60,7 +62,7 @@
       const clipboardText = await navigator.clipboard.readText()
       setInviteCode(clipboardText.replace(/[^a-zA-Z0-9]/g, '').slice(0, 12))
     } catch {
-      validationError = '无法读取剪贴板，请检查系统权限'
+      validationError = procedureMessage('procedure_unable_to_read_clipboard_check_system_permissions')
     }
   }
 
@@ -99,7 +101,7 @@
       confirmError = ''
       stage = 'confirm'
     } catch (error) {
-      validationError = error instanceof CloudJoinError ? error.message : '无法验证邀请码，请重试'
+      validationError = error instanceof CloudJoinError ? error.message : procedureMessage('procedure_unable_to_verify_invite_code_try_again')
     } finally {
       isValidating = false
     }
@@ -143,7 +145,7 @@
         stage = 'credentials'
       } else {
         confirmError =
-          error instanceof CloudJoinError ? error.message : '无法重新入会，请检查网络后重试'
+          error instanceof CloudJoinError ? error.message : procedureMessage('procedure_unable_to_rejoin_check_your_connection_and_try_again')
       }
     } finally {
       isRejoining = false
@@ -155,13 +157,13 @@
   <Dialog.Content class="sm:max-w-2xl" showCloseButton={!isValidating}>
     <form onsubmit={handleInviteSubmit} class="contents">
       <Dialog.Header>
-        <Dialog.Title>加入大会</Dialog.Title>
-        <Dialog.Description>输入大会邀请码，查找你受邀加入的大会和席位。</Dialog.Description>
+        <Dialog.Title>{t('procedure_join_conference')}</Dialog.Title>
+        <Dialog.Description>{t('procedure_enter_your_invite_code_to_find_the_conference_and_seat_you_were_invited_to_join')}</Dialog.Description>
       </Dialog.Header>
 
       <Field.FieldGroup>
         <Field.Field data-invalid={Boolean(validationError)}>
-          <Field.FieldLabel for="conference-invite-code">邀请码</Field.FieldLabel>
+          <Field.FieldLabel for="conference-invite-code">{t('procedure_invite_code')}</Field.FieldLabel>
           <div class="flex items-center justify-center gap-2">
             <InputOTP.Root
               inputId="conference-invite-code"
@@ -196,8 +198,8 @@
               variant="outline"
               size="icon-lg"
               onclick={clearInviteCode}
-              aria-label="全部删除"
-              title="全部删除"
+              aria-label={t('procedure_clear_all')}
+              title={t('procedure_clear_all')}
               disabled={isValidating}
             >
               <X data-icon="inline-start" />
@@ -206,8 +208,8 @@
               variant="outline"
               size="icon-lg"
               onclick={pasteInviteCode}
-              aria-label="粘贴邀请码"
-              title="粘贴邀请码"
+              aria-label={t('procedure_paste_invite_code')}
+              title={t('procedure_paste_invite_code')}
               disabled={isValidating}
             >
               <ClipboardPaste data-icon="inline-start" />
@@ -219,18 +221,18 @@
       {#if validationError}
         <Alert.Root variant="destructive">
           <CircleAlert />
-          <Alert.Title>无法验证邀请码</Alert.Title>
-          <Alert.Description>{validationError}</Alert.Description>
+          <Alert.Title>{t('procedure_unable_to_verify_invite_code')}</Alert.Title>
+          <Alert.Description>{renderProcedureMessage(validationError)}</Alert.Description>
         </Alert.Root>
       {/if}
 
       <Dialog.Footer>
         <Button type="submit" variant="outline" disabled={isValidating || inviteCode.length !== 12}>
           {#if isValidating}
-            <Spinner data-icon="inline-start" aria-label="正在验证" />
-            正在验证
+            <Spinner data-icon="inline-start" aria-label={t('procedure_verifying')} />
+            {t('procedure_verifying')}
           {:else}
-            加入
+            {t('procedure_join')}
           {/if}
         </Button>
       </Dialog.Footer>
@@ -244,7 +246,7 @@
     {target}
     hasStoredCredential={Boolean(storedPassword) || target.hasPassword === false}
     isSubmitting={isRejoining}
-    requestError={confirmError}
+    requestError={renderProcedureMessage(confirmError)}
     onBack={() => (stage = 'invite')}
     onConfirm={() => void handleConfirmed()}
     onOpenChange={handleDialogOpenChange}

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import type { Capability, Seat } from '$lib/classes/types/delegate'
   import { CAPABILITY_OPTIONS } from '$lib/classes/types/delegate'
   import { addSeat, updateSeat } from '$lib/classes/stores/delegate/delegate-store'
@@ -70,19 +71,19 @@
 
 <div class="flex flex-col gap-4 rounded-lg border p-4">
   <h4 class="text-base font-semibold">
-    {editingSeat ? '编辑席位' : '新建席位'}
+    {editingSeat ? t('procedure_edit_seat') : t('procedure_new_seat')}
   </h4>
 
   <Field.FieldGroup class="gap-3">
     <Field.Field>
-      <Field.FieldLabel for="seat-name">席位名称</Field.FieldLabel>
-      <Input id="seat-name" bind:value={name} placeholder="如：海军部长、新华社记者" />
+      <Field.FieldLabel for="seat-name">{t('procedure_seat_name')}</Field.FieldLabel>
+      <Input id="seat-name" bind:value={name} placeholder={t('procedure_for_example_navy_minister_news_agency_reporter')} />
     </Field.Field>
 
     <Field.Field>
-      <Field.FieldLabel for="seat-role">角色模板</Field.FieldLabel>
+      <Field.FieldLabel for="seat-role">{t('procedure_role_templates')}</Field.FieldLabel>
       <select id="seat-role" bind:value={roleId} class="h-9 w-full rounded-md border bg-background px-3 text-sm">
-        <option value="">不指定角色模板</option>
+        <option value="">{t('procedure_no_role_template')}</option>
         {#each $currentConferenceRecord?.roleTemplates ?? [] as template (template.id)}
           <option value={template.id}>{template.name}</option>
         {/each}
@@ -91,9 +92,9 @@
   </Field.FieldGroup>
 
   <Field.FieldSet>
-    <Field.FieldLegend variant="label">能力覆盖</Field.FieldLegend>
+    <Field.FieldLegend variant="label">{t('procedure_capability_overrides')}</Field.FieldLegend>
     <p class="-mt-2 text-xs text-muted-foreground">
-      勾选 = 强制开启；不勾 = 不覆盖（沿用席位组默认）
+      {t('procedure_checked_enable_explicitly_unchecked_use_seat_group_defaults')}
     </p>
     <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
       {#each CAPABILITY_OPTIONS as option (option.value)}
@@ -113,9 +114,9 @@
   </Field.FieldSet>
 
   <div class="flex justify-end gap-2">
-    <Button variant="outline" onclick={onClose}>取消</Button>
+    <Button variant="outline" onclick={onClose}>{t('procedure_cancel')}</Button>
     <Button onclick={handleSave} disabled={!name.trim()}>
-      {editingSeat ? '保存' : '创建'}
+      {editingSeat ? t('procedure_save') : t('procedure_create')}
     </Button>
   </div>
 </div>

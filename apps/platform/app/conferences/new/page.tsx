@@ -1,4 +1,6 @@
 "use client"
+import { message } from "@/i18n/messages"
+import { usePlatformTranslations } from "@/components/i18n-provider"
 
 import { useEffect, useRef, useState } from "react"
 import type { ComponentType, FormEvent } from "react"
@@ -69,16 +71,28 @@ interface WizardStep {
 }
 
 const steps: WizardStep[] = [
-  { id: "event", title: "大会信息", icon: Building2 },
-  { id: "schedule", title: "大会时间", icon: CalendarDays },
-  { id: "meeting", title: "会场规划", icon: ClipboardList },
-  { id: "roles", title: "角色权限", icon: ShieldCheck },
-  { id: "seats", title: "席位分配", icon: Users },
-  { id: "review", title: "确认创建", icon: Check },
+  { id: "event", title: message("platform_conference_info"), icon: Building2 },
+  {
+    id: "schedule",
+    title: message("platform_conference_time"),
+    icon: CalendarDays,
+  },
+  {
+    id: "meeting",
+    title: message("platform_committee_planning"),
+    icon: ClipboardList,
+  },
+  {
+    id: "roles",
+    title: message("platform_role_capabilities"),
+    icon: ShieldCheck,
+  },
+  { id: "seats", title: message("platform_seat_assignment"), icon: Users },
+  { id: "review", title: message("platform_confirm_creation"), icon: Check },
 ]
 
 const committeeTypeLabels: Record<CommitteeInput["type"], string> = {
-  cabinet: "常规",
+  cabinet: message("platform_cabinet"),
   mpc: "MPC",
   ipc: "IPC",
 }
@@ -202,6 +216,8 @@ function seatReference(seat: SeatInput, index: number): string {
 }
 
 export default function NewConferencePage() {
+  const { t, locale } = usePlatformTranslations()
+
   const router = useRouter()
   const { token, isReady, signOut } = usePlatformAuth()
   const contentRef = useRef<HTMLDivElement>(null)
@@ -223,7 +239,7 @@ export default function NewConferencePage() {
   const [fieldErrors, setFieldErrors] = useState<string[]>([])
 
   const eventValid = name.trim().length > 0
-  const scheduleValid = !scheduleError(startsAt, endsAt)
+  const scheduleValid = !scheduleError(startsAt, endsAt, locale)
   const meetingValid =
     structure.committees.length > 0 &&
     structure.committees.every((committee) => committee.name.trim().length > 0)
@@ -379,11 +395,12 @@ export default function NewConferencePage() {
     const committee = structure.committees.find(
       (item, index) => committeeReference(item, index) === target
     )
-    if (!committee) return roleName ? "未匹配角色" : "无可用角色"
+    if (!committee)
+      return roleName ? "unmatched" : t("platform_no_available_role")
     const reference = importedRoleReference(committee, roleName)
     return (
       structure.roleTemplates.find((role) => roleReference(role) === reference)
-        ?.name || (roleName ? "未匹配角色" : "无可用角色")
+        ?.name || (roleName ? "unmatched" : t("platform_no_available_role"))
     )
   }
   function importSeats(rows: ImportedSeat[], target?: string): void {
@@ -465,11 +482,16 @@ export default function NewConferencePage() {
         signOut()
         return
       }
-      setError(caught instanceof Error ? caught.message : "创建大会失败")
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : message("platform_create_failed")
+      )
       if (caught instanceof ConferenceApiError)
         setFieldErrors(
           caught.fields.map(
-            (field) => `${field.path || "大会配置"}：${field.message}`
+            (field) =>
+              `${field.path || t("platform_conference_configuration")}: ${field.message}`
           )
         )
     } finally {
@@ -488,19 +510,22 @@ export default function NewConferencePage() {
       <form onSubmit={(event) => void submit(event)}>
         <header className="flex items-center justify-between gap-4 pb-6">
           <div>
-            <h1 className="text-xl font-semibold">创建大会</h1>
+            <h1 className="text-xl font-semibold">
+              {t("platform_create_conference")}
+            </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              配置大会、委员会、角色权限与席位
+              {t("platform_create_intro")}
             </p>
           </div>
           <Badge variant="outline" className="shrink-0">
-            步骤 {currentStep + 1}/{steps.length}
+            {t("platform_step")}
+            {currentStep + 1}/{steps.length}
           </Badge>
         </header>
 
         <div className="flex min-h-[34rem] items-start gap-5">
           <nav
-            aria-label="创建步骤"
+            aria-label={t("platform_creation_steps")}
             className="sticky top-24 hidden w-48 shrink-0 rounded-3xl bg-background/70 px-4 py-5 backdrop-blur-xl lg:block"
           >
             <div className="flex flex-col gap-1">
@@ -526,7 +551,7 @@ export default function NewConferencePage() {
                   >
                     <Icon className="size-4 shrink-0" aria-hidden />
                     <span className="min-w-0 flex-1 truncate">
-                      {step.title}
+                      {t(step.title)}
                     </span>
                     {completed ? (
                       <Check
@@ -549,7 +574,8 @@ export default function NewConferencePage() {
                 <div className="flex flex-col gap-6">
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="event-name">
-                      大会名称<span className="text-destructive"> *</span>
+                      {t("platform_conference_name")}
+                      <span className="text-destructive"> *</span>
                     </Label>
                     <Input
                       id="event-name"
@@ -562,29 +588,33 @@ export default function NewConferencePage() {
                       onChange={(event) => setName(event.target.value)}
                     />
                     {attempted && !name.trim() ? (
-                      <FieldError>请输入大会名称</FieldError>
+                      <FieldError>
+                        {t("platform_enter_conference_name")}
+                      </FieldError>
                     ) : null}
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="organizer">主办方</Label>
+                    <Label htmlFor="organizer">{t("platform_organizer")}</Label>
                     <Input
                       id="organizer"
                       value={organizer}
                       maxLength={120}
                       disabled={isSaving}
-                      placeholder="主办单位或组织"
+                      placeholder={t("platform_organizer_placeholder")}
                       onChange={(event) => setOrganizer(event.target.value)}
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="event-description">大会说明</Label>
+                    <Label htmlFor="event-description">
+                      {t("platform_conference_description")}
+                    </Label>
                     <textarea
                       id="event-description"
                       value={description}
                       maxLength={4000}
                       disabled={isSaving}
                       className={textareaClassName}
-                      placeholder="大会主题、范围或备注"
+                      placeholder={t("platform_description_placeholder")}
                       onChange={(event) => setDescription(event.target.value)}
                     />
                   </div>
@@ -604,7 +634,7 @@ export default function NewConferencePage() {
               {steps[currentStep].id === "meeting" ? (
                 <section className="flex flex-col gap-4">
                   {attempted && structure.committees.length === 0 ? (
-                    <FieldError>至少添加一个会场</FieldError>
+                    <FieldError>{t("platform_committee_required")}</FieldError>
                   ) : null}
                   {structure.committees.map((committee, committeeIndex) => {
                     const reference = committeeReference(
@@ -620,7 +650,7 @@ export default function NewConferencePage() {
                         <div className="grid items-start gap-x-4 gap-y-3 md:grid-cols-[minmax(0,1fr)_11rem_auto]">
                           <div className="flex flex-col gap-2">
                             <Label htmlFor={`committee-name-${reference}`}>
-                              会场名称
+                              {t("platform_venue_name")}
                             </Label>
                             <Input
                               id={`committee-name-${reference}`}
@@ -634,16 +664,22 @@ export default function NewConferencePage() {
                               }
                             />
                             {invalid ? (
-                              <FieldError>会场名称不能为空</FieldError>
+                              <FieldError>
+                                {t("platform_venue_name_required")}
+                              </FieldError>
                             ) : null}
                           </div>
                           <div className="flex flex-col gap-2">
                             <Label htmlFor={`committee-type-${reference}`}>
-                              类型
+                              {t("platform_type")}
                             </Label>
                             <Select
                               value={committee.type}
-                              items={committeeTypeLabels}
+                              items={Object.fromEntries(
+                                Object.entries(committeeTypeLabels).map(
+                                  ([key, label]) => [key, t(label)]
+                                )
+                              )}
                               disabled={isSaving}
                               onValueChange={(value) =>
                                 changeCommitteeType(
@@ -659,7 +695,9 @@ export default function NewConferencePage() {
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="cabinet">常规</SelectItem>
+                                <SelectItem value="cabinet">
+                                  {t("platform_cabinet")}
+                                </SelectItem>
                                 <SelectItem value="mpc">MPC</SelectItem>
                                 <SelectItem value="ipc">IPC</SelectItem>
                               </SelectContent>
@@ -670,7 +708,7 @@ export default function NewConferencePage() {
                               type="button"
                               variant="ghost"
                               size="icon"
-                              title="删除委员会"
+                              title={t("platform_delete_committee")}
                               disabled={isSaving}
                               onClick={() =>
                                 setStructure((current) => ({
@@ -713,7 +751,7 @@ export default function NewConferencePage() {
                     }
                   >
                     <Plus aria-hidden />
-                    添加会场
+                    {t("platform_add_venue")}
                   </Button>
                 </section>
               ) : null}
@@ -721,7 +759,7 @@ export default function NewConferencePage() {
               {steps[currentStep].id === "roles" ? (
                 <section className="flex flex-col gap-4">
                   {attempted && structure.roleTemplates.length === 0 ? (
-                    <FieldError>至少添加一个角色</FieldError>
+                    <FieldError>{t("platform_role_required")}</FieldError>
                   ) : null}
                   {structure.roleTemplates.map((role, roleIndex) => {
                     const reference = roleReference(role)
@@ -772,7 +810,7 @@ export default function NewConferencePage() {
                     }
                   >
                     <Plus aria-hidden />
-                    添加角色
+                    {t("platform_add_role")}
                   </Button>
                 </section>
               ) : null}
@@ -803,10 +841,12 @@ export default function NewConferencePage() {
                         <div className="flex flex-wrap items-center justify-between gap-3">
                           <div className="flex min-w-0 items-center gap-2">
                             <h2 className="truncate text-sm font-semibold">
-                              {committee.name || "未命名委员会"}
+                              {committee.name ||
+                                t("platform_unnamed_committee")}
                             </h2>
                             <Badge variant="outline">
-                              {committee.seats.length} 个席位
+                              {committee.seats.length}
+                              {t("platform_seat_unit")}
                             </Badge>
                             <CollapsibleTrigger
                               render={
@@ -816,7 +856,14 @@ export default function NewConferencePage() {
                                   size="icon"
                                 />
                               }
-                              aria-label={`${collapsedCommittees[committeeRef] ? "展开" : "折叠"}${committee.name || "未命名委员会"}席位`}
+                              aria-label={t("platform_toggle_committee_seats", {
+                                action: collapsedCommittees[committeeRef]
+                                  ? t("platform_expand_seats")
+                                  : t("platform_collapse_seats"),
+                                value:
+                                  committee.name ||
+                                  t("platform_unnamed_committee"),
+                              })}
                             >
                               <ChevronDown
                                 className={cn(
@@ -833,7 +880,9 @@ export default function NewConferencePage() {
                               disabled={isSaving}
                               target={{
                                 value: committeeRef,
-                                label: committee.name || "未命名委员会",
+                                label:
+                                  committee.name ||
+                                  t("platform_unnamed_committee"),
                               }}
                               roleLabel={importRoleLabel}
                               onImport={importSeats}
@@ -846,7 +895,7 @@ export default function NewConferencePage() {
                               onClick={() => addSeat(committeeIndex)}
                             >
                               <Plus aria-hidden />
-                              添加席位
+                              {t("platform_add_seat")}
                             </Button>
                           </div>
                         </div>
@@ -877,8 +926,8 @@ export default function NewConferencePage() {
                                       <Input
                                         value={seat.name}
                                         disabled={isSaving}
-                                        placeholder="席位名称"
-                                        aria-label="席位名称"
+                                        placeholder={t("platform_seat_name")}
+                                        aria-label={t("platform_seat_name")}
                                         aria-invalid={nameInvalid || undefined}
                                         onChange={(event) =>
                                           updateSeat(
@@ -893,8 +942,12 @@ export default function NewConferencePage() {
                                       <Input
                                         value={seat.shortName ?? ""}
                                         disabled={isSaving}
-                                        placeholder="席位简称（可选）"
-                                        aria-label="席位简称"
+                                        placeholder={t(
+                                          "platform_seat_short_name_optional"
+                                        )}
+                                        aria-label={t(
+                                          "platform_seat_short_name"
+                                        )}
                                         onChange={(event) =>
                                           updateSeat(
                                             committeeIndex,
@@ -911,7 +964,8 @@ export default function NewConferencePage() {
                                           (allowedRole) => ({
                                             value: roleReference(allowedRole),
                                             label:
-                                              allowedRole.name || "未命名角色",
+                                              allowedRole.name ||
+                                              t("platform_unnamed_role"),
                                           })
                                         )}
                                         disabled={isSaving}
@@ -927,12 +981,16 @@ export default function NewConferencePage() {
                                       >
                                         <SelectTrigger
                                           className="w-full"
-                                          aria-label="角色"
+                                          aria-label={t("platform_role")}
                                           aria-invalid={
                                             roleInvalid || undefined
                                           }
                                         >
-                                          <SelectValue placeholder="选择角色" />
+                                          <SelectValue
+                                            placeholder={t(
+                                              "platform_select_role"
+                                            )}
+                                          />
                                         </SelectTrigger>
                                         <SelectContent>
                                           {allowedRoles.map((allowedRole) => (
@@ -940,7 +998,8 @@ export default function NewConferencePage() {
                                               key={roleReference(allowedRole)}
                                               value={roleReference(allowedRole)}
                                             >
-                                              {allowedRole.name || "未命名角色"}
+                                              {allowedRole.name ||
+                                                t("platform_unnamed_role")}
                                             </SelectItem>
                                           ))}
                                         </SelectContent>
@@ -949,7 +1008,7 @@ export default function NewConferencePage() {
                                         type="button"
                                         variant="ghost"
                                         size="icon"
-                                        title="删除席位"
+                                        title={t("platform_delete_seat")}
                                         disabled={isSaving}
                                         onClick={() =>
                                           updateCommittee(committeeIndex, {
@@ -966,11 +1025,13 @@ export default function NewConferencePage() {
                                       </Button>
                                     </div>
                                     {nameInvalid ? (
-                                      <FieldError>请输入席位名称</FieldError>
+                                      <FieldError>
+                                        {t("platform_enter_seat_name")}
+                                      </FieldError>
                                     ) : null}
                                     {roleInvalid ? (
                                       <FieldError>
-                                        当前席位的角色与会场类型不匹配，请重新选择角色
+                                        {t("platform_seat_role_mismatch")}
                                       </FieldError>
                                     ) : null}
                                   </div>
@@ -978,14 +1039,16 @@ export default function NewConferencePage() {
                               })
                             ) : (
                               <p className="rounded-md border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
-                                尚未分配席位
+                                {t("platform_no_seats_assigned")}
                               </p>
                             )}
                           </div>
                         </CollapsibleContent>
                         {noSeats ? (
                           <div className="mt-1">
-                            <FieldError>每个委员会至少分配一个席位</FieldError>
+                            <FieldError>
+                              {t("platform_committee_seat_required")}
+                            </FieldError>
                           </div>
                         ) : null}
                       </Collapsible>
@@ -997,9 +1060,11 @@ export default function NewConferencePage() {
               {steps[currentStep].id === "review" ? (
                 <div className="space-y-4">
                   <p className="text-sm">
-                    开始：{formatSchedule(scheduleInstant(startsAt))}
+                    {t("platform_starts_prefix")}
+                    {formatSchedule(scheduleInstant(startsAt), locale)}
                     <br />
-                    结束：{formatSchedule(scheduleInstant(endsAt))}
+                    {t("platform_ends_prefix")}
+                    {formatSchedule(scheduleInstant(endsAt), locale)}
                   </p>
                   <ReviewStep
                     name={name}
@@ -1020,7 +1085,7 @@ export default function NewConferencePage() {
                 onClick={() => goToStep(currentStep - 1)}
               >
                 <ArrowLeft aria-hidden />
-                上一步
+                {t("platform_previous")}
               </Button>
               {currentStep < steps.length - 1 ? (
                 <Button
@@ -1028,7 +1093,8 @@ export default function NewConferencePage() {
                   disabled={isSaving}
                   onClick={() => goToStep(currentStep + 1)}
                 >
-                  下一步 <ArrowRight aria-hidden />
+                  {t("platform_next")}
+                  <ArrowRight aria-hidden />
                 </Button>
               ) : (
                 <Button type="submit" disabled={isSaving}>
@@ -1037,7 +1103,9 @@ export default function NewConferencePage() {
                   ) : (
                     <Check aria-hidden />
                   )}
-                  {isSaving ? "创建中" : "创建大会"}
+                  {isSaving
+                    ? t("platform_creating")
+                    : t("platform_create_conference")}
                 </Button>
               )}
             </footer>
@@ -1067,6 +1135,8 @@ function RoleCard({
   onChange: (index: number, patch: Partial<RoleTemplateInput>) => void
   onRemove: (index: number) => void
 }) {
+  const { t, locale } = usePlatformTranslations()
+
   const [open, setOpen] = useState(false)
   const reference = roleReference(role)
 
@@ -1082,18 +1152,21 @@ function RoleCard({
             <Input
               value={role.name}
               disabled={disabled}
-              placeholder="角色名称"
-              aria-label="角色名称"
+              placeholder={t("platform_role_name")}
+              aria-label={t("platform_role_name")}
               aria-invalid={nameInvalid || undefined}
               className="max-w-72"
               onChange={(event) =>
                 onChange(roleIndex, { name: event.target.value })
               }
             />
-            {nameInvalid ? <FieldError>请输入角色名称</FieldError> : null}
+            {nameInvalid ? (
+              <FieldError>{t("platform_enter_role_name")}</FieldError>
+            ) : null}
           </div>
           <Badge variant={capabilitiesInvalid ? "destructive" : "outline"}>
-            {role.capabilities.length} 项权限
+            {role.capabilities.length}
+            {t("platform_capability_unit")}
           </Badge>
           <CollapsibleTrigger
             className={cn(
@@ -1101,8 +1174,16 @@ function RoleCard({
               "transition-transform",
               open && "rotate-180"
             )}
-            aria-label={open ? "收起权限" : "展开权限"}
-            title={open ? "收起权限" : "展开权限"}
+            aria-label={
+              open
+                ? t("platform_collapse_capabilities")
+                : t("platform_expand_capabilities")
+            }
+            title={
+              open
+                ? t("platform_collapse_capabilities")
+                : t("platform_expand_capabilities")
+            }
           >
             <ChevronDown aria-hidden />
           </CollapsibleTrigger>
@@ -1110,7 +1191,9 @@ function RoleCard({
             type="button"
             variant="ghost"
             size="icon"
-            title={usage > 0 ? "角色已被席位使用" : "删除角色"}
+            title={
+              usage > 0 ? t("platform_role_in_use") : t("platform_delete_role")
+            }
             disabled={disabled || usage > 0}
             onClick={() => onRemove(roleIndex)}
           >
@@ -1119,7 +1202,9 @@ function RoleCard({
         </div>
         <CollapsibleContent>
           <fieldset className="mt-4">
-            <legend className="text-sm font-medium">权限</legend>
+            <legend className="text-sm font-medium">
+              {t("platform_capabilities")}
+            </legend>
             <div className="mt-3">
               <CapabilityPicker
                 idPrefix={`capability-${reference}`}
@@ -1132,7 +1217,7 @@ function RoleCard({
             </div>
             {capabilitiesInvalid ? (
               <div className="mt-2">
-                <FieldError>请至少勾选一项权限</FieldError>
+                <FieldError>{t("platform_select_capability")}</FieldError>
               </div>
             ) : null}
           </fieldset>
@@ -1155,35 +1240,47 @@ function ReviewStep({
   error: string
   fieldErrors: string[]
 }) {
+  const { t, locale } = usePlatformTranslations()
+
   const [rolesOpen, setRolesOpen] = useState(true)
   return (
     <section className="flex flex-col gap-5">
       <article className="rounded-lg border p-4">
         <h2 className="truncate text-sm font-semibold">
-          {name || "未命名大会"}
+          {name || t("platform_unnamed_conference")}
         </h2>
         <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <dt className="text-xs text-muted-foreground">创建模式</dt>
-            <dd className="mt-1 font-medium">大会模式</dd>
+            <dt className="text-xs text-muted-foreground">
+              {t("platform_creation_mode")}
+            </dt>
+            <dd className="mt-1 font-medium">
+              {t("platform_conference_mode")}
+            </dd>
           </div>
           <div>
-            <dt className="text-xs text-muted-foreground">委员会</dt>
+            <dt className="text-xs text-muted-foreground">
+              {t("platform_committee")}
+            </dt>
             <dd className="mt-1 font-medium">{structure.committees.length}</dd>
           </div>
           <div>
-            <dt className="text-xs text-muted-foreground">角色模板</dt>
+            <dt className="text-xs text-muted-foreground">
+              {t("platform_role_template")}
+            </dt>
             <dd className="mt-1 font-medium">
               {structure.roleTemplates.length}
             </dd>
           </div>
           <div>
-            <dt className="text-xs text-muted-foreground">席位</dt>
+            <dt className="text-xs text-muted-foreground">
+              {t("platform_seat")}
+            </dt>
             <dd className="mt-1 font-medium">{totalSeats}</dd>
           </div>
         </dl>
         <p className="mt-4 text-sm text-muted-foreground">
-          创建后大会处于草稿状态，实际会议时间不会自动激活大会。请在准备完成后手动激活大会。
+          {t("platform_draft_after_creation")}
         </p>
       </article>
       <div className="grid gap-4">
@@ -1198,14 +1295,20 @@ function ReviewStep({
       <Collapsible open={rolesOpen} onOpenChange={setRolesOpen}>
         <article className="rounded-lg border p-4">
           <div className="flex items-center justify-between gap-3">
-            <h3 className="text-sm font-semibold">角色权限</h3>
+            <h3 className="text-sm font-semibold">
+              {t("platform_role_capabilities")}
+            </h3>
             <CollapsibleTrigger
               className={cn(
                 buttonVariants({ variant: "ghost", size: "icon" }),
                 "transition-transform",
                 rolesOpen && "rotate-180"
               )}
-              aria-label={rolesOpen ? "收起角色权限" : "展开角色权限"}
+              aria-label={
+                rolesOpen
+                  ? t("platform_collapse_roles")
+                  : t("platform_expand_roles")
+              }
             >
               <ChevronDown aria-hidden />
             </CollapsibleTrigger>
@@ -1228,12 +1331,15 @@ function ReviewStep({
                       <span className="truncate text-sm font-medium">
                         {role.name}
                       </span>
-                      <Badge variant="outline">{usage} 个席位</Badge>
+                      <Badge variant="outline">
+                        {usage}
+                        {t("platform_seat_unit")}
+                      </Badge>
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">
                       {role.capabilities
-                        .map((capability) => CAPABILITY_LABELS[capability])
-                        .join("、")}
+                        .map((capability) => t(CAPABILITY_LABELS[capability]))
+                        .join(locale === "zh-CN" ? "、" : ", ")}
                     </p>
                   </div>
                 )
@@ -1247,7 +1353,7 @@ function ReviewStep({
           role="alert"
           className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
         >
-          <p>{error}</p>
+          <p>{error.startsWith("platform_") ? t(error) : error}</p>
           {fieldErrors.length ? (
             <ul className="mt-2 list-disc space-y-1 pl-5">
               {fieldErrors.map((fieldError, index) => (
@@ -1268,6 +1374,8 @@ function ReviewCommittee({
   committee: CommitteeInput
   roles: RoleTemplateInput[]
 }) {
+  const { t, locale } = usePlatformTranslations()
+
   const [open, setOpen] = useState(true)
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
@@ -1277,8 +1385,10 @@ function ReviewCommittee({
             {committee.name}
           </h3>
           <Badge variant="outline">
-            {committeeTypeLabels[committee.type]} · {committee.seats.length}{" "}
-            个席位
+                  {t(committeeTypeLabels[committee.type])} ·{" "}
+                  {t("platform_seat_count", {
+                    value1: committee.seats.length,
+                  })}
           </Badge>
           <CollapsibleTrigger
             className={cn(
@@ -1286,7 +1396,9 @@ function ReviewCommittee({
               "transition-transform",
               open && "rotate-180"
             )}
-            aria-label={open ? "收起席位" : "展开席位"}
+            aria-label={
+              open ? t("platform_collapse_seats") : t("platform_expand_seats")
+            }
           >
             <ChevronDown aria-hidden />
           </CollapsibleTrigger>
@@ -1309,7 +1421,7 @@ function ReviewCommittee({
                 <span className="shrink-0 text-xs text-muted-foreground">
                   {roles.find(
                     (role) => roleReference(role) === seat.roleTemplateId
-                  )?.name || "未指定角色"}
+                  )?.name || t("platform_unspecified_role")}
                 </span>
               </li>
             ))}

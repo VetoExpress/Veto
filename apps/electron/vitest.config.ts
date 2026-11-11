@@ -8,11 +8,11 @@ export default defineConfig({
     // 测试文件位置
     include: ['src/main/**/*.test.ts'],
     // 全局 API（describe/it/expect 无需显式 import）
-    globals: true,
+    globals: true
   },
   resolve: {
     alias: {
       // 如果测试文件用相对路径 import，不需要特殊 alias
-    },
-  },
+    }
+  }
 })

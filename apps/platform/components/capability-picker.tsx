@@ -1,4 +1,6 @@
 "use client"
+import { message } from "@/i18n/messages"
+import { usePlatformTranslations } from "@/components/i18n-provider"
 
 import { useMemo, useState } from "react"
 import { ChevronDown, Search } from "lucide-react"
@@ -35,6 +37,8 @@ export function CapabilityPicker({
   gridClassName = "sm:grid-cols-2 xl:grid-cols-3",
   onChange,
 }: CapabilityPickerProps) {
+  const { t, locale } = usePlatformTranslations()
+
   const [query, setQuery] = useState("")
   const [openGroupIds, setOpenGroupIds] = useState<ReadonlySet<string>>(
     () => new Set()
@@ -48,11 +52,11 @@ export function CapabilityPicker({
       ...group,
       capabilities: group.capabilities.filter(
         (capability) =>
-          CAPABILITY_LABELS[capability].toLowerCase().includes(keyword) ||
+          t(CAPABILITY_LABELS[capability]).toLowerCase().includes(keyword) ||
           capability.toLowerCase().includes(keyword)
       ),
     })).filter((group) => group.capabilities.length > 0)
-  }, [keyword, searching])
+  }, [keyword, searching, t])
 
   const toggleGroup = (groupId: string, open: boolean) => {
     setOpenGroupIds((previous) => {
@@ -76,20 +80,22 @@ export function CapabilityPicker({
     <div className="flex flex-col gap-3">
       <div className="relative">
         <Search
-          className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+          className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
           aria-hidden
         />
         <Input
           value={query}
           disabled={disabled}
-          placeholder="搜索权限"
-          aria-label="搜索权限"
+          placeholder={t("platform_search_capabilities")}
+          aria-label={t("platform_search_capabilities")}
           className="pl-9"
           onChange={(event) => setQuery(event.target.value)}
         />
       </div>
       {visibleGroups.length === 0 ? (
-        <p className="text-sm text-muted-foreground">没有匹配的权限</p>
+        <p className="text-sm text-muted-foreground">
+          {t("platform_no_matching_capabilities")}
+        </p>
       ) : (
         visibleGroups.map((group) => {
           const selectedCount = group.capabilities.filter((capability) =>
@@ -106,10 +112,16 @@ export function CapabilityPicker({
                 <CollapsibleTrigger
                   className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent/50"
                   aria-label={
-                    open ? `收起${group.label}权限` : `展开${group.label}权限`
+                    open
+                      ? t("platform_collapse_group_capabilities", {
+                          value1: t(group.label),
+                        })
+                      : t("platform_expand_group_capabilities", {
+                          value1: t(group.label),
+                        })
                   }
                 >
-                  <span>{group.label}</span>
+                  <span>{t(group.label)}</span>
                   <span className="flex items-center gap-2">
                     <Badge variant="outline">
                       {selectedCount}/{group.capabilities.length}
@@ -148,7 +160,7 @@ export function CapabilityPicker({
                           onChange={() => toggleCapability(capability)}
                         />
                         <span className="min-w-0">
-                          {CAPABILITY_LABELS[capability]}
+                          {t(CAPABILITY_LABELS[capability])}
                         </span>
                       </label>
                     ))}

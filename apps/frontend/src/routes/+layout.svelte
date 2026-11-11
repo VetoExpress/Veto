@@ -1,5 +1,7 @@
 <script>
   import { VETO_NAME } from '$lib/classes/const'
+  import { initializeLocale, getLocale } from '$lib/i18n'
+  import { mods } from '$lib/classes/services/plugin/mod-registry.svelte'
   import { onMount } from 'svelte'
   import { scheduleWebLaunchTelemetry } from '$lib/classes/services/web-telemetry'
   import { conferenceSync } from '$lib/classes/stores/conference/conference-sync-store'
@@ -15,9 +17,18 @@
 
   let { children } = $props()
 
+  $effect(() => {
+    mods.setLocale(getLocale())
+  })
+
   onMount(() => {
+    const stopLocale = initializeLocale()
     scheduleWebLaunchTelemetry(__APP_VERSION__)
-    return conferenceSync.start()
+    const stopSync = conferenceSync.start()
+    return () => {
+      stopLocale()
+      stopSync()
+    }
   })
 </script>
 

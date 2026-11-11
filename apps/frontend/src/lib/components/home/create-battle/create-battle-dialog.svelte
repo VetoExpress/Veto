@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import PlusIcon from '@lucide/svelte/icons/plus'
   import SwordsIcon from '@lucide/svelte/icons/swords'
   import PuzzleIcon from '@lucide/svelte/icons/puzzle'
@@ -119,16 +120,16 @@
       <Dialog.Header class="pb-1">
         <Dialog.Title class="text-base font-semibold tracking-wide">
           {#if step === 'mode_select' && electronEnvironment}
-            新建战局
+            {t('settings_new_battle')}
           {:else}
-            新建自由推演
+            {t('settings_new_free_simulation')}
           {/if}
         </Dialog.Title>
         <Dialog.Description class="text-xs text-muted-foreground">
           {#if step === 'mode_select' && electronEnvironment}
-            选择推演模式开始。战役模式将自动加载预设的阵营、地图与事件。
+            {t('settings_mode_description')}
           {:else}
-            自由配置所有参数，从头构建一场推演。
+            {t('settings_free_description')}
           {/if}
         </Dialog.Description>
       </Dialog.Header>
@@ -160,10 +161,10 @@
                   </div>
                   <div>
                     <Card.Title class="text-sm font-semibold text-stone-800 dark:text-stone-200">
-                      战役模式
+                      {t('settings_campaign_mode')}
                     </Card.Title>
                     <Card.Description class="mt-1 text-[11px] leading-relaxed">
-                      选择预设战役包，阵营、地图、事件自动加载，命名后即刻推演。
+                      {t('settings_campaign_description')}
                     </Card.Description>
                   </div>
                   <Badge
@@ -173,8 +174,8 @@
                       : ''}"
                   >
                     {campaignPlugins.length === 0
-                      ? '暂无可用战役'
-                      : `${campaignPlugins.length} 个可用`}
+                      ? t('settings_no_campaigns')
+                      : t('settings_available_count', { count: campaignPlugins.length })}
                   </Badge>
                 </Card.Content>
               </Card.Root>
@@ -198,10 +199,10 @@
                   </div>
                   <div>
                     <Card.Title class="text-sm font-semibold text-stone-800 dark:text-stone-200">
-                      自由模式
+                      {t('settings_free_mode')}
                     </Card.Title>
                     <Card.Description class="mt-1 text-[11px] leading-relaxed">
-                      自行组合阵营、Mod 与时间参数，完全自定义推演环境。
+                      {t('settings_free_mode_description')}
                     </Card.Description>
                   </div>
                   <Badge
@@ -209,7 +210,7 @@
                     class="border-emerald-300 bg-emerald-100 text-[10px] text-emerald-700
                       dark:border-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
                   >
-                    完全自定义
+                    {t('settings_fully_customizable')}
                   </Badge>
                 </Card.Content>
               </Card.Root>
@@ -225,7 +226,7 @@
               onclick={backToModeSelect}
             >
               <ArrowLeftIcon size={12} />
-              返回模式选择
+              {t('settings_back_modes')}
             </button>
           {/if}
           <FreeModeForm
@@ -239,19 +240,19 @@
 
       <Dialog.Footer class="pt-1">
         {#if step === 'mode_select' && electronEnvironment}
-          <Button variant="outline" onclick={() => (open = false)}>取消</Button>
+          <Button variant="outline" onclick={() => (open = false)}>{t('settings_cancel')}</Button>
         {:else}
           {#if electronEnvironment}
             <Button variant="outline" onclick={backToModeSelect}>
               <ArrowLeftIcon size={13} class="mr-1" />
-              返回
+              {t('settings_back')}
             </Button>
           {:else}
-            <Button variant="outline" onclick={() => (open = false)}>取消</Button>
+            <Button variant="outline" onclick={() => (open = false)}>{t('settings_cancel')}</Button>
           {/if}
           <Button onclick={handleCreate} disabled={!draft.name.trim()} class="min-w-[120px] gap-2">
             <PlusIcon size={15} />
-            初始化战局
+            {t('settings_initialize_battle')}
           </Button>
         {/if}
       </Dialog.Footer>

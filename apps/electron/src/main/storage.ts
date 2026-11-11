@@ -59,8 +59,7 @@ export function createPluginStorage(pluginDir: string): PluginStorage {
     }
   }
 
-  const filePath = (key: string): string =>
-    path.join(storageDir, `${sanitizeKey(key)}.json`)
+  const filePath = (key: string): string => path.join(storageDir, `${sanitizeKey(key)}.json`)
 
   return {
     async get<T = unknown>(key: string): Promise<T | undefined> {
@@ -102,7 +101,7 @@ export function createPluginStorage(pluginDir: string): PluginStorage {
       } catch {
         return []
       }
-    },
+    }
   }
 }
 

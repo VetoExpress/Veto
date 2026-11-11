@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
 	import { ContextMenu } from 'bits-ui';
 	import {
 		Eye,
@@ -244,7 +245,7 @@
 					onSelect={handleViewProperties}
 				>
 					<Eye class="mr-2 size-4" />
-					查看属性
+					{t('components_view_properties')}
 				</ContextMenu.Item>
 
 				<ContextMenu.Item
@@ -252,7 +253,7 @@
 					onSelect={handleLocateUnit}
 				>
 					<LocateFixed class="mr-2 size-4" />
-					定位单位
+					{t('components_locate_unit')}
 				</ContextMenu.Item>
 
 				<div hidden={isDestroyed}>
@@ -262,7 +263,7 @@
 							class="rounded-button flex h-9 items-center py-3 pr-1.5 pl-3 text-sm font-medium select-none focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40 data-highlighted:bg-muted data-[state=open]:bg-muted"
 						>
 							<Route class="mr-2 size-4" />
-							路线指令
+							{t('components_route_commands')}
 							<ChevronRight class="ml-auto size-4 opacity-50" />
 						</ContextMenu.SubTrigger>
 						<ContextMenu.SubContent
@@ -274,23 +275,23 @@
 								onSelect={handleResetRoute}
 							>
 								<RefreshCw class="mr-2 size-4" />
-								重新设置路线
-								<span class="ml-auto text-xs opacity-50">清空并重绘</span>
+								{t('components_reset_route')}
+								<span class="ml-auto text-xs opacity-50">{t('components_clear_redraw')}</span>
 							</ContextMenu.Item>
 							<ContextMenu.Item
 								class="rounded-button flex h-9 items-center py-3 pr-1.5 pl-3 text-sm font-normal select-none focus-visible:outline-none data-highlighted:bg-muted"
 								onSelect={handleAppendRoute}
 							>
 								<PlusCircle class="mr-2 size-4" />
-								绘制路线节点
-								<span class="ml-auto text-xs opacity-50">继续追加</span>
+								{t('components_draw_waypoints')}
+								<span class="ml-auto text-xs opacity-50">{t('components_continue_append')}</span>
 							</ContextMenu.Item>
 							<ContextMenu.Item
 								class="rounded-button flex h-9 items-center py-3 pr-1.5 pl-3 text-sm font-normal text-destructive select-none focus-visible:outline-none data-highlighted:bg-muted"
 								onSelect={handleClearRoute}
 							>
 								<Eraser class="mr-2 size-4" />
-								清除路线
+								{t('components_clear_route')}
 							</ContextMenu.Item>
 						</ContextMenu.SubContent>
 					</ContextMenu.Sub>
@@ -301,7 +302,7 @@
 						onSelect={handleSetStrikeRange}
 					>
 						<Target class="mr-2 size-4" />
-						设置打击目标
+						{t('components_set_strike_target')}
 					</ContextMenu.Item>
 					{/if}
 
@@ -311,7 +312,7 @@
 						onSelect={handleManualAttack}
 					>
 						<Crosshair class="mr-2 size-4" />
-						手动攻击
+						{t('components_manual_attack')}
 					</ContextMenu.Item>
 
 					<!-- Phase 9：取消任务 -->
@@ -320,7 +321,7 @@
 						onSelect={handleCancelTask}
 					>
 						<Ban class="mr-2 size-4" />
-						取消任务
+						{t('components_cancel_task')}
 					</ContextMenu.Item>
 
 					<!-- 设置状态子菜单 -->
@@ -329,7 +330,7 @@
 							class="rounded-button flex h-9 items-center py-3 pr-1.5 pl-3 text-sm font-medium select-none focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40 data-highlighted:bg-muted data-[state=open]:bg-muted"
 						>
 							<Activity class="mr-2 size-4" />
-							设置状态
+							{t('components_set_status')}
 						</ContextMenu.SubTrigger>
 						<ContextMenu.SubContent
 							class="z-100 w-[160px] rounded-xl border border-muted bg-background px-1 py-1.5 ring-0! shadow-popover ring-transparent!"
@@ -356,7 +357,7 @@
 					onSelect={handleDeletePlaced}
 				>
 					<Trash2 class="mr-2 size-4" />
-					删除单位
+					{t('components_delete_unit')}
 				</ContextMenu.Item>
 			{/if}
 		</ContextMenu.Content>

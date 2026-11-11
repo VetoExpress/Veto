@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { procedureMessage, renderProcedureMessage, type ProcedureMessage } from '$lib/components/conference/common/message'
+  import { t } from '$lib/i18n'
   import { ChevronDown, FileSpreadsheet, FileText, Plus, Trash2, Upload } from '@lucide/svelte'
   import { cn } from '$lib/classes/utils'
   import { Button } from '$lib/components/ui/button'
@@ -28,7 +30,7 @@
   let previewDialogOpen = $state(false)
   let importMode = $state<ImportMode>('excel')
   let textValue = $state('')
-  let importError = $state('')
+  let importError = $state<ProcedureMessage>('')
   let selectedSheet = $state('')
   let targetCommitteeId = $state('')
   let importedRows = $state<ImportedSeat[]>([])
@@ -83,7 +85,7 @@
       selectedSheet = workbook.sheetNames[0]
       sheetDialogOpen = true
     } catch (error) {
-      importError = importErrorMessage(error, 'Excel 文件读取失败')
+      importError = importErrorMessage(error, procedureMessage('procedure_failed_to_read_excel_file'))
       formatDialogOpen = true
     }
   }
@@ -95,15 +97,15 @@
       sheetDialogOpen = false
       openPreview()
     } catch (error) {
-      importError = importErrorMessage(error, '没有读取到有效数据，请检查表格内容')
+      importError = importErrorMessage(error, procedureMessage('procedure_no_valid_data_found_check_the_worksheet'))
     }
   }
 
-  function importErrorMessage(error: unknown, fallback: string): string {
+  function importErrorMessage(error: unknown, fallback: ProcedureMessage): ProcedureMessage {
     if (!(error instanceof SeatImportError))
       return error instanceof Error ? error.message : fallback
-    if (error.code === 'empty_workbook') return '文件中没有可读取的 sheet'
-    if (error.code === 'sheet_not_found') return '找不到所选 Sheet'
+    if (error.code === 'empty_workbook') return procedureMessage('procedure_no_readable_worksheets_in_this_file')
+    if (error.code === 'sheet_not_found') return procedureMessage('procedure_selected_worksheet_not_found')
     if (error.code === 'no_valid_rows') return fallback
     return fallback
   }
@@ -114,7 +116,7 @@
       textDialogOpen = false
       openPreview()
     } catch (error) {
-      importError = importErrorMessage(error, '没有读取到有效数据，请按格式逐行输入')
+      importError = importErrorMessage(error, procedureMessage('procedure_no_valid_data_found_enter_one_seat_per_line_using_the_required_format'))
     }
   }
 
@@ -143,10 +145,10 @@
   }
 
   function matchedRoleName(row: ImportedSeat): string {
-    if (isSingleton) return row.hasVotingRights === false ? '无投票权' : '有投票权'
+    if (isSingleton) return row.hasVotingRights === false ? t('procedure_no_voting_rights') : t('procedure_has_voting_rights_2')
 
     const roleId = roleIdForType(row.roleName ?? '', targetCommitteeId)
-    return roleId ? wizard.roleName(roleId) : row.roleName ? '未匹配角色' : '自动匹配'
+    return roleId ? wizard.roleName(roleId) : row.roleName ? t('procedure_unmatched_role') : t('procedure_match_automatically')
   }
 
   function confirmImport(): void {
@@ -200,15 +202,15 @@
       >
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div class="flex min-w-0 items-center gap-2">
-            <h2 class="truncate text-sm font-semibold">{committee.name || '未命名委员会'}</h2>
-            <span class="text-sm text-muted-foreground">{committee.seats.length} 个席位</span>
+            <h2 class="truncate text-sm font-semibold">{committee.name || t('procedure_untitled_committee')}</h2>
+            <span class="text-sm text-muted-foreground">{t('procedure_seat_count', { value1: committee.seats.length })}</span>
             <Collapsible.Trigger>
               {#snippet child({ props })}
                 <Button
                   {...props}
                   variant="ghost"
                   size="icon"
-                  aria-label={`${collapsedCommittees[committee.id] ? '展开' : '折叠'}${committee.name || '未命名委员会'}席位`}
+                  aria-label={t('procedure_valuevalue_seats', { value1: collapsedCommittees[committee.id] ? t('procedure_expand') : t('procedure_collapse'), value2: committee.name || t('procedure_untitled_committee') })}
                 >
                   <ChevronDown
                     class={cn(
@@ -226,14 +228,14 @@
               size="sm"
               onclick={() => openFormatDialog('excel', committee.id)}
             >
-              <FileSpreadsheet data-icon="inline-start" />从 Excel 导入
+              <FileSpreadsheet data-icon="inline-start" />{t('procedure_import_from_excel')}
             </Button>
             <Button
               variant="outline"
               size="sm"
               onclick={() => openFormatDialog('text', committee.id)}
             >
-              <FileText data-icon="inline-start" />从文本导入
+              <FileText data-icon="inline-start" />{t('procedure_import_from_text')}
             </Button>
             <Button
               variant="outline"
@@ -244,7 +246,7 @@
               }}
             >
               <Plus data-icon="inline-start" />
-              添加席位
+              {t('procedure_add_seat_2')}
             </Button>
           </div>
         </div>
@@ -266,33 +268,33 @@
                 >
                   <Input
                     bind:value={seat.name}
-                    placeholder="席位名称"
-                    aria-label="席位名称"
+                    placeholder={t('procedure_seat_name')}
+                    aria-label={t('procedure_seat_name')}
                     aria-invalid={showSeatNameError || undefined}
                   />
                   {#if committee.type === 'cabinet'}
                     <Input
                       bind:value={seat.shortName}
-                      placeholder="席位简称（可选）"
-                      aria-label="席位简称"
+                      placeholder={t('procedure_seat_abbreviation_optional')}
+                      aria-label={t('procedure_seat_abbreviation')}
                     />
                   {/if}
                   {#if isSingleton}
                     <label
                       class="flex items-center justify-center gap-2 rounded-md border px-2 py-2 text-xs text-muted-foreground"
                     >
-                      <Checkbox bind:checked={seat.hasVotingRights} aria-label="投票权" />
-                      投票权
+                      <Checkbox bind:checked={seat.hasVotingRights} aria-label={t('procedure_voting_rights')} />
+                      {t('procedure_voting_rights')}
                     </label>
                   {:else}
                     <Select.Select type="single" bind:value={seat.roleId}>
-                      <Select.SelectTrigger class="w-full" aria-label="角色">
+                      <Select.SelectTrigger class="w-full" aria-label={t('procedure_role')}>
                         {wizard.roleName(seat.roleId ?? '')}
                       </Select.SelectTrigger>
                       <Select.SelectContent>
                         {#each wizard.roles as role (role.id)}
                           {#if wizard.isRoleAllowedInCommittee(role.id, committee.type)}
-                            <Select.SelectItem value={role.id} label={role.name || '未命名角色'} />
+                            <Select.SelectItem value={role.id} label={role.name || t('procedure_untitled_role')} />
                           {/if}
                         {/each}
                       </Select.SelectContent>
@@ -301,21 +303,21 @@
                   <Button
                     variant="ghost"
                     size="icon"
-                    title="删除席位"
+                    title={t('procedure_delete_seat')}
                     onclick={() => wizard.removeSeat(committee.id, seat.id)}
                   >
                     <Trash2 class="text-destructive" />
                   </Button>
                 </div>
                 {#if showSeatNameError}
-                  <Field.FieldError>请输入席位名称</Field.FieldError>
+                  <Field.FieldError>{t('procedure_enter_a_seat_name')}</Field.FieldError>
                 {/if}
               </div>
             {:else}
               <p
                 class="rounded-md border border-dashed px-3 py-6 text-center text-sm text-muted-foreground"
               >
-                尚未分配席位
+                {t('procedure_no_seats_assigned')}
               </p>
             {/each}
           </div>
@@ -323,14 +325,14 @@
       </Collapsible.Root>
 
       {#if showNoSeats}
-        <Field.FieldError class="mt-1">每个委员会至少分配一个席位</Field.FieldError>
+        <Field.FieldError class="mt-1">{t('procedure_assign_at_least_one_seat_to_each_committee')}</Field.FieldError>
       {/if}
       {#if showInvalidRole}
-        <Field.FieldError class="mt-1">存在未匹配到角色的席位，请重新选择角色</Field.FieldError>
+        <Field.FieldError class="mt-1">{t('procedure_some_seats_have_unmatched_roles_select_their_roles_again')}</Field.FieldError>
       {/if}
       {#if showInvalidSpecialRole}
         <Field.FieldError class="mt-1">
-          当前席位的角色与会场类型不匹配，请重新选择角色或调整会场类型
+          {t('procedure_the_seat_role_does_not_match_the_committee_type_choose_another_role_or_change_the_comm')}
         </Field.FieldError>
       {/if}
     </article>
@@ -340,54 +342,54 @@
 <Dialog.Root bind:open={formatDialogOpen}>
   <Dialog.Content class="sm:max-w-lg">
     <Dialog.Header>
-      <Dialog.Title>{importMode === 'excel' ? '从 Excel 导入席位' : '从文本导入席位'}</Dialog.Title>
-      <Dialog.Description>开始读取前，请确认导入内容符合以下格式。</Dialog.Description>
+      <Dialog.Title>{importMode === 'excel' ? t('procedure_import_seats_from_excel') : t('procedure_import_seats_from_text')}</Dialog.Title>
+      <Dialog.Description>{t('procedure_check_that_your_data_matches_the_following_format_before_importing')}</Dialog.Description>
     </Dialog.Header>
     {#if importMode === 'excel'}
       <div class="flex flex-col gap-3 text-sm text-muted-foreground">
-        <p>第一行作为表头，从第二行开始读取：</p>
+        <p>{t('procedure_the_first_row_is_a_header_data_starts_on_the_second_row')}</p>
         <div class="overflow-hidden rounded-md border">
           <table class="w-full text-sm">
             <thead class="bg-muted/50 text-left text-xs text-muted-foreground">
               <tr>
-                <th class="px-3 py-2 font-medium">A 列</th>
-                <th class="px-3 py-2 font-medium">B 列（可选）</th>
-                <th class="px-3 py-2 font-medium">C 列（可选）</th>
+                <th class="px-3 py-2 font-medium">{t('procedure_column_a')}</th>
+                <th class="px-3 py-2 font-medium">{t('procedure_column_b_optional')}</th>
+                <th class="px-3 py-2 font-medium">{t('procedure_column_c_optional')}</th>
               </tr>
             </thead>
             <tbody>
               <tr class="border-t">
-                <td class="px-3 py-2">席位名称</td>
-                <td class="px-3 py-2">席位简称（可选）</td>
+                <td class="px-3 py-2">{t('procedure_seat_name')}</td>
+                <td class="px-3 py-2">{t('procedure_seat_abbreviation_optional')}</td>
                 <td class="px-3 py-2">
-                  {isSingleton ? '投票权（可选，默认为是）' : '席位类型（角色名称，可选）'}
+                  {isSingleton ? t('procedure_voting_rights_optional_yes_by_default') : t('procedure_seat_type_role_name_optional')}
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
-        <p>选择文件后还需要选择要读取的 sheet。</p>
+        <p>{t('procedure_after_choosing_a_file_select_the_worksheet_to_read')}</p>
       </div>
     {:else}
       <div class="flex flex-col gap-2 text-sm text-muted-foreground">
-        <p>每行一个席位，格式为：</p>
+        <p>{t('procedure_one_seat_per_line_in_this_format')}</p>
         <code class="rounded-md bg-muted px-3 py-2 text-foreground">
-          {isSingleton ? '席位名称[,席位简称][,投票权]' : '席位名称[,席位简称][,席位类型]'}
+          {isSingleton ? t('procedure_seat_name_abbreviation_voting_rights') : t('procedure_seat_name_abbreviation_seat_type')}
         </code>
         <p>
           {isSingleton
-            ? '席位简称和投票权都可以省略；投票权填"否"表示无投票权，其他留空或取值默认为有投票权。'
-            : '席位简称和席位类型都可以省略；需要跳过简称填写类型时，请保留空字段，例如：席位名称,,席位类型。'}
+            ? t('procedure_abbreviation_and_voting_rights_are_optional_use_for_no_voting_rights_other_values_and_')
+            : t('procedure_abbreviation_and_seat_type_are_optional_to_omit_the_abbreviation_but_specify_a_type_ke')}
         </p>
-        <p>分隔符支持逗号、中文逗号、分号、中文分号和 |。</p>
+        <p>{t('procedure_separators_comma_chinese_comma_semicolon_chinese_semicolon_or')}</p>
       </div>
     {/if}
-    {#if importError}<Field.FieldError>{importError}</Field.FieldError>{/if}
+    {#if importError}<Field.FieldError>{renderProcedureMessage(importError)}</Field.FieldError>{/if}
     <Dialog.Footer>
-      <Button variant="outline" onclick={() => (formatDialogOpen = false)}>取消</Button>
+      <Button variant="outline" onclick={() => (formatDialogOpen = false)}>{t('procedure_cancel')}</Button>
       <Button onclick={confirmFormatDialog}>
         <Upload data-icon="inline-start" />
-        {importMode === 'excel' ? '选择文件' : '继续输入'}
+        {importMode === 'excel' ? t('procedure_choose_file') : t('procedure_continue_entering_text')}
       </Button>
     </Dialog.Footer>
   </Dialog.Content>
@@ -396,18 +398,18 @@
 <Dialog.Root bind:open={textDialogOpen}>
   <Dialog.Content class="sm:max-w-2xl">
     <Dialog.Header>
-      <Dialog.Title>粘贴文本席位</Dialog.Title>
-      <Dialog.Description>每行一个席位，支持逗号、分号或 | 分隔。</Dialog.Description>
+      <Dialog.Title>{t('procedure_paste_seat_data')}</Dialog.Title>
+      <Dialog.Description>{t('procedure_one_seat_per_line_separate_fields_with_commas_semicolons_or')}</Dialog.Description>
     </Dialog.Header>
     <Textarea
       bind:value={textValue}
       rows={10}
-      placeholder={isSingleton ? '席位名称[,席位简称][,投票权]' : '席位名称[,席位简称][,席位类型]'}
+      placeholder={isSingleton ? t('procedure_seat_name_abbreviation_voting_rights') : t('procedure_seat_name_abbreviation_seat_type')}
     />
-    {#if importError}<Field.FieldError>{importError}</Field.FieldError>{/if}
+    {#if importError}<Field.FieldError>{renderProcedureMessage(importError)}</Field.FieldError>{/if}
     <Dialog.Footer>
-      <Button variant="outline" onclick={() => (textDialogOpen = false)}>取消</Button>
-      <Button onclick={readText}>读取并预览</Button>
+      <Button variant="outline" onclick={() => (textDialogOpen = false)}>{t('procedure_cancel')}</Button>
+      <Button onclick={readText}>{t('procedure_read_and_preview')}</Button>
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>
@@ -415,24 +417,24 @@
 <Dialog.Root bind:open={sheetDialogOpen}>
   <Dialog.Content class="sm:max-w-md">
     <Dialog.Header>
-      <Dialog.Title>选择 Sheet</Dialog.Title>
-      <Dialog.Description>请选择要读取的工作表，第一行将作为表头跳过。</Dialog.Description>
+      <Dialog.Title>{t('procedure_choose_worksheet')}</Dialog.Title>
+      <Dialog.Description>{t('procedure_choose_a_worksheet_to_read_its_first_row_is_treated_as_a_header_and_skipped')}</Dialog.Description>
     </Dialog.Header>
     <Select.Select type="single" bind:value={selectedSheet}>
-      <Select.SelectTrigger class="w-full" aria-label="工作表">
-        {selectedSheet || '选择工作表'}
+      <Select.SelectTrigger class="w-full" aria-label={t('procedure_worksheet')}>
+        {selectedSheet || t('procedure_choose_worksheet_2')}
       </Select.SelectTrigger>
       <Select.SelectContent>
-        {#each workbook?.sheetNames ?? [] as sheet}<Select.SelectItem
+        {#each workbook?.sheetNames ?? [] as sheet (sheet)}<Select.SelectItem
             value={sheet}
             label={sheet}
           />{/each}
       </Select.SelectContent>
     </Select.Select>
-    {#if importError}<Field.FieldError>{importError}</Field.FieldError>{/if}
+    {#if importError}<Field.FieldError>{renderProcedureMessage(importError)}</Field.FieldError>{/if}
     <Dialog.Footer>
-      <Button variant="outline" onclick={() => (sheetDialogOpen = false)}>取消</Button>
-      <Button disabled={!selectedSheet} onclick={readSelectedSheet}>读取并预览</Button>
+      <Button variant="outline" onclick={() => (sheetDialogOpen = false)}>{t('procedure_cancel')}</Button>
+      <Button disabled={!selectedSheet} onclick={readSelectedSheet}>{t('procedure_read_and_preview')}</Button>
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>
@@ -440,33 +442,33 @@
 <Dialog.Root bind:open={previewDialogOpen}>
   <Dialog.Content class="max-w-4xl">
     <Dialog.Header>
-      <Dialog.Title>导入数据预览</Dialog.Title>
+      <Dialog.Title>{t('procedure_import_preview')}</Dialog.Title>
       <Dialog.Description>
-        确认后将把以下 {importedRows.length} 条席位追加到当前会场。
+        {t('procedure_seat_import_confirmation', { value1: importedRows.length })}
       </Dialog.Description>
     </Dialog.Header>
-    <p class="text-sm text-muted-foreground">导入到：{targetCommittee?.name || '未命名委员会'}</p>
+    <p class="text-sm text-muted-foreground">{t('procedure_seat_import_target', { value1: targetCommittee?.name || t('procedure_untitled_committee') })}</p>
     <div class="max-h-[50vh] overflow-auto rounded-md border">
       <table class="w-full text-sm">
         <thead class="sticky top-0 bg-muted/90 text-left text-xs text-muted-foreground">
           <tr>
-            <th class="px-3 py-2 font-medium">席位名称</th>
-            <th class="px-3 py-2 font-medium">席位简称</th>
-            <th class="px-3 py-2 font-medium">{isSingleton ? '输入值' : '席位类型'}</th>
-            <th class="px-3 py-2 font-medium">{isSingleton ? '投票权' : '匹配角色'}</th>
+            <th class="px-3 py-2 font-medium">{t('procedure_seat_name')}</th>
+            <th class="px-3 py-2 font-medium">{t('procedure_seat_abbreviation')}</th>
+            <th class="px-3 py-2 font-medium">{isSingleton ? t('procedure_input_value') : t('procedure_seat_type')}</th>
+            <th class="px-3 py-2 font-medium">{isSingleton ? t('procedure_voting_rights') : t('procedure_matched_role')}</th>
           </tr>
         </thead>
         <tbody>
           {#each importedRows as row, index (index)}
             <tr class="border-t">
-              <td class="px-3 py-2">{row.name || '（空）'}</td>
+              <td class="px-3 py-2">{row.name || t('procedure_empty')}</td>
               <td class="px-3 py-2">{row.shortName || '—'}</td>
               <td class="px-3 py-2">
                 {isSingleton
                   ? row.hasVotingRights === false
-                    ? '否'
+                    ? t('procedure_no')
                     : ''
-                  : row.roleName || '自动匹配'}
+                  : row.roleName || t('procedure_match_automatically')}
               </td>
               <td class="px-3 py-2 text-muted-foreground">{matchedRoleName(row)}</td>
             </tr>
@@ -476,12 +478,12 @@
     </div>
     {#if hasUnmatchedImportedRole}
       <Field.FieldError>
-        存在无法匹配到当前委员会的席位类型，导入后请在席位列表中重新选择角色。
+        {t('procedure_some_seat_types_cannot_be_matched_in_this_committee_select_their_roles_in_the_seat_lis')}
       </Field.FieldError>
     {/if}
     <Dialog.Footer>
-      <Button variant="outline" onclick={() => (previewDialogOpen = false)}>取消</Button>
-      <Button disabled={!targetCommittee} onclick={confirmImport}>确认导入</Button>
+      <Button variant="outline" onclick={() => (previewDialogOpen = false)}>{t('procedure_cancel')}</Button>
+      <Button disabled={!targetCommittee} onclick={confirmImport}>{t('procedure_confirm_import')}</Button>
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>

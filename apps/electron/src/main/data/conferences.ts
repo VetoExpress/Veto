@@ -73,7 +73,7 @@ export function listConferences(): ConferenceSummary[] {
     presentCount: c.presentCount ?? 0,
     votingCount: c.votingCount ?? 0,
     currentSpeaker: c.currentSpeaker,
-    timelineId: c.timelineId,
+    timelineId: c.timelineId
   }))
 }
 
@@ -96,7 +96,7 @@ export function getMinutes(conferenceId: string, limit = 10): MinutesEntry[] {
       timestamp: m.timestamp,
       type: m.type ?? 'info',
       title: m.title?.slice(0, 30) ?? '',
-      detail: m.detail,
+      detail: m.detail
     }))
     .reverse()
 }
@@ -118,7 +118,12 @@ export function getMinutes(conferenceId: string, limit = 10): MinutesEntry[] {
  */
 export function updateConference(
   id: string,
-  patch: Partial<Pick<ConferenceEntry, 'phase' | 'presentCount' | 'votingCount' | 'currentSpeaker' | 'timelineId'>>,
+  patch: Partial<
+    Pick<
+      ConferenceEntry,
+      'phase' | 'presentCount' | 'votingCount' | 'currentSpeaker' | 'timelineId'
+    >
+  >
 ): ConferenceEntry | null {
   const data = loadStore<ConferenceEntry[]>('conferences')
   if (!data || !Array.isArray(data)) return null
@@ -137,7 +142,7 @@ export function updateConference(
     eventBus.emit('conference:phase_changed', {
       conferenceId: id,
       prevPhase: prev.phase,
-      phase: patch.phase,
+      phase: patch.phase
     })
   }
 
@@ -147,12 +152,12 @@ export function updateConference(
       eventBus.emit('conference:speaker_started', {
         conferenceId: id,
         seat: patch.currentSpeaker.seat,
-        remaining: patch.currentSpeaker.remaining,
+        remaining: patch.currentSpeaker.remaining
       })
     } else if (!patch.currentSpeaker && prev.currentSpeaker) {
       eventBus.emit('conference:speaker_finished', {
         conferenceId: id,
-        seat: prev.currentSpeaker.seat,
+        seat: prev.currentSpeaker.seat
       })
     }
   }

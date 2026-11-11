@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import { Button } from '$lib/components/ui/button'
   import { Settings } from '@lucide/svelte'
   import { tweened } from 'svelte/motion'
@@ -38,6 +39,8 @@
 </script>
 
 <Button
+  title={t('components_settings')}
+  aria-label={t('components_settings')}
   variant="ghost"
   onclick={openSetting}
   size="icon"

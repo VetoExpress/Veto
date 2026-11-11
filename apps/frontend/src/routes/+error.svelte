@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
   import { page } from '$app/stores'
@@ -37,7 +38,7 @@
       {message}
     </h1>
     <p class="max-w-xs text-sm text-stone-400 sm:max-w-sm dark:text-stone-500">
-      糟糕，出了点儿问题。你可以尝试刷新页面，或者返回首页。
+      {t('procedure_something_went_wrong_try_refreshing_the_page_or_return_home')}
     </p>
   </div>
 
@@ -48,14 +49,14 @@
       class="flex w-full items-center justify-center gap-2 rounded-xl bg-stone-800 px-5 py-3 text-sm font-medium text-white shadow transition hover:bg-stone-700 active:scale-95 sm:w-auto sm:py-2.5 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-stone-200"
     >
       <Home class="size-4" />
-      返回首页
+      {t('procedure_return_home')}
     </button>
     <button
       onclick={() => location.reload()}
       class="flex w-full items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white/60 px-5 py-3 text-sm font-medium text-stone-700 shadow backdrop-blur-sm transition hover:bg-white active:scale-95 sm:w-auto sm:py-2.5 dark:border-stone-700 dark:bg-stone-800/60 dark:text-stone-300 dark:hover:bg-stone-800"
     >
       <RefreshCw class="size-4" />
-      刷新页面
+      {t('procedure_refresh_page')}
     </button>
   </div>
 </div>

@@ -1,4 +1,5 @@
 import type { SituationUpdate, TimelineProjection } from '../../../../../shared/content-types'
+import { t, getLocale } from '$lib/i18n'
 
 export type CloudSituation = SituationUpdate
 export type CloudTimeline = TimelineProjection
@@ -29,16 +30,17 @@ async function request<T>(token: string, path: string, init: RequestInit = {}): 
   try {
     const headers = new Headers(init.headers)
     headers.set('authorization', `Bearer ${token}`)
+    headers.set('Accept-Language', getLocale())
     if (init.body) headers.set('content-type', 'application/json')
     response = await fetch(new URL(path.replace(/^\//, ''), `${cloudApiBaseUrl}/`), {
       ...init,
       headers
     })
   } catch {
-    throw new CloudSituationError('无法连接云端服务')
+    throw new CloudSituationError(t('services_cloud_unavailable'))
   }
   const payload = (await response.json().catch(() => null)) as T | unknown
-  if (!response.ok) throw new CloudSituationError(message(payload, '局势请求失败'), response.status)
+  if (!response.ok) throw new CloudSituationError(message(payload, t('services_situation_failed')), response.status)
   return payload as T
 }
 

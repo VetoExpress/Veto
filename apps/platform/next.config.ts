@@ -1,8 +1,12 @@
-import type { NextConfig } from "next"
+import createNextIntlPlugin from "next-intl/plugin"
 
-const nextConfig: NextConfig = {
+const nextConfig = {
   distDir: process.env.VETO_E2E ? ".next-e2e" : ".next",
-  transpilePackages: ["@vetoexpress/auth", "@vetoexpress/utils"],
+  transpilePackages: [
+    "@vetoexpress/auth",
+    "@vetoexpress/i18n",
+    "@vetoexpress/utils",
+  ],
 }
 
-export default nextConfig
+export default createNextIntlPlugin("./i18n/request.ts")(nextConfig)

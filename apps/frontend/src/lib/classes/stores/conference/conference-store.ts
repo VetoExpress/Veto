@@ -9,6 +9,7 @@
  */
 
 import { writable, derived, get, type Readable } from 'svelte/store'
+import { t } from '$lib/i18n'
 import type {
   Conference as ConferenceDTO,
   Committee as CommitteeDTO,
@@ -16,6 +17,7 @@ import type {
   AgendaItem,
   YieldChoice,
   Motion,
+  MotionProposal,
   VoteBallot,
   ConferenceActionType,
   ConferencePhase
@@ -151,7 +153,7 @@ export async function retryConferenceStorage(): Promise<void> {
   if (storageReady) { await saveConferencesNow(); return }
   try {
   const data = await bootstrapStore<ConferenceDTO[]>(STORE_DOMAIN, [])
-  if (!Array.isArray(data)) throw new Error('会议存档格式无效，原文件已保留')
+  if (!Array.isArray(data)) throw new Error(t('services_conference_corrupt'))
   const restored = data.map((conference) => Conference.fromJSON(conference))
   for (const conference of restored) {
     for (const committee of conference.committees) {
@@ -178,19 +180,19 @@ export async function restoreCommitteeCheckpoint(checkpoint: CommitteeCheckpoint
   if (get(restoringCheckpoint)) return
   const conference = get(currentConferenceRecord)
   const current = getCurrentEngine()
-  if (!conference || !current || !storageReady) throw new Error('会议尚未加载完成')
+  if (!conference || !current || !storageReady) throw new Error(t('services_conference_loading'))
   const restored = restoreCheckpoint(checkpoint, conference.id, current)
   restoringCheckpoint.set(true)
   try {
     destroyAllTimers()
     if (current.activeSpeaker) current.activeSpeaker = { ...current.activeSpeaker, paused: true }
     if (current.activeCaucus) current.activeCaucus = { ...current.activeCaucus, paused: true }
-    if (!await saveCheckpoint(makeCheckpoint(conference.id, current, '恢复前自动备份'))) throw new Error('恢复前备份失败，当前会议已暂停')
+    if (!await saveCheckpoint(makeCheckpoint(conference.id, current, '恢复前自动备份'))) throw new Error(t('services_checkpoint_backup_failed'))
     const data = get(conferences).map((item) => {
       const json = item.toJSON()
       return item.id === conference.id ? { ...json, committees: json.committees.map((committee) => committee.id === restored.id ? restored.toJSON() : committee) } : json
     })
-    if (!await saver.save(data)) throw new Error('恢复保存失败，当前会议已暂停，原记录仍保留')
+    if (!await saver.save(data)) throw new Error(t('services_checkpoint_restore_failed'))
     registerEngine(restored)
     syncEngine(restored)
     getDisplayBridge().sendUpdate(buildDisplayData(restored))
@@ -415,7 +417,7 @@ export function getConferenceById(id: string): Conference | null {
 
 /** Replace an inactive local archive and register its committee engines. */
 export function restoreSyncedConference(data: ConferenceDTO): void {
-  if (get(currentConferenceId) === data.id) throw new Error('请先退出大会再恢复云端存档')
+  if (get(currentConferenceId) === data.id) throw new Error(t('services_exit_before_restore'))
   const restored = Conference.fromJSON(data)
   const existing = getConferenceById(data.id)
   for (const committee of existing?.committees ?? []) unregisterEngine(committee.id)
@@ -593,7 +595,7 @@ export function cancelYieldPending(): void {
 
 // ---- 动议 -----------------------------------------------------------------
 
-export function proposeMotion(motionData: Omit<Motion, 'id' | 'proposedAt' | 'status'>): string {
+export function proposeMotion(motionData: MotionProposal): string {
   const engine = getCurrentEngine()
   if (!engine) return ''
   const id = engine.proposeMotion(motionData)

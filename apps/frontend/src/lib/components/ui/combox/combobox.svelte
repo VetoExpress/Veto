@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import CheckIcon from "@lucide/svelte/icons/check";
   import ChevronsUpDownIcon from "@lucide/svelte/icons/chevrons-up-down";
   import { tick } from "svelte";
@@ -38,16 +39,16 @@
         role="combobox"
         aria-expanded={open}
       >
-        {selectedValue || "选择..."}
+        {selectedValue || t('settings_choose')}
         <ChevronsUpDownIcon class="ml-2 size-4 shrink-0 opacity-50" />
       </Button>
     {/snippet}
   </Popover.Trigger>
   <Popover.Content class="w-[200px] p-0">
     <Command.Root>
-      <Command.Input placeholder="搜索..." />
+      <Command.Input placeholder={t('settings_search')} />
       <Command.List>
-        <Command.Empty>什么也没有...</Command.Empty>
+        <Command.Empty>{t('settings_no_results')}</Command.Empty>
         <Command.Group>
           {#each items as item (item.value)}
             <Command.Item

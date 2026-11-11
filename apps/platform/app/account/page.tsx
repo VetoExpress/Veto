@@ -1,4 +1,5 @@
 "use client"
+import { usePlatformTranslations } from "@/components/i18n-provider"
 
 import { Loader2 } from "lucide-react"
 
@@ -11,13 +12,15 @@ import { usePlatformAuth } from "@/lib/use-platform-auth"
 import { usePlatformUser } from "@/lib/use-platform-user"
 
 export default function AccountPage() {
+  const { t, locale } = usePlatformTranslations()
+
   const { token, isReady, signOut } = usePlatformAuth()
   const { user, error } = usePlatformUser(token, signOut)
 
   if (!isReady) return <PlatformLoading />
 
   return (
-    <PlatformShell backHref="/" backLabel="返回大会列表">
+    <PlatformShell backHref="/" backLabel={t("platform_back_conferences")}>
       <section className="border-b pb-10">
         <TextAnimate
           as="h1"
@@ -25,10 +28,10 @@ export default function AccountPage() {
           by="word"
           className="platform-title text-4xl font-bold tracking-[-0.04em] text-balance sm:text-5xl"
         >
-          个人中心
+          {t("platform_account_center")}
         </TextAnimate>
         <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
-          管理个人资料、账号安全与登录状态。
+          {t("platform_account_intro")}
         </p>
       </section>
 
@@ -52,7 +55,7 @@ export default function AccountPage() {
             <CardContent className="grid place-items-center py-20">
               <Loader2
                 className="animate-spin text-muted-foreground"
-                aria-label="正在加载用户信息"
+                aria-label={t("platform_loading_user")}
               />
             </CardContent>
           </Card>

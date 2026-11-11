@@ -1,3 +1,5 @@
+import { t, getLocale } from '$lib/i18n'
+
 const cloudApiBaseUrl = (
   import.meta.env.VITE_CLOUD_API_URL ?? 'https://api.miaoyww.top/v1'
 ).replace(/\/$/, '')
@@ -48,20 +50,21 @@ async function request<T>(token: string, path: string, init: RequestInit = {}): 
   try {
     const headers = new Headers(init.headers)
     headers.set('authorization', `Bearer ${token}`)
+    headers.set('Accept-Language', getLocale())
     if (init.body) headers.set('content-type', 'application/json')
     response = await fetch(new URL(path.replace(/^\//, ''), `${cloudApiBaseUrl}/`), {
       ...init,
       headers
     })
   } catch {
-    throw new CloudDirectiveError('无法连接云端服务')
+    throw new CloudDirectiveError(t('services_cloud_unavailable'))
   }
   const payload = (await response.json().catch(() => null)) as T | Record<string, unknown> | null
   if (!response.ok) {
     const error = payload && typeof payload === 'object' && 'error' in payload ? payload.error : null
     const message = error && typeof error === 'object' && 'message' in error && typeof error.message === 'string'
       ? error.message
-      : '指令请求失败'
+      : t('services_directive_failed')
     throw new CloudDirectiveError(message, response.status)
   }
   return payload as T

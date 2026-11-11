@@ -13,37 +13,21 @@ import type {
   NewsStatus as SharedNewsStatus,
   SituationUpdate as SharedSituationUpdate
 } from '../../../../../shared'
+import { CAPABILITY_MESSAGE_KEYS } from '../../../../../shared/content-types'
+import { getLocalizedLabels } from '../../../../../shared/action-types'
+import { t } from '$lib/i18n'
 
 // ---- 能力系统 -------------------------------------------------------------
 
 /** Seat 可执行的操作能力 */
 export type Capability = SharedCapability
 
-/** 能力中文标签（与 CONTEXT.md 术语表一致，全库唯一真源，条目须覆盖全部 Capability） */
-export const CAPABILITY_LABELS: Record<Capability, string> = {
-  view_conference: '查看会议状态',
-  view_situation: '查看全局局势',
-  view_news: '查看全局新闻',
-  view_files: '查看文件',
-  review_files: '审核文件',
-  draft_news: '起草新闻草稿',
-  review_news: '审核新闻',
-  submit_directive: '提交指令',
-  process_directive: '处理指令',
-  send_files: '发送文件',
-  publish_situation: '发布局势更新',
-  withdraw_news: '撤回已发布新闻',
-  withdraw_situation: '撤回已发布局势更新',
-  withdraw_files: '撤回已发布文件',
-  control_conference: '控制会议流程',
-  control_timeline: '控制大会时间线',
-  draft_resolution: '起草决议'
-}
+export const CAPABILITY_LABELS = getLocalizedLabels(CAPABILITY_MESSAGE_KEYS, t)
 
 /** 能力选项（顺序即 UI 展示顺序），由 CAPABILITY_LABELS 派生，禁止另立清单 */
-export const CAPABILITY_OPTIONS: Array<{ value: Capability; label: string }> = Object.entries(
+export const CAPABILITY_OPTIONS: Array<{ value: Capability; label: string }> = Object.keys(
   CAPABILITY_LABELS
-).map(([value, label]) => ({ value: value as Capability, label }))
+).map((value) => ({ value: value as Capability, get label() { return CAPABILITY_LABELS[value as Capability] } }))
 
 // ---- 席位组 ---------------------------------------------------------------
 

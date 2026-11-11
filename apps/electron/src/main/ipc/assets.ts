@@ -19,7 +19,7 @@ const MIME_MAP: Record<string, string> = {
   '.jpeg': 'image/jpeg',
   '.gif': 'image/gif',
   '.webp': 'image/webp',
-  '.svg': 'image/svg+xml',
+  '.svg': 'image/svg+xml'
 }
 
 export function registerAssetsIpc(pluginInstances: PluginInstance[]): void {
@@ -43,7 +43,7 @@ export function registerAssetsIpc(pluginInstances: PluginInstance[]): void {
 
       return {
         data: buffer.toString('base64'),
-        mimeType: MIME_MAP[ext] ?? 'application/octet-stream',
+        mimeType: MIME_MAP[ext] ?? 'application/octet-stream'
       }
     } catch {
       return null

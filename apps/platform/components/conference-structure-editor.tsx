@@ -1,4 +1,6 @@
 "use client"
+import { message } from "@/i18n/messages"
+import { usePlatformTranslations } from "@/components/i18n-provider"
 
 import { useState } from "react"
 import type { JSX } from "react"
@@ -51,7 +53,7 @@ const textareaClassName =
   "min-h-24 w-full resize-y rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
 
 const committeeTypeLabels: Record<CommitteeInput["type"], string> = {
-  cabinet: "委员会 / Cabinet",
+  cabinet: message("platform_committee_cabinet"),
   mpc: "MPC",
   ipc: "IPC",
 }
@@ -60,9 +62,9 @@ const roleSystemLabels: Record<
   NonNullable<RoleTemplateInput["systemCode"]> | "custom",
   string
 > = {
-  custom: "自定义角色",
+  custom: message("platform_custom_role"),
   staff: "Staff",
-  mpc_press: "MPC 记者",
+  mpc_press: message("platform_mpc_press"),
   ipc: "IPC",
 }
 
@@ -90,6 +92,8 @@ export function ConferenceStructureEditor({
   allowExistingRemoval = true,
   conferenceId,
 }: ConferenceStructureEditorProps): JSX.Element {
+  const { t, locale } = usePlatformTranslations()
+
   const [rolesOpen, setRolesOpen] = useState(true)
   const [committeesOpen, setCommitteesOpen] = useState(true)
   const [editingRoleIndex, setEditingRoleIndex] = useState<number | null>(null)
@@ -172,12 +176,12 @@ export function ConferenceStructureEditor({
                   id="roles-heading"
                   className="text-lg font-semibold tracking-tight"
                 >
-                  角色与权限
+                  {t("platform_roles_and_capabilities")}
                 </h2>
                 <Badge variant="secondary">{value.roleTemplates.length}</Badge>
               </div>
               <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                每个角色至少选择一项权限。系统角色会限制可使用的委员会类型。
+                {t("platform_role_configuration_hint")}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -188,11 +192,15 @@ export function ConferenceStructureEditor({
                 onClick={addRole}
               >
                 <Plus aria-hidden="true" />
-                添加角色
+                {t("platform_add_role")}
               </Button>
               <CollapsibleTrigger
                 render={<Button type="button" variant="ghost" size="icon" />}
-                aria-label={rolesOpen ? "收起角色与权限" : "展开角色与权限"}
+                aria-label={
+                  rolesOpen
+                    ? t("platform_collapse_role_section")
+                    : t("platform_expand_role_section")
+                }
               >
                 <ChevronDown
                   className={cn(rolesOpen && "rotate-180")}
@@ -205,7 +213,7 @@ export function ConferenceStructureEditor({
           <CollapsibleContent className="border-t p-4 sm:p-5">
             {value.roleTemplates.length === 0 ? (
               <div className="rounded-xl border border-dashed px-5 py-10 text-center text-sm text-muted-foreground">
-                尚未添加角色
+                {t("platform_no_roles")}
               </div>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2">
@@ -228,24 +236,35 @@ export function ConferenceStructureEditor({
                         onClick={() => setEditingRoleIndex(roleIndex)}
                       >
                         <span className="sr-only">
-                          编辑{role.name.trim() || `角色 ${roleIndex + 1}`}
+                          {t("platform_edit")}
+                          {role.name.trim() ||
+                            t("platform_role_number", {
+                              value1: roleIndex + 1,
+                            })}
                         </span>
                       </button>
                       <CardHeader className="pointer-events-none relative px-4">
                         <CardTitle className="truncate text-base">
-                          {role.name.trim() || `角色 ${roleIndex + 1}`}
+                          {role.name.trim() ||
+                            t("platform_role_number", {
+                              value1: roleIndex + 1,
+                            })}
                         </CardTitle>
                         <p className="line-clamp-2 text-sm leading-5 text-muted-foreground">
-                          {role.description?.trim() || "暂无角色说明"}
+                          {role.description?.trim() ||
+                            t("platform_no_role_description")}
                         </p>
                       </CardHeader>
                       <CardContent className="relative flex flex-wrap items-center justify-between gap-3 px-4">
                         <div className="pointer-events-none flex flex-wrap items-center gap-2">
                           {role.systemCode ? (
-                            <Badge variant="outline">系统角色</Badge>
+                            <Badge variant="outline">
+                              {t("platform_system_role")}
+                            </Badge>
                           ) : null}
                           <span className="text-xs text-muted-foreground">
-                            {role.capabilities.length} 项权限
+                            {role.capabilities.length}
+                            {t("platform_capability_unit")}
                           </span>
                         </div>
                         <div className="relative flex items-center gap-1">
@@ -261,12 +280,20 @@ export function ConferenceStructureEditor({
                             }}
                           >
                             <Pencil aria-hidden="true" />
-                            编辑
+                            {t("platform_edit")}
                           </Button>
                           <ConfirmDeleteButton
-                            disabled={disabled || inUse || (!allowExistingRemoval && Boolean(role.id))}
+                            disabled={
+                              disabled ||
+                              inUse ||
+                              (!allowExistingRemoval && Boolean(role.id))
+                            }
                             disabledLabel={
-                              inUse ? "角色正在被席位使用" : !allowExistingRemoval && role.id ? "活动中的大会不能删除已有角色" : undefined
+                              inUse
+                                ? t("platform_role_assigned")
+                                : !allowExistingRemoval && role.id
+                                  ? t("platform_active_role_retained")
+                                  : undefined
                             }
                             onConfirm={() => removeRole(roleIndex)}
                           />
@@ -293,12 +320,12 @@ export function ConferenceStructureEditor({
                   id="committees-heading"
                   className="text-lg font-semibold tracking-tight"
                 >
-                  委员会与席位
+                  {t("platform_committees_and_seats")}
                 </h2>
                 <Badge variant="secondary">{value.committees.length}</Badge>
               </div>
               <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                每个委员会至少需要一个席位。
+                {t("platform_committee_needs_seat")}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -308,7 +335,7 @@ export function ConferenceStructureEditor({
                   className={buttonVariants({ variant: "outline" })}
                 >
                   <Plus aria-hidden="true" />
-                  添加委员会
+                  {t("platform_add_committee")}
                 </Link>
               ) : (
                 <Button
@@ -318,13 +345,15 @@ export function ConferenceStructureEditor({
                   onClick={addCommittee}
                 >
                   <Plus aria-hidden="true" />
-                  添加委员会
+                  {t("platform_add_committee")}
                 </Button>
               )}
               <CollapsibleTrigger
                 render={<Button type="button" variant="ghost" size="icon" />}
                 aria-label={
-                  committeesOpen ? "收起委员会与席位" : "展开委员会与席位"
+                  committeesOpen
+                    ? t("platform_collapse_committee_section")
+                    : t("platform_expand_committee_section")
                 }
               >
                 <ChevronDown
@@ -338,7 +367,7 @@ export function ConferenceStructureEditor({
           <CollapsibleContent className="border-t p-4 sm:p-5">
             {value.committees.length === 0 ? (
               <div className="rounded-xl border border-dashed px-5 py-10 text-center text-sm text-muted-foreground">
-                尚未添加委员会
+                {t("platform_no_committees")}
               </div>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2">
@@ -347,9 +376,10 @@ export function ConferenceStructureEditor({
                     committee,
                     committeeIndex
                   )
-                  const href = conferenceId && !disabled
-                    ? `/conferences/${conferenceId}/committees/${reference}`
-                    : undefined
+                  const href =
+                    conferenceId && !disabled
+                      ? `/conferences/${conferenceId}/committees/${reference}`
+                      : undefined
                   return (
                     <Card
                       key={reference}
@@ -361,9 +391,11 @@ export function ConferenceStructureEditor({
                           className="absolute inset-0 rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
                         >
                           <span className="sr-only">
-                            编辑
+                            {t("platform_edit")}
                             {committee.name.trim() ||
-                              `委员会 ${committeeIndex + 1}`}
+                              t("platform_committee_number", {
+                                value1: committeeIndex + 1,
+                              })}
                           </span>
                         </Link>
                       ) : (
@@ -376,24 +408,29 @@ export function ConferenceStructureEditor({
                           }
                         >
                           <span className="sr-only">
-                            编辑
+                            {t("platform_edit")}
                             {committee.name.trim() ||
-                              `委员会 ${committeeIndex + 1}`}
+                              t("platform_committee_number", {
+                                value1: committeeIndex + 1,
+                              })}
                           </span>
                         </button>
                       )}
                       <CardHeader className="pointer-events-none relative px-4">
                         <CardTitle className="truncate text-base">
                           {committee.name.trim() ||
-                            `委员会 ${committeeIndex + 1}`}
+                            t("platform_committee_number", {
+                              value1: committeeIndex + 1,
+                            })}
                         </CardTitle>
                         <p className="text-sm text-muted-foreground">
-                          {committeeTypeLabels[committee.type]}
+                          {t(committeeTypeLabels[committee.type])}
                         </p>
                       </CardHeader>
                       <CardContent className="relative flex flex-wrap items-center justify-between gap-3 px-4">
                         <span className="pointer-events-none text-xs text-muted-foreground">
-                          {committee.seats.length} 个席位
+                          {committee.seats.length}
+                          {t("platform_seat_unit")}
                         </span>
                         <div className="relative flex items-center gap-1">
                           {href ? (
@@ -405,7 +442,7 @@ export function ConferenceStructureEditor({
                               })}
                             >
                               <Pencil aria-hidden="true" />
-                              编辑
+                              {t("platform_edit")}
                             </Link>
                           ) : (
                             <Button
@@ -420,11 +457,14 @@ export function ConferenceStructureEditor({
                               }}
                             >
                               <Pencil aria-hidden="true" />
-                              编辑
+                              {t("platform_edit")}
                             </Button>
                           )}
                           <ConfirmDeleteButton
-                            disabled={disabled || (!allowExistingRemoval && Boolean(committee.id))}
+                            disabled={
+                              disabled ||
+                              (!allowExistingRemoval && Boolean(committee.id))
+                            }
                             onConfirm={() => removeCommittee(committeeIndex)}
                           />
                         </div>
@@ -446,9 +486,11 @@ export function ConferenceStructureEditor({
       >
         <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{editingRole?.name.trim() || "编辑角色"}</DialogTitle>
+            <DialogTitle>
+              {editingRole?.name.trim() || t("platform_edit_role")}
+            </DialogTitle>
             <DialogDescription>
-              设置角色名称、类型以及该角色可使用的大会能力。
+              {t("platform_role_editor_hint")}
             </DialogDescription>
           </DialogHeader>
           {editingRole && editingRoleIndex !== null ? (
@@ -456,7 +498,7 @@ export function ConferenceStructureEditor({
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
                   <Label htmlFor={`role-name-${roleReference(editingRole)}`}>
-                    角色名称
+                    {t("platform_role_name")}
                   </Label>
                   <Input
                     id={`role-name-${roleReference(editingRole)}`}
@@ -472,11 +514,16 @@ export function ConferenceStructureEditor({
                 </div>
                 <div className="flex flex-col gap-2">
                   <Label htmlFor={`role-system-${roleReference(editingRole)}`}>
-                    角色类型
+                    {t("platform_role_type")}
                   </Label>
                   <Select
                     value={editingRole.systemCode ?? "custom"}
-                    items={roleSystemLabels}
+                    items={Object.fromEntries(
+                      Object.entries(roleSystemLabels).map(([key, label]) => [
+                        key,
+                        t(label),
+                      ])
+                    )}
                     disabled={disabled}
                     onValueChange={(newValue) =>
                       updateRole(editingRoleIndex, {
@@ -491,13 +538,19 @@ export function ConferenceStructureEditor({
                       id={`role-system-${roleReference(editingRole)}`}
                       className="h-9 w-full"
                     >
-                      <SelectValue placeholder="选择角色类型" />
+                      <SelectValue
+                        placeholder={t("platform_select_role_type")}
+                      />
                     </SelectTrigger>
 
                     <SelectContent>
-                      <SelectItem value="custom">自定义角色</SelectItem>
+                      <SelectItem value="custom">
+                        {t("platform_custom_role")}
+                      </SelectItem>
                       <SelectItem value="staff">Staff</SelectItem>
-                      <SelectItem value="mpc_press">MPC 记者</SelectItem>
+                      <SelectItem value="mpc_press">
+                        {t("platform_mpc_press")}
+                      </SelectItem>
                       <SelectItem value="ipc">IPC</SelectItem>
                     </SelectContent>
                   </Select>
@@ -507,7 +560,7 @@ export function ConferenceStructureEditor({
                 <Label
                   htmlFor={`role-description-${roleReference(editingRole)}`}
                 >
-                  角色说明
+                  {t("platform_role_description")}
                 </Label>
                 <Input
                   id={`role-description-${roleReference(editingRole)}`}
@@ -522,7 +575,9 @@ export function ConferenceStructureEditor({
                 />
               </div>
               <fieldset>
-                <legend className="text-sm font-medium">权限</legend>
+                <legend className="text-sm font-medium">
+                  {t("platform_capabilities")}
+                </legend>
                 <div className="mt-3">
                   <CapabilityPicker
                     value={editingRole.capabilities}
@@ -538,7 +593,7 @@ export function ConferenceStructureEditor({
           ) : null}
           <DialogFooter>
             <DialogClose render={<Button variant="outline" />}>
-              完成
+              {t("platform_done")}
             </DialogClose>
           </DialogFooter>
         </DialogContent>
@@ -553,10 +608,10 @@ export function ConferenceStructureEditor({
         <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>
-              {editingCommittee?.name.trim() || "编辑委员会"}
+              {editingCommittee?.name.trim() || t("platform_edit_committee")}
             </DialogTitle>
             <DialogDescription>
-              大会创建完成后，委员会将使用独立页面进行编辑。
+              {t("platform_committee_editor_hint")}
             </DialogDescription>
           </DialogHeader>
           {editingCommittee && editingCommitteeIndex !== null ? (
@@ -572,7 +627,7 @@ export function ConferenceStructureEditor({
           ) : null}
           <DialogFooter>
             <DialogClose render={<Button variant="outline" />}>
-              完成
+              {t("platform_done")}
             </DialogClose>
           </DialogFooter>
         </DialogContent>

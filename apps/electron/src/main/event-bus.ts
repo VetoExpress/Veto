@@ -97,7 +97,7 @@ class EventBus {
     const payload: EventPayload = {
       type,
       timestamp: Date.now(),
-      data,
+      data
     }
 
     // 遍历所有注册的 pattern，检查是否匹配当前 event type
@@ -150,7 +150,7 @@ function matchPattern(pattern: string, eventType: string): boolean {
     '^' +
     pattern
       .replace(/[.+^${}()|[\]\\]/g, '\\$&') // 转义正则特殊字符
-      .replace(/\*/g, '.*') +                 // * → .*
+      .replace(/\*/g, '.*') + // * → .*
     '$'
   try {
     return new RegExp(regexStr).test(eventType)

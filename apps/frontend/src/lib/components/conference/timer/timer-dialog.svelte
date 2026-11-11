@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import { onDestroy } from 'svelte'
   import { Timer, Play, Pause, RotateCcw, Clock, Square } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
@@ -29,16 +30,16 @@
   })
 
   // ── 预设时长（秒） ──
-  const PRESETS = [
-    { label: '30秒', sec: 30 },
-    { label: '1分', sec: 60 },
-    { label: '2分', sec: 120 },
-    { label: '3分', sec: 180 },
-    { label: '5分', sec: 300 },
-    { label: '10分', sec: 600 },
-    { label: '15分', sec: 900 },
-    { label: '30分', sec: 1800 }
-  ]
+  const PRESETS = $derived([
+    { label: t('procedure_30_seconds'), sec: 30 },
+    { label: t('procedure_1_minute'), sec: 60 },
+    { label: t('procedure_2_minutes'), sec: 120 },
+    { label: t('procedure_3_minutes'), sec: 180 },
+    { label: t('procedure_5_minutes'), sec: 300 },
+    { label: t('procedure_10_minutes'), sec: 600 },
+    { label: t('procedure_15_minutes'), sec: 900 },
+    { label: t('procedure_30_minutes'), sec: 1800 }
+  ])
 
   // ── 本地输入状态 ──
   let inputMin = $state(2)
@@ -142,10 +143,10 @@
       <Dialog.Header class="pb-1">
         <Dialog.Title class="flex items-center gap-2 text-base font-semibold">
           <Clock size={18} class="text-indigo-500" />
-          简易计时器
+          {t('procedure_standalone_timer')}
         </Dialog.Title>
         <Dialog.Description class="text-xs text-muted-foreground">
-          独立计时 · {hasStarted ? '后台运行中' : '不影响会议流程'}
+          {t('procedure_standalone_timer_status', { value1: hasStarted ? t('procedure_running_in_background') : t('procedure_does_not_affect_meeting_procedure') })}
         </Dialog.Description>
       </Dialog.Header>
 
@@ -175,7 +176,7 @@
               {formatTime(displaySec)}
             </span>
             <span class="mt-1 text-[11px] text-muted-foreground">
-              {isExpired ? '⏰ 时间到！' : isRunning ? '计时中…' : hasStarted ? '已暂停' : '就绪'}
+              {isExpired ? t('procedure_time_is_up') : isRunning ? t('procedure_timing') : hasStarted ? t('procedure_paused') : t('procedure_ready')}
             </span>
           </div>
         </div>
@@ -190,7 +191,7 @@
               onclick={handleStart}
             >
               <Play size={16} />
-              {hasStarted && !isExpired ? '继续' : '开始'}
+              {hasStarted && !isExpired ? t('procedure_continue_2') : t('procedure_start_2')}
             </Button>
           {:else}
             <Button
@@ -200,7 +201,7 @@
               onclick={handlePause}
             >
               <Pause size={16} />
-              暂停
+              {t('procedure_pause')}
             </Button>
           {/if}
           <Button
@@ -211,7 +212,7 @@
             onclick={handleReset}
           >
             <Square size={16} />
-            停止
+            {t('procedure_stop')}
           </Button>
         </div>
 
@@ -219,7 +220,7 @@
 
         <!-- 自定义时间输入（暂停或到期后修改会开始新的计时） -->
         <div class="w-full space-y-2">
-          <Label class="text-xs text-muted-foreground">自定义时长</Label>
+          <Label class="text-xs text-muted-foreground">{t('procedure_custom_duration')}</Label>
           <div class="flex items-center gap-2">
             <div class="flex items-center gap-1.5">
               <Input
@@ -231,7 +232,7 @@
                 disabled={isRunning}
                 onchange={() => applyCustomTime()}
               />
-              <span class="text-xs text-muted-foreground">分</span>
+              <span class="text-xs text-muted-foreground">{t('procedure_min')}</span>
             </div>
             <div class="flex items-center gap-1.5">
               <Input
@@ -243,14 +244,14 @@
                 disabled={isRunning}
                 onchange={() => applyCustomTime()}
               />
-              <span class="text-xs text-muted-foreground">秒</span>
+              <span class="text-xs text-muted-foreground">{t('procedure_seconds')}</span>
             </div>
           </div>
         </div>
 
         <!-- 预设按钮 -->
         <div class="w-full space-y-2">
-          <Label class="text-xs text-muted-foreground">快速预设</Label>
+          <Label class="text-xs text-muted-foreground">{t('procedure_quick_presets')}</Label>
           <div class="grid grid-cols-4 gap-2">
             {#each PRESETS as preset (preset.sec)}
               <Button
@@ -268,7 +269,7 @@
       </div>
 
       <Dialog.Footer class="pt-1">
-        <Button variant="outline" onclick={() => (open = false)}>关闭</Button>
+        <Button variant="outline" onclick={() => (open = false)}>{t('procedure_close')}</Button>
       </Dialog.Footer>
     </Dialog.Content>
   </Dialog.Portal>

@@ -8,11 +8,13 @@ import type {
   Entry,
   ConferenceEntry
 } from '../../../../../shared/action-types'
-import { ACTION_LABELS } from '../../../../../shared/action-types'
+import { ACTION_MESSAGE_KEYS, getLocalizedLabels } from '../../../../../shared/action-types'
+import { t } from '$lib/i18n'
+import type { MessageKey } from '@vetoexpress/i18n'
 
 export type { Attendance, ParticipantSeat, Seat, SeatView } from './delegate'
 export type { ConferenceActionType, Entry, ConferenceEntry }
-export { ACTION_LABELS }
+export const ACTION_LABELS = getLocalizedLabels(ACTION_MESSAGE_KEYS, t)
 
 export type ConferencePhase =
   | 'preamble'
@@ -79,11 +81,12 @@ export interface SpeakerListData {
 
 export type PointType = 'point_of_order' | 'point_of_inquiry' | 'point_of_personal_privilege'
 
-export const POINT_LABELS: Record<PointType, string> = {
-  point_of_order: '程序性问题',
-  point_of_inquiry: '咨询性问题',
-  point_of_personal_privilege: '个人特权问题'
+export const POINT_MESSAGE_KEYS: Record<PointType, MessageKey> = {
+  point_of_order: 'domain_point_point_of_order',
+  point_of_inquiry: 'domain_point_point_of_inquiry',
+  point_of_personal_privilege: 'domain_point_point_of_personal_privilege'
 }
+export const POINT_LABELS = getLocalizedLabels(POINT_MESSAGE_KEYS, t)
 
 export type MotionType =
   | 'open_speakers_list'
@@ -204,23 +207,30 @@ export type Motion =
   | ChangeAttendanceMotion
   | IndividualSpeechMotion
 
-export const MOTION_LABELS: Record<MotionType, string> = {
-  open_speakers_list: '开启主发言名单',
-  moderated_caucus: '有主持核心磋商',
-  unmoderated_caucus: '自由磋商',
-  moderated_debate: '有主持的辩论',
-  unmoderated_debate: '自由辩论',
-  modify_speaking_time: '修改发言时间',
-  postpone_resolution: '延置决议草案',
-  resume_resolution: '恢复决议草案',
-  closure_debate: '结束辩论',
-  suspend_meeting: '暂时休会',
-  close_meeting: '闭幕',
-  reorder_resolution: '调整投票顺序',
-  substantive_vote: '实质性投票',
-  change_attendance: '更改出席状态',
-  individual_speech: '个人演讲'
+export type MotionProposal = Motion extends infer T
+  ? T extends Motion
+    ? Omit<T, 'id' | 'proposedAt' | 'status'>
+    : never
+  : never
+
+export const MOTION_MESSAGE_KEYS: Record<MotionType, MessageKey> = {
+  open_speakers_list: 'domain_motion_open_speakers_list',
+  moderated_caucus: 'domain_motion_moderated_caucus',
+  unmoderated_caucus: 'domain_motion_unmoderated_caucus',
+  moderated_debate: 'domain_motion_moderated_debate',
+  unmoderated_debate: 'domain_motion_unmoderated_debate',
+  modify_speaking_time: 'domain_motion_modify_speaking_time',
+  postpone_resolution: 'domain_motion_postpone_resolution',
+  resume_resolution: 'domain_motion_resume_resolution',
+  closure_debate: 'domain_motion_closure_debate',
+  suspend_meeting: 'domain_motion_suspend_meeting',
+  close_meeting: 'domain_motion_close_meeting',
+  reorder_resolution: 'domain_motion_reorder_resolution',
+  substantive_vote: 'domain_motion_substantive_vote',
+  change_attendance: 'domain_motion_change_attendance',
+  individual_speech: 'domain_motion_individual_speech'
 }
+export const MOTION_LABELS = getLocalizedLabels(MOTION_MESSAGE_KEYS, t)
 
 export interface Point {
   id: string
@@ -297,6 +307,8 @@ export interface Committee {
     speakerSeatIds: string[]
     remainingSec?: number
   } | null
+  /** 点名完成后的目标阶段；辩论结束触发的投票前点名设为 voting。 */
+  postRollCallPhase?: 'pending_speakers_list' | 'voting'
   activeCaucus?: {
     motionId: string
     type: CaucusType

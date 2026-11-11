@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import { Plus, Trash2 } from '@lucide/svelte'
   import type { SeatGroupType } from '$lib/classes/types/delegate'
   import { Button } from '$lib/components/ui/button'
@@ -7,11 +8,11 @@
   import * as Select from '$lib/components/ui/select'
   import { wizard } from '$lib/classes/stores/runes/create-conference-event-wizard.svelte'
 
-  const typeLabels: Record<SeatGroupType, string> = {
-    cabinet: '常规',
+  const typeLabels: Record<SeatGroupType, string> = $derived({
+    cabinet: t('procedure_cabinet'),
     mpc: 'MPC',
     ipc: 'IPC'
-  }
+  })
 
   const isSingleton = $derived(wizard.mode === 'singleton')
   const showNoCommittees = $derived(wizard.attempted && wizard.committees.length === 0)
@@ -19,11 +20,11 @@
 
 <section class="flex flex-col gap-4">
   {#if isSingleton}
-    <p class="text-sm text-muted-foreground">单例模式聚焦单一场会，会场数量已固定为一个。</p>
+    <p class="text-sm text-muted-foreground">{t('procedure_singleton_mode_has_exactly_one_committee')}</p>
   {/if}
 
   {#if showNoCommittees}
-    <Field.FieldError>至少添加一个会场</Field.FieldError>
+    <Field.FieldError>{t('procedure_add_at_least_one_committee')}</Field.FieldError>
   {/if}
 
   {#each wizard.committees as committee (committee.id)}
@@ -35,7 +36,7 @@
           : 'grid items-start gap-x-4 gap-y-3 md:grid-cols-[minmax(0,1fr)_11rem_auto]'}
       >
         <Field.Field data-invalid={showNameError}>
-          <Field.FieldLabel for={`committee-name-${committee.id}`}>会场名称</Field.FieldLabel>
+          <Field.FieldLabel for={`committee-name-${committee.id}`}>{t('procedure_committee_name')}</Field.FieldLabel>
           <Input
             id={`committee-name-${committee.id}`}
             bind:value={committee.name}
@@ -44,20 +45,20 @@
           />
           {#if showNameError}
             <Field.FieldError id={`committee-name-error-${committee.id}`}>
-              会场名称不能为空
+              {t('procedure_committee_name_is_required')}
             </Field.FieldError>
           {/if}
         </Field.Field>
 
         {#if !isSingleton}
           <Field.Field>
-            <Field.FieldLabel for={`committee-type-${committee.id}`}>类型</Field.FieldLabel>
+            <Field.FieldLabel for={`committee-type-${committee.id}`}>{t('procedure_type')}</Field.FieldLabel>
             <Select.Select type="single" bind:value={committee.type}>
               <Select.SelectTrigger id={`committee-type-${committee.id}`} class="w-full">
                 {typeLabels[committee.type]}
               </Select.SelectTrigger>
               <Select.SelectContent>
-                <Select.SelectItem value="cabinet" label="常规" />
+                <Select.SelectItem value="cabinet" label={t('procedure_cabinet')} />
                 <Select.SelectItem value="mpc" label="MPC" />
                 <Select.SelectItem value="ipc" label="IPC" />
               </Select.SelectContent>
@@ -70,7 +71,7 @@
             <Button
               variant="ghost"
               size="icon"
-              title="删除委员会"
+              title={t('procedure_delete_committee')}
               onclick={() => wizard.removeCommittee(committee.id)}
             >
               <Trash2 class="text-destructive" />
@@ -84,7 +85,7 @@
   {#if !isSingleton}
     <Button variant="outline" class="w-fit" onclick={() => wizard.addCommittee()}>
       <Plus data-icon="inline-start" />
-      添加会场
+      {t('procedure_add_committee')}
     </Button>
   {/if}
 </section>

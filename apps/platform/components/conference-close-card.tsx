@@ -1,4 +1,6 @@
 "use client"
+import { message } from "@/i18n/messages"
+import { usePlatformTranslations } from "@/components/i18n-provider"
 
 import { useCallback, useEffect, useState } from "react"
 import { Loader2, TriangleAlert } from "lucide-react"
@@ -38,6 +40,8 @@ export function ConferenceCloseCard({
   onConferenceChange,
   onError,
 }: Props) {
+  const { t, locale } = usePlatformTranslations()
+
   const [pendingCount, setPendingCount] = useState(0)
   const [closing, setClosing] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -64,7 +68,7 @@ export function ConferenceCloseCard({
     try {
       onConferenceChange(await closeConference(token, conferenceId, version))
     } catch (error) {
-      onError(error, "结束大会或清理待审文件失败")
+      onError(error, "platform_close_failed")
       try {
         onConferenceChange(
           await getConference(token, conferenceId, { refresh: true })
@@ -83,9 +87,11 @@ export function ConferenceCloseCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">结束大会</CardTitle>
+        <CardTitle className="text-lg">
+          {t("platform_close_conference")}
+        </CardTitle>
         <p className="text-sm leading-6 text-muted-foreground">
-          结束后将停止大会操作，仍可查看记录。
+          {t("platform_close_conference_hint")}
         </p>
       </CardHeader>
       <CardContent>
@@ -96,7 +102,9 @@ export function ConferenceCloseCard({
             }
           >
             {closing && <Loader2 className="animate-spin" aria-hidden="true" />}
-            {lifecycle === "active" ? "结束大会" : "重试清理"}
+            {lifecycle === "active"
+              ? t("platform_close_conference")
+              : t("platform_retry_cleanup")}
           </DialogTrigger>
           <DialogContent showCloseButton={false}>
             <DialogHeader>
@@ -105,14 +113,16 @@ export function ConferenceCloseCard({
                   className="size-5 text-destructive"
                   aria-hidden="true"
                 />
-                确认{lifecycle === "active" ? "结束大会" : "重试清理"}？
+                {t("platform_confirm")}
+                {lifecycle === "active"
+                  ? t("platform_close_conference")
+                  : t("platform_retry_cleanup")}
+                ？
               </DialogTitle>
               <DialogDescription>
-                待审核文件将立即清理。已发布文件仅保留至设置的会议结束时间后 3
-                天（72
-                小时），请在文件页查看截止时间并提前下载到本地。未设置结束时间时暂无自动清理期限。手动结束不会重设该期限。
+                {t("platform_close_files_hint")}
                 <br />
-                此操作无法撤回。
+                {t("platform_irreversible")}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
@@ -122,7 +132,7 @@ export function ConferenceCloseCard({
                 disabled={closing}
                 onClick={() => setConfirmOpen(false)}
               >
-                取消
+                {t("platform_cancel")}
               </Button>
               <Button
                 type="button"
@@ -136,7 +146,7 @@ export function ConferenceCloseCard({
                 {closing && (
                   <Loader2 className="animate-spin" aria-hidden="true" />
                 )}
-                确认结束
+                {t("platform_confirm_close")}
               </Button>
             </DialogFooter>
           </DialogContent>

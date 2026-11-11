@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   /**
    * general-debate/index.svelte
    * ────────────────────────────
@@ -45,48 +46,45 @@
   <div class="flex flex-col items-center gap-10">
     <DisplaySectionHeader
       Icon={Volume2}
-      label={yp.yieldType === 'question' ? '呼吁提问' : '呼吁评论'}
+      label={yp.yieldType === 'question' ? t('components_call_questions') : t('components_call_comments')}
       colorClass="text-[#C9A84C]"
     />
 
     <div class="text-center">
       <div class="text-6xl font-light tracking-wide text-white/70">
-        {yp.yieldType === 'question' ? '场下有无提问？' : '场下有无评论？'}
+        {yp.yieldType === 'question' ? t('components_any_questions') : t('components_any_comments')}
       </div>
       <div class="mt-4 text-2xl font-light tracking-[0.06em] text-white/30">
-        {yp.originalSeat.name} 将剩余 {formatTime(Math.round(yp.remainingSec))} 让渡给{yp.yieldType ===
-        'question'
-          ? '提问'
-          : '评论'}
+        {t('components_yield_floor', { name: yp.originalSeat.name, time: formatTime(Math.round(yp.remainingSec)), kind: yp.yieldType })}
       </div>
     </div>
   </div>
 {:else if isYieldQuestioning}
   <!-- 提问方已指定，等待/正在进行提问 -->
   <div class="flex flex-col items-center gap-10">
-    <DisplaySectionHeader Icon={HelpCircle} label="提问环节" colorClass="text-[#5B92E5]" />
+    <DisplaySectionHeader Icon={HelpCircle} label={t('components_question_period')} colorClass="text-[#5B92E5]" />
 
     <div class="text-center">
       <SeatNameDisplay
         name={yp.questionerSeat?.name ?? ''}
         shortName={yp.questionerSeat?.shortName ?? ''}
       />
-      <div class="mt-2 text-3xl font-light tracking-[0.06em] text-white/30">正在提问</div>
+      <div class="mt-2 text-3xl font-light tracking-[0.06em] text-white/30">{t('components_asking_question')}</div>
       <div class="mt-6 text-xl tracking-wider text-white/20">
-        {yp.originalSeat.name} 将使用剩余 {formatTime(Math.round(yp.remainingSec))} 回答
+        {t('components_yield_answer', { name: yp.originalSeat.name, time: formatTime(Math.round(yp.remainingSec)) })}
       </div>
     </div>
   </div>
 {:else if isYieldDelegate}
   <!-- 让渡给代表：等待主席选择 -->
   <div class="flex flex-col items-center gap-10">
-    <DisplaySectionHeader Icon={ArrowRight} label="让渡时间" colorClass="text-[#C9A84C]" />
+    <DisplaySectionHeader Icon={ArrowRight} label={t('components_yield_time')} colorClass="text-[#C9A84C]" />
 
     <div class="text-center">
       <div class="text-5xl font-light tracking-wide text-white/70">
-        {yp.originalSeat.name} 将剩余 {formatTime(Math.round(yp.remainingSec))} 让渡给另一位代表
+        {t('components_yield_delegate', { name: yp.originalSeat.name, time: formatTime(Math.round(yp.remainingSec)) })}
       </div>
-      <div class="mt-4 text-2xl tracking-wider text-white/20">等待主席指定目标席位</div>
+      <div class="mt-4 text-2xl tracking-wider text-white/20">{t('components_wait_target_seat')}</div>
     </div>
   </div>
 {:else if data.currentSpeaker}
@@ -98,8 +96,8 @@
 {:else}
   {@const waiting = data.speakersList.filter((s: { status: string }) => s.status === 'waiting')}
   {@const allSpeakers = data.readySpeaker ? [data.readySpeaker, ...waiting] : waiting}
-  {@const displayTitle = data.readySpeaker ? '即将发言' : '主发言名单'}
-  {@const displaySubtitle = data.readySpeaker ? '等待主席开始计时' : ''}
+  {@const displayTitle = data.readySpeaker ? t('components_up_next') : t('components_speakers_list')}
+  {@const displaySubtitle = data.readySpeaker ? t('components_wait_start_timer') : ''}
   <SpeakerQueueDisplay
     speakers={allSpeakers}
     max={DISPLAY_MAX_SPEAKERS}

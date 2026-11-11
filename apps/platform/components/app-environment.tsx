@@ -1,4 +1,5 @@
 "use client"
+import { usePlatformTranslations } from "@/components/i18n-provider"
 
 import {
   createContext,
@@ -82,6 +83,8 @@ export function returnToApp() {
 }
 
 export function AppEnvironment({ children }: { children: ReactNode }) {
+  const { t, locale } = usePlatformTranslations()
+
   const desktop = useSyncExternalStore(subscribe, isDesktop, serverSnapshot)
   const appEntry = useSyncExternalStore(subscribe, isAppEntry, serverSnapshot)
   const [titlebarActions, setTitlebarActions] = useState<HTMLDivElement | null>(
@@ -110,29 +113,29 @@ export function AppEnvironment({ children }: { children: ReactNode }) {
         {desktop && (
           <header
             className="platform-titlebar relative z-50 flex h-9 shrink-0 items-center gap-2 bg-background select-none"
-            aria-label="窗口标题栏"
+            aria-label={t("platform_window_titlebar")}
           >
             <nav
               className="ml-[10px] flex h-full shrink-0 items-center gap-1"
-              aria-label="应用导航"
+              aria-label={t("platform_app_navigation")}
             >
               <Button
                 type="button"
                 variant="ghost"
                 className="h-full gap-2 text-muted-foreground hover:bg-accent hover:text-foreground"
                 onClick={returnToApp}
-                title="返回应用"
+                title={t("platform_return_app")}
               >
                 <Monitor className="size-4" aria-hidden="true" />
-                返回应用
+                {t("platform_return_app")}
               </Button>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon-lg"
                 className="text-muted-foreground hover:bg-accent hover:text-foreground"
-                aria-label="后退"
-                title="后退"
+                aria-label={t("platform_go_back")}
+                title={t("platform_go_back")}
                 onClick={() => window.history.back()}
               >
                 <ArrowLeft className="size-4" aria-hidden="true" />
@@ -142,8 +145,8 @@ export function AppEnvironment({ children }: { children: ReactNode }) {
                 variant="ghost"
                 size="icon-lg"
                 className="text-muted-foreground hover:bg-accent hover:text-foreground"
-                aria-label="前进"
-                title="前进"
+                aria-label={t("platform_go_forward")}
+                title={t("platform_go_forward")}
                 onClick={() => window.history.forward()}
               >
                 <ArrowRight className="size-4" aria-hidden="true" />
@@ -169,7 +172,7 @@ export function AppEnvironment({ children }: { children: ReactNode }) {
                 type="button"
                 variant="ghost"
                 className="flex h-full w-11 items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground"
-                aria-label="最小化"
+                aria-label={t("platform_minimize")}
                 onClick={() => sendWindowCommand("window:minimize")}
               >
                 <Minus className="size-4" aria-hidden="true" />
@@ -178,7 +181,7 @@ export function AppEnvironment({ children }: { children: ReactNode }) {
                 type="button"
                 variant="ghost"
                 className="flex h-full w-11 items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground"
-                aria-label="最大化 / 还原"
+                aria-label={t("platform_maximize_restore")}
                 onClick={() => sendWindowCommand("window:maximize")}
               >
                 <Square className="size-4" aria-hidden="true" />
@@ -187,7 +190,7 @@ export function AppEnvironment({ children }: { children: ReactNode }) {
                 type="button"
                 variant="ghost"
                 className="flex h-full w-11 items-center justify-center text-muted-foreground hover:bg-red-500 hover:text-white"
-                aria-label="关闭窗口"
+                aria-label={t("platform_close_window")}
                 onClick={() => sendWindowCommand("window:close")}
               >
                 <X className="size-4" aria-hidden="true" />

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import SettingCard from '../../settings-card.svelte'
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'
@@ -36,10 +37,10 @@
 
 <div in:fly={{ y: 8, duration: 320, opacity: 0 }}>
   <ScrollArea>
-    <div class="mb-1 text-xl font-bold">会议设置</div>
-    <p class="mb-4 text-sm">配置当前委员会的投票规则、展示选项与本地会议快照。</p>
+    <div class="mb-1 text-xl font-bold">{t('settings_committee')}</div>
+    <p class="mb-4 text-sm">{t('settings_committee_description')}</p>
     <div class="space-y-3">
-      <SettingCard title="投票规则" description="实质性投票所需的赞成票门槛，按出席且拥有投票权的席位计算。">
+      <SettingCard title={t('settings_voting_rules')} description={t('settings_voting_description')}>
         {#if $currentCommittee}
           <Select.Select
             type="single"
@@ -50,43 +51,43 @@
               }
             }}
           >
-            <Select.SelectTrigger aria-label="投票规则" class="w-48">
+            <Select.SelectTrigger aria-label={t('settings_voting_rules')} class="w-48">
               {$currentCommittee.substantiveVotingMajority === 'simple_majority'
-                ? '二分之一多数'
-                : '三分之二多数'}
+                ? t('settings_majority_simple')
+                : t('settings_majority_two_thirds')}
             </Select.SelectTrigger>
             <Select.SelectContent>
-              <Select.SelectItem value="two_thirds" label="三分之二多数" />
-              <Select.SelectItem value="simple_majority" label="二分之一多数" />
+              <Select.SelectItem value="two_thirds" label={t('settings_majority_two_thirds')} />
+              <Select.SelectItem value="simple_majority" label={t('settings_majority_simple')} />
             </Select.SelectContent>
           </Select.Select>
         {:else}
-          <p class="text-sm text-muted-foreground">请先进入一个委员会，再调整投票规则。</p>
+          <p class="text-sm text-muted-foreground">{t('settings_voting_enter_committee')}</p>
         {/if}
       </SettingCard>
 
-      <SettingCard title="默认图标风格" description="新建战局时使用的单位图标样式。">
+      <SettingCard title={t('settings_default_icons')} description={t('settings_default_icons_description')}>
         <div class="flex gap-2">
           <Button
             variant={$globalSettings.defaultIconStyle === 'nato' ? 'default' : 'outline'}
             size="sm"
-            onclick={() => saveIconStyle('nato')}>北约标准</Button
+            onclick={() => saveIconStyle('nato')}>{t('settings_nato')}</Button
           >
           <Button
             variant={$globalSettings.defaultIconStyle === 'simple' ? 'default' : 'outline'}
             size="sm"
-            onclick={() => saveIconStyle('simple')}>简单图标</Button
+            onclick={() => saveIconStyle('simple')}>{t('settings_simple_icons')}</Button
           >
         </div>
       </SettingCard>
 
       <SettingCard
-        title="Display 主展示区位置"
-        description="调整 Display 窗口中主内容的水平/垂直偏移（px）。也可在 Display 窗口用 Alt+方向键 微调。"
+        title={t('settings_display_position')}
+        description={t('settings_display_position_description')}
       >
         <div class="flex items-end gap-4">
           <div class="flex flex-col gap-1.5">
-            <label for="display-offset-x" class="text-xs text-muted-foreground">X 偏移</label>
+            <label for="display-offset-x" class="text-xs text-muted-foreground">{t('settings_offset_x')}</label>
             <Input
               id="display-offset-x"
               type="number"
@@ -96,7 +97,7 @@
             />
           </div>
           <div class="flex flex-col gap-1.5">
-            <label for="display-offset-y" class="text-xs text-muted-foreground">Y 偏移</label>
+            <label for="display-offset-y" class="text-xs text-muted-foreground">{t('settings_offset_y')}</label>
             <Input
               id="display-offset-y"
               type="number"
@@ -105,7 +106,7 @@
               class="w-28"
             />
           </div>
-          <Button size="sm" variant="ghost" onclick={resetOffset}>重置</Button>
+          <Button size="sm" variant="ghost" onclick={resetOffset}>{t('settings_reset')}</Button>
         </div>
       </SettingCard>
     </div>

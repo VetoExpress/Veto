@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import { page } from '$app/state'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
@@ -72,38 +73,38 @@
           size="sm"
           variant="outline"
           class="h-8 gap-1.5 text-xs"
-          title="会议设置"
+          title={t('procedure_meeting_settings')}
           onclick={() => {
             activeSettingsSection.set('committee')
             settingsDialogOpen.set(true)
           }}
         >
           <Settings size={12} />
-          会议设置
+          {t('procedure_meeting_settings')}
         </Button>
 
         <Button
           size="sm"
           variant="outline"
           class="h-8 gap-1.5 text-xs"
-          title="会议日志"
+          title={t('procedure_meeting_log')}
           onclick={() => (logDialogOpen = true)}
         >
           <ScrollText size={12} />
-          日志
+          {t('procedure_log')}
         </Button>
 
         <Button
           size="sm"
           variant="outline"
           class="h-8 gap-1.5 text-xs"
-          title="打开简易计时器"
+          title={t('procedure_open_standalone_timer')}
           onclick={() => {
             timerDialogOpen.set(true)
           }}
         >
           <Timer size={12} />
-          计时器
+          {t('procedure_timer')}
         </Button>
 
         {#if presentation.canProposePoint}
@@ -111,11 +112,11 @@
             size="sm"
             variant="outline"
             class="h-8 gap-1.5 text-xs"
-            title="提出问题"
+            title={t('procedure_raise_a_point')}
             onclick={() => (pointDialogOpen = true)}
           >
             <HelpCircle size={12} />
-            问题
+            {t('procedure_point')}
           </Button>
         {/if}
 
@@ -128,14 +129,14 @@
             title={presentation.motionDisabledReason}
           >
             <Play size={12} />
-            动议与程序
+            {t('procedure_motions_and_procedure')}
           </Button>
         {/if}
 
         {#if presentation.canResumeMeeting}
           <Button size="sm" variant="outline" class="h-8 gap-1.5 text-xs" onclick={resumeMeeting}>
             <Play size={12} />
-            恢复会议
+            {t('procedure_resume_meeting')}
           </Button>
         {/if}
       {/snippet}
@@ -157,7 +158,7 @@
     <ConferenceLogDialog bind:open={logDialogOpen} minutes={conf?.minutes ?? []} />
   {:else}
     <div class="flex flex-1 items-center justify-center text-muted-foreground">
-      <p>请选择或创建一场大会</p>
+      <p>{t('procedure_select_or_create_a_conference')}</p>
     </div>
   {/if}
 </div>

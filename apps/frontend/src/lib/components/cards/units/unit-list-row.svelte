@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
 	import type { UnitTemplate, PlacedUnit } from '$lib/classes/types/battle';
 	import type { RuntimeUnitPosition } from '$lib/classes/stores/battle/battle-store';
 	import { Button } from '$lib/components/ui/button';
@@ -119,7 +120,7 @@
 				</div>
 				{#if org !== null && maxOrg !== null}
 					<div class="flex items-center gap-1">
-						<span class="w-4 shrink-0 text-[9px] text-muted-foreground">组织</span>
+						<span class="w-4 shrink-0 text-[9px] text-muted-foreground">{t('components_organization_short')}</span>
 						<div class="h-1 flex-1 overflow-hidden rounded-full bg-muted">
 							<div
 								class="h-full rounded-full {org / maxOrg < 0.2 ? 'bg-orange-400' : 'bg-blue-400'}"
@@ -134,9 +135,9 @@
 					</div>
 				{/if}
 				{#if isDestroyed}
-					<span class="text-[9px] font-medium text-red-500">✕ 已阵亡</span>
+					<span class="text-[9px] font-medium text-red-500">{t('components_destroyed_cross')}</span>
 				{:else if isEngaged}
-					<span class="text-[9px] font-medium text-red-600 dark:text-red-400">⚔ 交战中</span>
+					<span class="text-[9px] font-medium text-red-600 dark:text-red-400">{t('components_engaged_icon')}</span>
 				{/if}
 			</div>
 		{/if}
@@ -154,7 +155,7 @@
 				<Button
 					variant="ghost"
 					size="icon-sm"
-					title="定位到地图"
+					title={t('components_locate_map')}
 					class="size-6 text-muted-foreground hover:text-blue-500"
 					onclick={onLocate}
 				>
@@ -164,7 +165,7 @@
 				<Button
 					variant="ghost"
 					size="icon-sm"
-					title="放置到地图"
+					title={t('components_place_map')}
 					class="size-6 text-muted-foreground hover:text-green-600"
 					onclick={onPlace}
 				>
@@ -175,7 +176,7 @@
 		<Button
 			variant="ghost"
 			size="icon-sm"
-			title="删除"
+			title={t('components_delete')}
 			class="size-6 text-muted-foreground hover:text-destructive"
 			onclick={onDelete}
 		>

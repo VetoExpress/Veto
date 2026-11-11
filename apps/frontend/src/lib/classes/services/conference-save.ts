@@ -1,4 +1,5 @@
 import { writable } from 'svelte/store'
+import { t } from '$lib/i18n'
 
 export interface SaveStatus {
   state: 'loading' | 'pending' | 'saving' | 'saved' | 'error'
@@ -15,7 +16,7 @@ export function createConferenceSaver(write: (data: unknown) => Promise<void>) {
   return {
     status,
     pending() { revision++; status.set({ state: 'pending', savedAt }) },
-    fail(error: unknown) { status.set({ state: 'error', savedAt, error: error instanceof Error ? error.message : '保存失败' }) },
+    fail(error: unknown) { status.set({ state: 'error', savedAt, error: error instanceof Error ? error.message : t('services_save_failed') }) },
     save(data: unknown): Promise<boolean> {
       const version = ++revision
       // Capture at request time; live objects must not drift while queued.

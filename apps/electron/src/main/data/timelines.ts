@@ -59,7 +59,7 @@ export function listTimelines(): TimelineSummary[] {
       paused: (state as TimelineState).paused ?? true,
       ratio: (state as TimelineState).ratio ?? 1,
       simTime: (state as TimelineState).simulationAnchor ?? 0,
-      realAnchor: (state as TimelineState).realAnchor ?? 0,
+      realAnchor: (state as TimelineState).realAnchor ?? 0
     }
   })
 }
@@ -84,10 +84,7 @@ export function getTimeline(id: string): TimelineEntry | null {
  *
  * @returns 更新后的时间线对象，找不到匹配 id 返回 null
  */
-export function updateTimeline(
-  id: string,
-  patch: Partial<TimelineState>,
-): TimelineEntry | null {
+export function updateTimeline(id: string, patch: Partial<TimelineState>): TimelineEntry | null {
   const data = loadStore<TimelineEntry[]>('tools')
   if (!data || !Array.isArray(data)) return null
 
@@ -100,7 +97,7 @@ export function updateTimeline(
   const prev = data[idx]
   const next: TimelineEntry = {
     ...prev,
-    state: { ...prev.state, ...patch },
+    state: { ...prev.state, ...patch }
   }
 
   // 检测 paused 变更 → emit
@@ -108,7 +105,7 @@ export function updateTimeline(
     const eventType = patch.paused ? 'timeline:paused' : 'timeline:resumed'
     eventBus.emit(eventType, {
       timelineId: id,
-      paused: patch.paused,
+      paused: patch.paused
     })
   }
 
@@ -117,7 +114,7 @@ export function updateTimeline(
     eventBus.emit('timeline:ratio_changed', {
       timelineId: id,
       prevRatio: prev.state?.ratio,
-      ratio: patch.ratio,
+      ratio: patch.ratio
     })
   }
 

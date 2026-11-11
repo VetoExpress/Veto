@@ -1,4 +1,5 @@
 "use client"
+import { usePlatformTranslations } from "@/components/i18n-provider"
 
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -22,7 +23,9 @@ export function ConferenceScheduleFields({
   onEndChange: (value: string) => void
   disabled?: boolean
 }) {
-  const error = scheduleError(startsAt, endsAt)
+  const { t, locale } = usePlatformTranslations()
+
+  const error = scheduleError(startsAt, endsAt, locale)
   const deadline =
     !error && endsAt
       ? new Date(
@@ -32,13 +35,14 @@ export function ConferenceScheduleFields({
   return (
     <fieldset disabled={disabled} className="flex flex-col gap-3">
       <legend className="mb-2 text-sm font-medium">
-        实际会议时间（UTC+8，必填）
+        {t("platform_schedule_legend")}
       </legend>
       <p className="text-xs text-muted-foreground">
-        请填写开始与结束时间。与模拟时间线独立，不会自动激活或结束大会。
+        {t("platform_schedule_hint")}
       </p>
       <Label htmlFor="conference-starts-at">
-        开始时间<span className="text-destructive"> *</span>
+        {t("platform_start_time")}
+        <span className="text-destructive"> *</span>
       </Label>
       <Input
         id="conference-starts-at"
@@ -51,7 +55,8 @@ export function ConferenceScheduleFields({
         onChange={(event) => onStartChange(event.target.value)}
       />
       <Label htmlFor="conference-ends-at">
-        结束时间<span className="text-destructive"> *</span>
+        {t("platform_end_time")}
+        <span className="text-destructive"> *</span>
       </Label>
       <Input
         id="conference-ends-at"
@@ -71,8 +76,10 @@ export function ConferenceScheduleFields({
       >
         {error ||
           (deadline
-            ? `文件将于 ${formatSchedule(deadline)} 到期并自动清理（结束后 3 天，即 72 小时）。请提前下载保存到本地，清理后无法恢复。`
-            : "文件将在结束时间的 3 天（72 小时）后自动清理。")}
+            ? t("platform_schedule_cleanup_deadline", {
+                value1: formatSchedule(deadline, locale),
+              })
+            : t("platform_schedule_cleanup_hint"))}
       </p>
     </fieldset>
   )

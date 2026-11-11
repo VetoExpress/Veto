@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
 	import { ContextMenu } from 'bits-ui';
 	import { UserPlus, Route, RefreshCw, PlusCircle, ChevronRight, Eraser } from '@lucide/svelte';
 	import {
@@ -97,7 +98,7 @@
 						class="rounded-button flex h-9 items-center py-3 pr-1.5 pl-3 text-sm font-medium select-none focus-visible:outline-none data-highlighted:bg-muted data-[state=open]:bg-muted"
 					>
 						<Route class="mr-2 size-4" />
-						路线指令
+						{t('components_route_commands')}
 						<ChevronRight class="ml-auto size-4 opacity-50" />
 					</ContextMenu.SubTrigger>
 					<ContextMenu.SubContent
@@ -109,22 +110,22 @@
 							onSelect={handleResetRoute}
 						>
 							<RefreshCw class="mr-2 size-4" />
-							重新设置路线
-							<span class="ml-auto text-xs opacity-50">清空并重绘</span>
+							{t('components_reset_route')}
+							<span class="ml-auto text-xs opacity-50">{t('components_clear_redraw')}</span>
 						</ContextMenu.Item>
 						<ContextMenu.Item
 							class="rounded-button flex h-9 items-center py-3 pr-1.5 pl-3 text-sm font-normal select-none focus-visible:outline-none data-highlighted:bg-muted"
 							onSelect={handleAppendRoute}
 						>
 							<PlusCircle class="mr-2 size-4" />
-							绘制路线节点
-							<span class="ml-auto text-xs opacity-50">继续追加</span>
+							{t('components_draw_waypoints')}
+							<span class="ml-auto text-xs opacity-50">{t('components_continue_append')}</span>
 						</ContextMenu.Item>					<ContextMenu.Item
 						class="rounded-button flex h-9 items-center py-3 pr-1.5 pl-3 text-sm font-normal text-destructive select-none focus-visible:outline-none data-highlighted:bg-muted"
 						onSelect={handleClearRoute}
 					>
 						<Eraser class="mr-2 size-4" />
-						清除路线
+						{t('components_clear_route')}
 					</ContextMenu.Item>					</ContextMenu.SubContent>
 				</ContextMenu.Sub>
 			{/if}
@@ -135,7 +136,7 @@
 						class="rounded-button flex h-9 items-center py-3 pr-1.5 pl-3 text-sm font-medium select-none focus-visible:outline-none data-highlighted:bg-muted data-[state=open]:bg-muted"
 					>
 						<UserPlus class="mr-2 size-4" />
-						新建单位
+						{t('components_new_unit')}
 					</ContextMenu.SubTrigger>
 					<ContextMenu.SubContent
 						class="z-[10000] w-[180px] rounded-xl border border-muted bg-background px-1 py-1.5 shadow-popover outline-none"
@@ -157,7 +158,7 @@
 					class="rounded-button flex h-9 items-center py-3 pr-1.5 pl-3 text-sm font-normal select-none opacity-50 focus-visible:outline-none"
 					disabled
 				>
-					暂无阵营，请先创建阵营
+					{t('components_no_factions_create')}
 				</ContextMenu.Item>
 			{/if}
 		</ContextMenu.Content>

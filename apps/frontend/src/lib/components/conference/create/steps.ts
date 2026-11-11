@@ -1,3 +1,4 @@
+import { t } from '$lib/i18n'
 import {
   Building2,
   Check,
@@ -11,12 +12,12 @@ export type WizardStepId = 'mode' | 'event' | 'meeting' | 'roles' | 'seats' | 'r
 
 /** 创建向导各步的元数据：标题与图标（数组顺序即步骤顺序） */
 export const wizardSteps = [
-  { id: 'mode', title: '选择模式', icon: Compass },
-  { id: 'event', title: '大会信息', icon: Building2 },
-  { id: 'meeting', title: '会场规划', icon: ClipboardList },
-  { id: 'roles', title: '角色权限', icon: ShieldCheck },
-  { id: 'seats', title: '席位分配', icon: Users },
-  { id: 'review', title: '确认创建', icon: Check }
+  { id: 'mode', get title() { return t('platform_creation_mode') }, icon: Compass },
+  { id: 'event', get title() { return t('platform_conference_details') }, icon: Building2 },
+  { id: 'meeting', get title() { return t('platform_committee_planning') }, icon: ClipboardList },
+  { id: 'roles', get title() { return t('platform_role_capabilities') }, icon: ShieldCheck },
+  { id: 'seats', get title() { return t('platform_seat_assignment') }, icon: Users },
+  { id: 'review', get title() { return t('platform_confirm_creation') }, icon: Check }
 ] as const
 
 export type WizardStep = (typeof wizardSteps)[number]

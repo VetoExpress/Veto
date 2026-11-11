@@ -1,18 +1,19 @@
 <script lang="ts">
+  import { t, formatNumber } from '$lib/i18n'
   import type { Facility, FacilityType } from '$lib/classes/types/battle'
 
   let { facility }: { facility: Facility } = $props()
 
-  const TYPE_LABELS: Record<FacilityType, string> = {
-    fortress: '要塞',
-    trench_network: '堑壕网络',
-    supply_depot: '补给站',
-    railway_hub: '铁路枢纽',
-    airfield: '机场',
-    artillery_position: '炮兵阵地',
-    command_post: '指挥部',
-    hospital: '野战医院'
-  }
+  const TYPE_LABELS = $derived<Record<FacilityType, string>>({
+    fortress: t('components_fortress'),
+    trench_network: t('components_trench_network'),
+    supply_depot: t('components_supply_depot'),
+    railway_hub: t('components_railway_hub'),
+    airfield: t('components_airfield'),
+    artillery_position: t('components_artillery_position'),
+    command_post: t('components_command_post'),
+    hospital: t('components_hospital')
+  })
 
   const typeLabel = $derived(TYPE_LABELS[facility.type] ?? facility.type)
   const properties = $derived(Object.entries(facility.properties ?? {}))
@@ -28,7 +29,7 @@
         <div class="flex justify-between gap-3 text-[11px]">
           <span class="text-muted-foreground">{key}</span>
           <span class="font-medium text-stone-700 dark:text-stone-300">
-            {typeof value === 'number' ? (value % 1 === 0 ? value : value.toFixed(1)) : String(value)}
+            {typeof value === 'number' ? formatNumber(value, { maximumFractionDigits: 1 }) : String(value)}
           </span>
         </div>
       {/each}
@@ -37,7 +38,7 @@
 
   {#if facility.maxCapacity != null}
     <div class="mt-1.5 flex items-center gap-1 text-[11px] text-muted-foreground">
-      <span>容量: {facility.maxCapacity}</span>
+      <span>{t('components_capacity', { count: facility.maxCapacity })}</span>
     </div>
   {/if}
 </div>

@@ -1,4 +1,5 @@
 import { get, writable } from 'svelte/store'
+import { t } from '$lib/i18n'
 import { accountStore } from '../app/account-store'
 import { listAccountConferences, platformConferenceUrl, type PlatformConference } from '$lib/classes/clients/account-conference-client'
 import { lastOpenedConferenceId } from './conference-store'
@@ -17,7 +18,7 @@ export async function refreshPlatformConferences(): Promise<void> {
       platformConferences.set({ conferences, loading: false, error: '' })
   } catch (error) {
     if (request === revision)
-      platformConferences.set({ conferences: [], loading: false, error: error instanceof Error ? error.message : '加载云平台大会失败' })
+      platformConferences.set({ conferences: [], loading: false, error: error instanceof Error ? error.message : t('services_platform_load_failed') })
   }
 }
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
 	import Button, { type ButtonProps } from '$lib/components/button.svelte';
 	import { useImageCropperCrop } from './image-cropper.svelte.js';
 	import CropIcon from '@lucide/svelte/icons/crop';
@@ -30,5 +31,5 @@
 	}}
 >
 	<CropIcon />
-	<span>Crop</span>
+	<span>{t('settings_crop')}</span>
 </Button>

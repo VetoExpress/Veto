@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
 	import { currentFactionId, selectFaction, removeFaction } from '$lib/classes/stores/battle/battle-store';
 	import { Button } from '$lib/components/ui/button';
 	import { Trash2 } from '@lucide/svelte';
@@ -16,7 +17,7 @@
 		type="button"
 		variant="ghost"
 		class="flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-1 text-left"
-		title={$currentFactionId === faction.id ? '点击取消选择' : '点击选择阵营'}
+		title={$currentFactionId === faction.id ? t('components_deselect_faction') : t('components_select_faction')}
 		onclick={() => selectFaction(faction.id)}
 	>
 		<span
@@ -30,7 +31,7 @@
 		variant="ghost"
 		size="icon"
 		class="h-7 w-7 text-muted-foreground hover:text-destructive"
-		title="删除阵营"
+		title={t('components_delete_faction')}
 		onclick={(e: MouseEvent) => {
 			e.stopPropagation();
 			removeFaction(faction.id);

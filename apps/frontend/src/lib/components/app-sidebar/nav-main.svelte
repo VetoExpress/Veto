@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import ChevronRightIcon from '@lucide/svelte/icons/chevron-right'
   import * as Collapsible from '$lib/components/ui/collapsible/index.js'
   import * as Sidebar from '$lib/components/ui/sidebar/index.js'
@@ -23,11 +24,11 @@
   } = $props()
 </script>
 
-{#each groups as group (group.label)}
+{#each groups as group, groupIndex (groupIndex)}
   <Sidebar.Group>
     <Sidebar.GroupLabel>{group.label}</Sidebar.GroupLabel>
     <Sidebar.Menu>
-      {#each group.items as mainItem (mainItem.title)}
+      {#each group.items as mainItem (mainItem.url)}
         <Collapsible.Root open={mainItem.isActive}>
           {#snippet child({ props })}
             <Sidebar.MenuItem {...props}>
@@ -44,13 +45,13 @@
                   {#snippet child({ props })}
                     <Sidebar.MenuAction {...props} class="data-[state=open]:rotate-90">
                       <ChevronRightIcon />
-                      <span class="sr-only">Toggle</span>
+                      <span class="sr-only">{t('settings_toggle')}</span>
                     </Sidebar.MenuAction>
                   {/snippet}
                 </Collapsible.Trigger>
                 <Collapsible.Content>
                   <Sidebar.MenuSub>
-                    {#each mainItem.items as subItem (subItem.title)}
+                    {#each mainItem.items as subItem (subItem.url)}
                       <Sidebar.MenuSubItem>
                         <Sidebar.MenuSubButton href={subItem.url}>
                           <span>{subItem.title}</span>

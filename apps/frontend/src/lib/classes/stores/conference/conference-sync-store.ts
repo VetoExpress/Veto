@@ -1,4 +1,5 @@
 import { get, writable } from 'svelte/store'
+import { t } from '$lib/i18n'
 import type { Conference as ConferenceDTO } from '$lib/classes/types/conference'
 import { accountRequest } from '$lib/classes/clients/account-conference-client'
 import { accountStore } from '../app/account-store'
@@ -42,7 +43,7 @@ async function reconcile(): Promise<void> {
   const valid = () => connection === generation && get(state).enabled && get(accountStore).user?.email === email
   try {
     await conferencesReady
-    if (get(conferenceSaveStatus).state === 'error') throw new Error('本机大会存档尚未成功加载，请先恢复本地存储')
+    if (get(conferenceSaveStatus).state === 'error') throw new Error(t('services_local_archive_failed'))
     const remote = new Map<string, Archive>()
     let cursor: string | null = null
     do {

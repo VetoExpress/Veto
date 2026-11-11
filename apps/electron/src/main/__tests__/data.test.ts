@@ -28,22 +28,13 @@ vi.mock('../data/store', () => ({
   deleteStore: vi.fn((domain: string) => {
     storeData.delete(domain)
   }),
-  migrateFromLocalStorage: vi.fn(),
+  migrateFromLocalStorage: vi.fn()
 }))
 
 import { eventBus } from '../event-bus'
-import {
-  listConferences,
-  getConference,
-  getMinutes,
-  updateConference,
-} from '../data/conferences'
+import { listConferences, getConference, getMinutes, updateConference } from '../data/conferences'
 import type { ConferenceEntry } from '../data/conferences'
-import {
-  listTimelines,
-  getTimeline,
-  updateTimeline,
-} from '../data/timelines'
+import { listTimelines, getTimeline, updateTimeline } from '../data/timelines'
 import type { TimelineEntry, TimelineState } from '../data/timelines'
 
 // ── Helper ─────────────────────────────────────────────────
@@ -63,22 +54,22 @@ function makeConference(overrides: Partial<ConferenceEntry> = {}): ConferenceEnt
         timestamp: 1000,
         type: 'speaker_started',
         title: 'Speaker started',
-        detail: 'Seat A begins',
+        detail: 'Seat A begins'
       },
       {
         id: 'min-2',
         timestamp: 2000,
         type: 'speaker_finished',
-        title: 'Speaker finished',
+        title: 'Speaker finished'
       },
       {
         id: 'min-3',
         timestamp: 3000,
         type: 'phase_changed',
-        title: 'Phase changed to debate',
-      },
+        title: 'Phase changed to debate'
+      }
     ],
-    ...overrides,
+    ...overrides
   }
 }
 
@@ -92,9 +83,9 @@ function makeTimeline(overrides: Partial<TimelineEntry> = {}): TimelineEntry {
       paused: false,
       ratio: 60,
       simulationAnchor: 0,
-      realAnchor: Date.now(),
+      realAnchor: Date.now()
     },
-    ...overrides,
+    ...overrides
   }
 }
 
@@ -207,7 +198,7 @@ describe('Conference data layer', () => {
       expect(payload.data).toMatchObject({
         conferenceId: 'conf-1',
         prevPhase: 'general_debate',
-        phase: 'voting',
+        phase: 'voting'
       })
     })
 
@@ -229,20 +220,20 @@ describe('Conference data layer', () => {
       eventBus.on('conference:speaker_started', handler)
 
       updateConference('conf-1', {
-        currentSpeaker: { seat: 'USA', remaining: 120 },
+        currentSpeaker: { seat: 'USA', remaining: 120 }
       })
 
       expect(handler).toHaveBeenCalledTimes(1)
       expect(handler.mock.calls[0][0].data).toMatchObject({
         conferenceId: 'conf-1',
         seat: 'USA',
-        remaining: 120,
+        remaining: 120
       })
     })
 
     it('移除 currentSpeaker（传 null）→ emit conference:speaker_finished', () => {
       storeData.set('conferences', [
-        makeConference({ currentSpeaker: { seat: 'USA', remaining: 60 } }),
+        makeConference({ currentSpeaker: { seat: 'USA', remaining: 60 } })
       ])
 
       const handler = vi.fn()
@@ -318,7 +309,7 @@ describe('Timeline data layer', () => {
       expect(handler).toHaveBeenCalledTimes(1)
       expect(handler.mock.calls[0][0].data).toMatchObject({
         timelineId: 'tl-1',
-        paused: true,
+        paused: true
       })
     })
 
@@ -327,7 +318,7 @@ describe('Timeline data layer', () => {
         paused: true,
         ratio: 1,
         simulationAnchor: 0,
-        realAnchor: Date.now(),
+        realAnchor: Date.now()
       }
       storeData.set('tools', [makeTimeline({ state: initialState })])
 
@@ -362,7 +353,7 @@ describe('Timeline data layer', () => {
       expect(handler.mock.calls[0][0].data).toMatchObject({
         timelineId: 'tl-1',
         prevRatio: 60,
-        ratio: 3600,
+        ratio: 3600
       })
     })
 

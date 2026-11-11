@@ -1,19 +1,20 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import type { Facility, FacilityType } from '$lib/classes/types/battle'
   import { getMilSymbolSVG } from '$lib/classes/utils/milsymbol-utils'
 
   let { facility, onclick }: { facility: Facility; onclick?: () => void } = $props()
 
-  const TYPE_LABELS: Record<FacilityType, string> = {
-    fortress: '要塞',
-    trench_network: '堑壕',
-    supply_depot: '补给站',
-    railway_hub: '铁路枢纽',
-    airfield: '机场',
-    artillery_position: '炮兵阵地',
-    command_post: '指挥部',
-    hospital: '野战医院'
-  }
+  const TYPE_LABELS = $derived<Record<FacilityType, string>>({
+    fortress: t('components_fortress'),
+    trench_network: t('components_trench'),
+    supply_depot: t('components_supply_depot'),
+    railway_hub: t('components_railway_hub'),
+    airfield: t('components_airfield'),
+    artillery_position: t('components_artillery_position'),
+    command_post: t('components_command_post'),
+    hospital: t('components_hospital')
+  })
 
   const FACILITY_CODES: Record<FacilityType, string> = {
     fortress: 'GUCFS--',

@@ -15,6 +15,7 @@
  */
 
 import { get } from 'svelte/store';
+import { t } from '$lib/i18n';
 import { gameClock } from './game-clock.store';
 import {
 	tickMapMovement,
@@ -313,7 +314,7 @@ function handlePlacedCombat() {
 		if (pos.status === 'destroyed' && up.status !== 'destroyed') {
 			moveToFallen(id)
 		} else if (pos.status === 'retreating' && up.status !== 'retreating') {
-			addLog(`${un} 溃退`, { category: 'combat', location: { lat: pos.lat, lng: pos.lng }, sourceUnitId: id });
+			addLog(t('components_battle_unit_routed', { unit: un }), { category: 'combat', location: { lat: pos.lat, lng: pos.lng }, sourceUnitId: id });
 		}
 	}
 }

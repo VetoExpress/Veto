@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import type { Capability, SeatGroup, SeatGroupType } from '$lib/classes/types/delegate'
   import { CAPABILITY_OPTIONS } from '$lib/classes/types/delegate'
   import { addSeatGroup, updateSeatGroup } from '$lib/classes/stores/delegate/delegate-store'
@@ -21,11 +22,11 @@
     new Set(editingGroup?.defaultCapabilities ?? ['view_conference'])
   )
 
-  const typeLabels: Record<SeatGroupType, string> = {
-    cabinet: '常规',
-    mpc: 'MPC（新闻中心）',
+  const typeLabels: Record<SeatGroupType, string> = $derived({
+    cabinet: t('procedure_cabinet'),
+    mpc: t('procedure_mpc_press_center'),
     ipc: 'IPC'
-  }
+  })
 
   function toggleCapability(capability: Capability): void {
     const next = new Set(selectedCapabilities)
@@ -56,24 +57,24 @@
 
 <div class="flex flex-col gap-4 rounded-lg border p-4">
   <h4 class="text-base font-semibold">
-    {editingGroup ? '编辑席位组' : '新建席位组'}
+    {editingGroup ? t('procedure_edit_seat_group') : t('procedure_new_seat_group')}
   </h4>
 
   <Field.FieldGroup class="gap-3">
     <Field.Field>
-      <Field.FieldLabel for="sg-name">名称</Field.FieldLabel>
-      <Input id="sg-name" bind:value={name} placeholder="如：常规、MPC、IPC" />
+      <Field.FieldLabel for="sg-name">{t('procedure_name_2')}</Field.FieldLabel>
+      <Input id="sg-name" bind:value={name} placeholder={t('procedure_for_example_cabinet_mpc_ipc')} />
     </Field.Field>
 
     <Field.Field>
-      <Field.FieldLabel for="sg-type">类型</Field.FieldLabel>
+      <Field.FieldLabel for="sg-type">{t('procedure_type')}</Field.FieldLabel>
       <Select.Select type="single" bind:value={type}>
         <Select.SelectTrigger id="sg-type" class="w-full">
           {typeLabels[type]}
         </Select.SelectTrigger>
         <Select.SelectContent>
-          <Select.SelectItem value="cabinet" label="常规" />
-          <Select.SelectItem value="mpc" label="MPC（新闻中心）" />
+          <Select.SelectItem value="cabinet" label={t('procedure_cabinet')} />
+          <Select.SelectItem value="mpc" label={t('procedure_mpc_press_center')} />
           <Select.SelectItem value="ipc" label="IPC" />
         </Select.SelectContent>
       </Select.Select>
@@ -81,7 +82,7 @@
   </Field.FieldGroup>
 
   <Field.FieldSet>
-    <Field.FieldLegend variant="label">默认能力</Field.FieldLegend>
+    <Field.FieldLegend variant="label">{t('procedure_default_capabilities')}</Field.FieldLegend>
     <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
       {#each CAPABILITY_OPTIONS as option (option.value)}
         <label
@@ -100,9 +101,9 @@
   </Field.FieldSet>
 
   <div class="flex justify-end gap-2">
-    <Button variant="outline" onclick={onClose}>取消</Button>
+    <Button variant="outline" onclick={onClose}>{t('procedure_cancel')}</Button>
     <Button onclick={handleSave} disabled={!name.trim()}>
-      {editingGroup ? '保存' : '创建'}
+      {editingGroup ? t('procedure_save') : t('procedure_create')}
     </Button>
   </div>
 </div>

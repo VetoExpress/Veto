@@ -1,4 +1,5 @@
 import { get } from 'svelte/store'
+import { t } from '$lib/i18n'
 
 import {
   CloudJoinError,
@@ -72,7 +73,7 @@ function fromBase64(value: string): ArrayBuffer {
 
 async function loadEncryptionKey(): Promise<CryptoKey> {
   if (typeof crypto === 'undefined' || !crypto.subtle || typeof localStorage === 'undefined') {
-    throw new CloudJoinError('当前环境不支持本地安全存储')
+    throw new CloudJoinError(t('services_secure_storage_unavailable'))
   }
 
   const storedKey = localStorage.getItem(CLOUD_ENCRYPTION_KEY)

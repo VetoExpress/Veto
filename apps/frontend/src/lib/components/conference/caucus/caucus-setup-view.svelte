@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   /**
    * caucus-setup-view.svelte
    * ─────────────────────────
@@ -64,21 +65,21 @@
     >
       {#if setup.remainingSec != null}
         <div class="text-sm font-medium text-amber-700 dark:text-amber-400">
-          名单已走完 · 继续添加发言人
+          {t('procedure_list_complete_add_more_speakers')}
         </div>
       {:else}
         <div class="text-sm font-medium text-indigo-700 dark:text-indigo-400">
-          动议通过 · 设置磋商发言名单
+          {t('procedure_motion_approved_set_up_the_caucus_speakers_list')}
         </div>
       {/if}
       <div class="mt-2 text-xl font-bold text-foreground">
-        {(motion as any).topic ?? '有主持核心磋商'}
+        {(motion as any).topic ?? t('procedure_moderated_caucus')}
       </div>
       <div class="mt-1 text-sm text-muted-foreground">
         {#if setup.remainingSec != null}
-          剩余时间 {setup.remainingSec} 秒 · 每人 {(motion as any).speakingTimePerPersonSec} 秒
+          {t('procedure_caucus_remaining_per_speaker', { value1: setup.remainingSec, value2: (motion as any).speakingTimePerPersonSec })}
         {:else}
-          总时长 {(motion as any).totalTimeSec} 秒 · 每人 {(motion as any).speakingTimePerPersonSec} 秒
+          {t('procedure_caucus_total_per_speaker', { value1: (motion as any).totalTimeSec, value2: (motion as any).speakingTimePerPersonSec })}
         {/if}
       </div>
     </div>
@@ -86,20 +87,20 @@
     <div class="flex justify-center gap-4">
       <Button size="lg" class="gap-2 min-w-[200px]" onclick={handleStart}>
         <Play size={18} />
-        开始磋商
+        {t('procedure_start_caucus')}
       </Button>
       <Button size="lg" variant="destructive" class="gap-2 min-w-[200px]" onclick={endCaucus}>
         <Play size={18} />
-        结束磋商
+        {t('procedure_end_caucus')}
       </Button>
     </div>
     <!-- 动议国位置 -->
     <div class="rounded-lg border bg-card p-4">
       <div class="flex items-center justify-between">
         <div>
-          <div class="text-sm font-medium text-foreground">动议国发言位置</div>
+          <div class="text-sm font-medium text-foreground">{t('procedure_proposer_speaking_position')}</div>
           <div class="mt-0.5 text-xs text-muted-foreground">
-            {proposerSeat?.name ?? '动议提出方'}
+            {proposerSeat?.name ?? t('procedure_motion_proposer')}
           </div>
         </div>
         <div class="flex items-center gap-2">
@@ -109,7 +110,7 @@
             class="h-8 text-xs"
             onclick={togglePosition}
           >
-            标首（第一个发言）
+            {t('procedure_first_speaker')}
           </Button>
           <Button
             size="sm"
@@ -117,7 +118,7 @@
             class="h-8 text-xs"
             onclick={togglePosition}
           >
-            标尾（最后一个发言）
+            {t('procedure_last_speaker')}
           </Button>
         </div>
       </div>
@@ -127,9 +128,9 @@
     <div class="rounded-lg border bg-card p-4">
       <div class="flex items-center gap-2">
         <Users size={16} class="text-muted-foreground" />
-        <span class="text-sm font-medium text-foreground">添加发言席位</span>
+        <span class="text-sm font-medium text-foreground">{t('procedure_add_speaker')}</span>
         <span class="ml-auto text-xs text-muted-foreground">
-          最多 {maxSpeakers} 人 · 已添加 {listedIds.length} 人
+          {t('procedure_caucus_capacity_added', { value1: maxSpeakers, value2: listedIds.length })}
         </span>
       </div>
       <div class="mt-3">
@@ -137,12 +138,12 @@
           <div
             class="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-center text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400"
           >
-            名单已满（{totalSec}秒 ÷ {perSpeakerSec}秒/人 = {maxSpeakers}人）
+            {t('procedure_caucus_capacity_full', { value1: totalSec, value2: perSpeakerSec, value3: maxSpeakers })}
           </div>
         {:else}
           <SeatSelector
             seats={conf.participantSeats}
-            placeholder="搜索并添加席位..."
+            placeholder={t('procedure_search_and_add_seats')}
             resetOnSelect={true}
             excludeIds={listedIds}
             onselect={handleAdd}
@@ -156,12 +157,12 @@
       <div class="flex items-center gap-2 px-4 py-3">
         <GripVertical size={14} class="text-muted-foreground" />
         <span class="text-sm font-medium text-foreground">
-          磋商发言名单 ({listedIds.length}/{maxSpeakers})
+          {t('procedure_caucus_list_count', { value1: listedIds.length, value2: maxSpeakers })}
         </span>
       </div>
 
       {#if listedIds.length === 0}
-        <div class="px-4 pb-4 text-center text-xs text-muted-foreground">名单为空，请添加席位</div>
+        <div class="px-4 pb-4 text-center text-xs text-muted-foreground">{t('procedure_the_list_is_empty_add_seats_to_continue')}</div>
       {:else}
         <div class="divide-y">
           {#each listedIds as delId, i}
@@ -171,7 +172,7 @@
                 <span class="w-6 text-right font-mono text-xs text-muted-foreground">{i + 1}</span>
                 <span class="min-w-0 flex-1 text-sm text-foreground">{del.name}</span>
                 {#if proposerSeat?.id === delId}
-                  <Badge variant="outline" class="text-[10px]">动议席位</Badge>
+                  <Badge variant="outline" class="text-[10px]">{t('procedure_proposing_seat')}</Badge>
                 {/if}
                 <Button
                   size="sm"
@@ -179,7 +180,7 @@
                   class="h-7 text-xs text-muted-foreground hover:text-red-500"
                   onclick={() => handleRemove(delId)}
                 >
-                  移除
+                  {t('procedure_remove')}
                 </Button>
               </div>
             {/if}
@@ -192,7 +193,7 @@
   {:else}
     <div class="flex flex-col items-center gap-4 text-muted-foreground">
       <Users size={48} class="opacity-30" />
-      <p class="text-lg font-medium">磋商设置未就绪</p>
+      <p class="text-lg font-medium">{t('procedure_caucus_setup_is_not_ready')}</p>
     </div>
   {/if}
 </div>

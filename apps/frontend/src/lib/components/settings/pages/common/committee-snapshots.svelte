@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { messageText, type LocalizedMessage } from '$lib/components/ui/localized-message'
+  import { t, formatDate, formatNumber } from '$lib/i18n'
   import { onMount } from 'svelte'
   import * as Select from '$lib/components/ui/select'
   import * as Alert from '$lib/components/ui/alert'
@@ -24,7 +26,7 @@
 
   let selected = $state('')
   let busy = $state(false)
-  let error = $state('')
+  let error = $state<LocalizedMessage>('')
 
   const snapshots = $derived(
     $committeeCheckpoints.filter(
@@ -42,14 +44,14 @@
   })
 
   function describeSnapshot(snapshot: CommitteeCheckpoint): string {
-    return `${new Date(snapshot.createdAt).toLocaleString('zh-CN')} · ${snapshot.label} · ${PHASE_LABELS[snapshot.data.phase]}`
+    return `${formatDate(snapshot.createdAt, { dateStyle: 'short', timeStyle: 'short' })} · ${snapshot.label} · ${PHASE_LABELS[snapshot.data.phase]}`
   }
 
   async function saveSnapshot(): Promise<void> {
     busy = true
     error = ''
     try {
-      if (!(await createCommitteeCheckpoint())) error = '快照未保存，请检查本地存储后重试'
+      if (!(await createCommitteeCheckpoint())) error = () => t('settings_snapshot_save_failed')
     } finally {
       busy = false
     }
@@ -57,8 +59,8 @@
 
   function requestRestore(snapshot: CommitteeCheckpoint): void {
     showConfirm(
-      '恢复这份快照？',
-      '恢复将替换当前会场的本地议事记录，并暂停计时。恢复前会自动备份当前记录。',
+      t('settings_snapshot_confirm'),
+      t('settings_snapshot_confirm_description'),
       () => void restore(snapshot)
     )
   }
@@ -71,7 +73,7 @@
       selected = ''
       settingsDialogOpen.set(false)
     } catch (caught) {
-      error = caught instanceof Error ? caught.message : '恢复失败'
+      error = caught instanceof Error ? caught.message : () => t('settings_restore_failed')
     } finally {
       busy = false
     }
@@ -79,17 +81,16 @@
 </script>
 
 <div class="mt-8">
-  <div class="mb-1 text-xl font-bold">本地会议快照</div>
+  <div class="mb-1 text-xl font-bold">{t('settings_snapshots')}</div>
   <p class="mb-4 text-sm text-muted-foreground">
-    阶段切换时自动留存快照；每个会场保留最近 20 份，全机最多 100
-    份。快照只恢复本地议事记录，恢复后计时保持暂停。
+    {t('settings_snapshots_description')}
   </p>
 
   {#if $currentCommittee}
     <div class="space-y-3">
       <SettingCard
-        title="保存当前快照"
-        description="将当前会场的发言名单、磋商与表决进度保存为一份本地快照。"
+        title={t('settings_snapshot_save')}
+        description={t('settings_snapshot_save_description')}
       >
         <Button
           variant="outline"
@@ -98,14 +99,14 @@
           onclick={() => void saveSnapshot()}
         >
           {#if busy}<Spinner data-icon="inline-start" />{/if}
-          保存当前快照
+          {t('settings_snapshot_save')}
         </Button>
       </SettingCard>
 
       <SettingCard
         class="md:flex-col md:items-stretch"
-        title="恢复快照"
-        description="选择一份快照预览内容；恢复会替换当前会场的本地议事记录，并自动备份当前记录。"
+        title={t('settings_snapshot_restore')}
+        description={t('settings_snapshot_restore_description')}
       >
         <div class="flex flex-col gap-3">
           <Select.Root
@@ -115,8 +116,8 @@
             onValueChange={(value) => (selected = value)}
             disabled={busy || $restoringCheckpoint || snapshots.length === 0}
           >
-            <Select.Trigger aria-label="选择会议快照" class="w-full max-w-96">
-              <Select.Value placeholder={snapshots.length ? '选择快照预览' : '暂无快照'} />
+            <Select.Trigger aria-label={t('settings_snapshot_select')} class="w-full max-w-96">
+              <Select.Value placeholder={snapshots.length ? t('settings_snapshot_preview') : t('settings_snapshot_empty')} />
             </Select.Trigger>
             <Select.Content>
               <Select.Group>
@@ -130,25 +131,22 @@
           {#if preview}
             <div class="flex flex-col gap-2 rounded-md bg-muted p-3 text-sm">
               <p>
-                阶段：{PHASE_LABELS[preview.data.phase]} · 发言队列：{preview.data.speakerLists
-                  ?.entries.length ?? 0} 人 · 表决记录：{preview.data.votingSessions.length} 次
+                {t('settings_snapshot_summary', { phase: PHASE_LABELS[preview.data.phase], speakers: preview.data.speakerLists?.entries.length ?? 0, votes: preview.data.votingSessions.length })}
               </p>
               {#if preview.data.activeSpeaker}
                 <p>
-                  当前发言剩余：{Math.max(
+                  {t('settings_snapshot_speaker_remaining', { seconds: formatNumber(Math.max(
                     0,
                     preview.data.activeSpeaker.totalSec - preview.data.activeSpeaker.elapsedSec
-                  ).toFixed(1)}
-                  秒
+                  ), { minimumFractionDigits: 1, maximumFractionDigits: 1 }) })}
                 </p>
               {/if}
               {#if preview.data.activeCaucus}
                 <p>
-                  磋商剩余：{Math.max(
+                  {t('settings_snapshot_caucus_remaining', { seconds: formatNumber(Math.max(
                     0,
                     preview.data.activeCaucus.totalSec - preview.data.activeCaucus.elapsedSec
-                  ).toFixed(1)}
-                  秒
+                  ), { minimumFractionDigits: 1, maximumFractionDigits: 1 }) })}
                 </p>
               {/if}
               <div>
@@ -158,7 +156,7 @@
                   disabled={busy || $restoringCheckpoint}
                   onclick={() => preview && requestRestore(preview)}
                 >
-                  恢复这份快照
+                  {t('settings_snapshot_restore_this')}
                 </Button>
               </div>
             </div>
@@ -166,13 +164,13 @@
 
           {#if error || $checkpointError}
             <Alert.Root variant="destructive">
-              <Alert.Description>{error || $checkpointError}</Alert.Description>
+              <Alert.Description>{messageText(error) || $checkpointError}</Alert.Description>
             </Alert.Root>
           {/if}
         </div>
       </SettingCard>
     </div>
   {:else}
-    <p class="text-sm text-muted-foreground">请先进入一个委员会，再管理本地会议快照。</p>
+    <p class="text-sm text-muted-foreground">{t('settings_snapshot_enter_committee')}</p>
   {/if}
 </div>

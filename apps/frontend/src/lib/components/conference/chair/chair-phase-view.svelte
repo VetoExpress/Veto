@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import { AlertTriangle, Gavel, Play, Users } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
@@ -21,23 +22,23 @@
 
 <div class="flex min-h-0 flex-1 overflow-hidden p-6">
   {#if screen.kind === 'preamble'}
-    <PlaceholderPage title="会前准备" subtitle="所有参会席位已就位，准备开始点名" icon={Users}>
+    <PlaceholderPage title={t('procedure_preparation')} subtitle={t('procedure_all_participants_are_ready_start_roll_call')} icon={Users}>
       <Button size="lg" class="gap-2 bg-indigo-600 hover:bg-indigo-700" onclick={onStartRollCall}>
         <Play size={18} />
-        开始点名
+        {t('procedure_start_roll_call')}
       </Button>
     </PlaceholderPage>
   {:else if screen.kind === 'roll_call'}
-    <PlaceholderPage title="点名进行中" subtitle="点名页面已在独立页面中打开" icon={Users}>
+    <PlaceholderPage title={t('procedure_roll_call_in_progress')} subtitle={t('procedure_roll_call_is_open_on_a_separate_page')} icon={Users}>
       <Button size="lg" class="gap-2 bg-indigo-600 hover:bg-indigo-700" onclick={onStartRollCall}>
         <Play size={18} />
-        进入点名页面
+        {t('procedure_open_roll_call')}
       </Button>
     </PlaceholderPage>
   {:else if screen.kind === 'pending_speakers_list'}
     <PlaceholderPage
-      title="等待开启主发言名单"
-      subtitle="点名已完成，需由代表动议「开启主发言名单」以进入一般性辩论"
+      title={t('procedure_waiting_to_open_the_speakers_list')}
+      subtitle={t('procedure_roll_call_is_complete_a_delegate_must_move_to_open_the_speakers_list_to_begin_general_')}
       icon={Users}
     />
   {:else if screen.kind === 'general_debate'}
@@ -61,10 +62,10 @@
       <VotingView />
     </ScrollArea>
   {:else if screen.kind === 'suspended'}
-    <PlaceholderPage title="会议休会中" subtitle="点击「恢复会议」继续" icon={Gavel} />
+    <PlaceholderPage title={t('procedure_meeting_suspended')} subtitle={t('procedure_select_resume_meeting_to_continue')} icon={Gavel} />
   {:else if screen.kind === 'closed'}
-    <PlaceholderPage title="会议已闭幕" subtitle="点击「恢复会议」重置会议流程" icon={Gavel} />
+    <PlaceholderPage title={t('procedure_meeting_closed')} subtitle={t('procedure_select_resume_meeting_to_reset_the_procedure')} icon={Gavel} />
   {:else}
-    <PlaceholderPage title="会议状态异常" subtitle={screen.message} icon={AlertTriangle} />
+    <PlaceholderPage title={t('procedure_invalid_meeting_state')} subtitle={screen.message} icon={AlertTriangle} />
   {/if}
 </div>

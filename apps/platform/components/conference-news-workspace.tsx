@@ -1,4 +1,6 @@
 "use client"
+import { message } from "@/i18n/messages"
+import { usePlatformTranslations } from "@/components/i18n-provider"
 
 import { useCallback, useEffect, useState } from "react"
 import { Loader2, RefreshCw } from "lucide-react"
@@ -21,10 +23,10 @@ interface Props {
 }
 
 const statusLabel: Record<OrganizerNews["status"], string> = {
-  submitted: "待审核",
-  rejected: "已驳回",
-  published: "已发布",
-  withdrawn: "已撤回",
+  submitted: "platform_pending_review",
+  rejected: "platform_rejected",
+  published: "platform_published",
+  withdrawn: "platform_withdrawn",
 }
 
 export function ConferenceNewsWorkspace({
@@ -33,6 +35,8 @@ export function ConferenceNewsWorkspace({
   lifecycle,
   onError,
 }: Props) {
+  const { t, locale } = usePlatformTranslations()
+
   const [news, setNews] = useState<OrganizerNews[]>([])
   const [timezone, setTimezone] = useState("Asia/Shanghai")
   const [loading, setLoading] = useState(false)
@@ -48,7 +52,7 @@ export function ConferenceNewsWorkspace({
       setNews(result.news)
       setTimezone(result.timezone)
     } catch (error) {
-      onError(error, "加载新闻失败")
+      onError(error, "platform_load_news_failed")
     } finally {
       setLoading(false)
     }
@@ -67,14 +71,14 @@ export function ConferenceNewsWorkspace({
       setReason("")
       await load()
     } catch (error) {
-      onError(error, "撤回新闻失败")
+      onError(error, "platform_withdraw_news_failed")
     } finally {
       setBusy(false)
     }
   }
 
   function formatTime(value: number): string {
-    return new Intl.DateTimeFormat("zh-CN", {
+    return new Intl.DateTimeFormat(locale, {
       timeZone: timezone,
       dateStyle: "medium",
       timeStyle: "short",
@@ -85,7 +89,7 @@ export function ConferenceNewsWorkspace({
     return (
       <Card>
         <CardContent className="py-10 text-center text-muted-foreground">
-          大会激活后可查看新闻记录。
+          {t("platform_draft_news_hint")}
         </CardContent>
       </Card>
     )
@@ -95,9 +99,9 @@ export function ConferenceNewsWorkspace({
     <section className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="font-semibold">新闻管理</h2>
+          <h2 className="font-semibold">{t("platform_news_management")}</h2>
           <p className="text-sm text-muted-foreground">
-            组织者可以查看全部稿件与附原因撤回，不能代发或审核。
+            {t("platform_news_intro")}
           </p>
         </div>
         <Button
@@ -105,13 +109,14 @@ export function ConferenceNewsWorkspace({
           disabled={loading}
           onClick={() => void load()}
         >
-          {loading ? <Loader2 className="animate-spin" /> : <RefreshCw />}刷新
+          {loading ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+          {t("platform_refresh")}
         </Button>
       </div>
       {news.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center text-muted-foreground">
-            暂无新闻记录
+            {t("platform_no_news")}
           </CardContent>
         </Card>
       ) : (
@@ -131,7 +136,7 @@ export function ConferenceNewsWorkspace({
                     item.status === "published" ? "default" : "secondary"
                   }
                 >
-                  {statusLabel[item.status]}
+                  {t(statusLabel[item.status])}
                 </Badge>
               </div>
             </CardHeader>
@@ -141,12 +146,14 @@ export function ConferenceNewsWorkspace({
               </p>
               {item.reviewNote && (
                 <p className="rounded-md bg-muted p-3 text-sm">
-                  审核说明：{item.reviewNote}
+                  {t("platform_review_note")}
+                  {item.reviewNote}
                 </p>
               )}
               {item.withdrawalReason && (
                 <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                  撤回原因：{item.withdrawalReason}
+                  {t("platform_withdrawal_reason_prefix")}
+                  {item.withdrawalReason}
                 </p>
               )}
               {lifecycle === "active" && item.status === "published" && (
@@ -154,7 +161,7 @@ export function ConferenceNewsWorkspace({
                   {withdrawId === item.id ? (
                     <div className="space-y-2">
                       <Label htmlFor={`news-withdraw-${item.id}`}>
-                        撤回原因
+                        {t("platform_withdrawal_reason")}
                       </Label>
                       <textarea
                         id={`news-withdraw-${item.id}`}
@@ -173,14 +180,14 @@ export function ConferenceNewsWorkspace({
                             setReason("")
                           }}
                         >
-                          取消
+                          {t("platform_cancel")}
                         </Button>
                         <Button
                           variant="destructive"
                           disabled={busy || !reason.trim()}
                           onClick={() => void withdraw(item)}
                         >
-                          确认撤回
+                          {t("platform_confirm_withdraw")}
                         </Button>
                       </div>
                     </div>
@@ -193,7 +200,7 @@ export function ConferenceNewsWorkspace({
                         setReason("")
                       }}
                     >
-                      撤回
+                      {t("platform_withdraw")}
                     </Button>
                   )}
                 </div>

@@ -1,0 +1,9 @@
+{
+  "$schema": "https://inlang.com/schema/project-settings",
+  "baseLocale": "zh-CN",
+  "locales": ["zh-CN", "en-US"],
+  "modules": ["../../node_modules/@inlang/plugin-icu1/dist/index.js"],
+  "plugin.inlang.icu-messageformat-1": {
+    "pathPattern": "./messages/{locale}.json"
+  }
+}

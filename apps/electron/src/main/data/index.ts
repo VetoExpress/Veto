@@ -12,25 +12,11 @@
  * └─────────────────────────────────────────────────────────────┘
  */
 
-export {
-  loadStore,
-  saveStore,
-  deleteStore,
-  migrateFromLocalStorage,
-} from './store'
+export { loadStore, saveStore, deleteStore, migrateFromLocalStorage } from './store'
 export type { StoreDomain } from './store'
 
-export {
-  listConferences,
-  getConference,
-  getMinutes,
-  updateConference,
-} from './conferences'
+export { listConferences, getConference, getMinutes, updateConference } from './conferences'
 export type { ConferenceEntry, ConferenceSummary, MinutesEntry } from './conferences'
 
-export {
-  listTimelines,
-  getTimeline,
-  updateTimeline,
-} from './timelines'
+export { listTimelines, getTimeline, updateTimeline } from './timelines'
 export type { TimelineEntry, TimelineState, TimelineSummary } from './timelines'

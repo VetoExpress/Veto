@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   /**
    * voting/index.svelte
    * ────────────────────
@@ -24,7 +25,7 @@
     }))
   )
 
-  const headerLabel = $derived(docName ? '实质性投票' : '投票表决')
+  const headerLabel = $derived(docName ? t('components_substantive_vote') : t('components_voting'))
 </script>
 
 <DisplayPage>
@@ -33,7 +34,7 @@
     <div class="flex flex-col items-center gap-3">
       <DisplaySectionHeader Icon={Vote} label={headerLabel} colorClass="text-[#5B92E5]" />
       <span class="text-sm tracking-wider text-white/20">
-        {vs.majorityRule === '简单多数' ? 'SIMPLE MAJORITY' : 'TWO-THIRDS MAJORITY'}
+        {vs.majorityRule === 'simple_majority' ? t('components_simple_majority') : t('components_two_thirds_majority')}
       </span>
     </div>
 
@@ -51,7 +52,7 @@
         <div class="text-9xl font-light tabular-nums leading-none text-[#5B92E5]">
           {vs.tally.yes}
         </div>
-        <div class="text-sm tracking-[0.12em] text-white/30 uppercase">赞成</div>
+        <div class="text-sm tracking-[0.12em] text-white/30 uppercase">{t('components_yes')}</div>
       </div>
       <div
         class="flex w-52 flex-col items-center gap-3 rounded-sm border border-white/10 bg-white/[0.02] px-10 py-10"
@@ -59,7 +60,7 @@
         <div class="text-9xl font-light tabular-nums leading-none text-white/40">
           {vs.tally.no}
         </div>
-        <div class="text-sm tracking-[0.12em] text-white/30 uppercase">反对</div>
+        <div class="text-sm tracking-[0.12em] text-white/30 uppercase">{t('components_no')}</div>
       </div>
       <div
         class="flex w-52 flex-col items-center gap-3 rounded-sm border border-white/10 bg-white/[0.02] px-10 py-10"
@@ -67,7 +68,7 @@
         <div class="text-9xl font-light tabular-nums leading-none text-white/40">
           {vs.tally.abstain}
         </div>
-        <div class="text-sm tracking-[0.12em] text-white/30 uppercase">弃权</div>
+        <div class="text-sm tracking-[0.12em] text-white/30 uppercase">{t('components_abstain')}</div>
       </div>
     </div>
 
@@ -75,7 +76,7 @@
     {#if !vs.result}
       <div class="flex flex-col items-center gap-4">
         <div class="text-xs tracking-[0.1em] text-white/20 uppercase">
-          {vs.round === 2 ? 'ROUND 2 · SECOND CALL' : 'ROLL CALL VOTE'}
+          {vs.round === 2 ? t('components_second_call') : t('components_roll_call_vote')}
         </div>
         <SeatRoster
           entries={rosterEntries}
@@ -93,7 +94,7 @@
           ? 'bg-[#5B92E5]/10 text-[#5B92E5] border border-[#5B92E5]/20'
           : 'bg-white/5 text-white/40 border border-white/10'}"
       >
-        {vs.result === 'passed' ? '通过  ADOPTED' : '未通过  REJECTED'}
+        {vs.result === 'passed' ? t('components_vote_adopted') : t('components_vote_failed')}
       </div>
     {/if}
   </div>

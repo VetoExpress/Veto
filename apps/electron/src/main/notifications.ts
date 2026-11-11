@@ -59,8 +59,8 @@ export function createNotifications(): PluginNotifications {
           message,
           level: options?.level ?? 'info',
           duration: options?.duration ?? 4000,
-          timestamp: Date.now(),
-        },
+          timestamp: Date.now()
+        }
       }
 
       for (const win of BrowserWindow.getAllWindows()) {
@@ -70,6 +70,6 @@ export function createNotifications(): PluginNotifications {
           /* window may be closed */
         }
       }
-    },
+    }
   }
 }

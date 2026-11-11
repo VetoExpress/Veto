@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import { ChevronDown } from '@lucide/svelte'
   import { cn } from '$lib/classes/utils'
   import { CAPABILITY_LABELS } from '$lib/classes/types/delegate'
@@ -17,36 +18,36 @@
 
 <section class="flex flex-col gap-5">
   <article class="rounded-lg border p-4">
-    <h2 class="truncate text-sm font-semibold">{wizard.eventName || '未命名大会'}</h2>
+    <h2 class="truncate text-sm font-semibold">{wizard.eventName || t('procedure_untitled_conference')}</h2>
     <dl
       class={wizard.mode === 'singleton'
         ? 'mt-3 grid gap-3 text-sm sm:grid-cols-3'
         : 'mt-3 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4'}
     >
       <div>
-        <dt class="text-xs text-muted-foreground">创建模式</dt>
+        <dt class="text-xs text-muted-foreground">{t('procedure_creation_mode')}</dt>
         <dd class="mt-1 font-medium">
-          {wizard.mode === 'singleton' ? '单例模式' : '大会模式'}
+          {wizard.mode === 'singleton' ? t('procedure_singleton_mode') : t('procedure_conference_mode')}
         </dd>
       </div>
       <div>
         <dt class="text-xs text-muted-foreground">
-          {wizard.mode === 'singleton' ? '会议' : '委员会'}
+          {wizard.mode === 'singleton' ? t('procedure_meeting') : t('procedure_committee')}
         </dt>
         <dd class="mt-1 font-medium">
           {wizard.mode === 'singleton'
-            ? wizard.committees[0]?.name || '未命名会议'
+            ? wizard.committees[0]?.name || t('procedure_untitled_meeting')
             : wizard.committees.length}
         </dd>
       </div>
       {#if wizard.mode !== 'singleton'}
         <div>
-          <dt class="text-xs text-muted-foreground">角色模板</dt>
+          <dt class="text-xs text-muted-foreground">{t('procedure_role_templates')}</dt>
           <dd class="mt-1 font-medium">{wizard.roles.length}</dd>
         </div>
       {/if}
       <div>
-        <dt class="text-xs text-muted-foreground">席位</dt>
+        <dt class="text-xs text-muted-foreground">{t('procedure_seat')}</dt>
         <dd class="mt-1 font-medium">{wizard.totalSeatCount}</dd>
       </div>
     </dl>
@@ -62,10 +63,10 @@
     <Collapsible.Root bind:open={rolesOpen}>
       <article class="rounded-lg border p-4">
         <div class="flex items-center justify-between gap-3">
-          <h3 class="text-sm font-semibold">角色权限</h3>
+          <h3 class="text-sm font-semibold">{t('procedure_role_capabilities')}</h3>
           <Collapsible.Trigger
-            aria-label={rolesOpen ? '收起角色权限' : '展开角色权限'}
-            title={rolesOpen ? '收起角色权限' : '展开角色权限'}
+            aria-label={rolesOpen ? t('procedure_collapse_role_capabilities') : t('procedure_expand_role_capabilities')}
+            title={rolesOpen ? t('procedure_collapse_role_capabilities') : t('procedure_expand_role_capabilities')}
             class={cn(
               buttonVariants({ variant: 'ghost', size: 'icon' }),
               'transition-transform',
@@ -73,7 +74,7 @@
             )}
           >
             <ChevronDown />
-            <span class="sr-only">{rolesOpen ? '收起角色权限' : '展开角色权限'}</span>
+            <span class="sr-only">{rolesOpen ? t('procedure_collapse_role_capabilities') : t('procedure_expand_role_capabilities')}</span>
           </Collapsible.Trigger>
         </div>
 
@@ -83,7 +84,7 @@
               <div class="rounded-md border px-3 py-2">
                 <div class="flex items-center justify-between gap-3">
                   <span class="truncate text-sm font-medium">{role.name}</span>
-                  <Badge variant="outline">{wizard.roleUsage().get(role.id) ?? 0} 个席位</Badge>
+                  <Badge variant="outline">{t('procedure_seat_count', { value1: wizard.roleUsage().get(role.id) ?? 0 })}</Badge>
                 </div>
                 <p class="mt-1 text-xs text-muted-foreground">
                   {role.capabilities.map(capabilityLabel).join('、')}

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   /**
    * speaker-controls.svelte
    * ────────────────────────
@@ -30,34 +31,34 @@
       onclick={() => onresume?.()}
     >
       <Play size={12} />
-      继续计时
+      {t('procedure_continue_timer')}
     </ShortcutButton>
   {:else}
     <ShortcutButton shortcut="Space" size="sm" variant="outline" class="h-8 gap-1.5 text-xs" onclick={() => onpause?.()}>
       <Pause size={12} />
-      暂停
+      {t('procedure_pause')}
     </ShortcutButton>
   {/if}
   <ShortcutButton shortcut="Esc" size="sm" variant="outline" class="h-8 text-xs" onclick={() => onend?.()}>
     <MicOff size={12} class="mr-1" />
-    结束发言
+    {t('procedure_end_speech')}
   </ShortcutButton>
   {#if canYield}
     <ShortcutButton shortcut="Y 1" size="sm" variant="outline" class="h-8 text-xs" onclick={() => onyield?.('chair')}>
       <Users size={12} class="mr-1" />
-      让渡给主席
+      {t('procedure_yield_to_chair')}
     </ShortcutButton>
     <ShortcutButton shortcut="Y 2" size="sm" variant="outline" class="h-8 text-xs" onclick={() => onyield?.('delegate')}>
       <ArrowRight size={12} class="mr-1" />
-      让渡给代表
+      {t('procedure_yield_to_delegate')}
     </ShortcutButton>
     <ShortcutButton shortcut="Y 3" size="sm" variant="outline" class="h-8 text-xs" onclick={() => onyield?.('question')}>
       <HelpCircle size={12} class="mr-1" />
-      让渡给提问
+      {t('procedure_yield_to_questions')}
     </ShortcutButton>
     <ShortcutButton shortcut="Y 4" size="sm" variant="outline" class="h-8 text-xs" onclick={() => onyield?.('comment')}>
       <MessageCircle size={12} class="mr-1" />
-      让渡给评论
+      {t('procedure_yield_to_comments')}
     </ShortcutButton>
   {/if}
 </div>

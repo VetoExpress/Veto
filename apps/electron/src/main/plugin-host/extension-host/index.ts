@@ -27,7 +27,7 @@ export {
   unloadAll,
   getLoadedPlugins,
   getPluginState,
-  loadedCount,
+  loadedCount
 } from './plugin-loader'
 
 export type { LoadedPlugin } from './plugin-loader'

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   /**
    * current-speaker-card.svelte
    * ────────────────────────────
@@ -27,7 +28,7 @@
 <div class="flex flex-col items-center">
   <DisplaySectionHeader
     Icon={Mic}
-    label={isPaused ? '计时已暂停' : '正在发言'}
+    label={isPaused ? t('components_timer_paused') : t('components_speaking')}
     colorClass={accentColor}
   />
 

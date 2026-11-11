@@ -22,7 +22,7 @@ import Module from 'node:module'
 const _originalLoad = (Module as any)._load as (
   request: string,
   parent: Module | undefined,
-  isMain: boolean,
+  isMain: boolean
 ) => unknown
 
 /** 插件目录 → API 对象的映射 */
@@ -30,7 +30,11 @@ const pluginApiRegistry = new Map<string, Record<string, unknown>>()
 
 // ── Monkey-patch ────────────────────────────────────────────────────────────
 
-;(Module as any)._load = function (request: string, parent: Module | undefined, _isMain: boolean): unknown {
+;(Module as any)._load = function (
+  request: string,
+  parent: Module | undefined,
+  _isMain: boolean
+): unknown {
   // 拦截对 "veto" 模块的请求
   if (request === 'veto' && parent) {
     const api = lookupApi(parent)

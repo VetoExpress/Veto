@@ -1,4 +1,6 @@
 "use client"
+import { message } from "@/i18n/messages"
+import { usePlatformTranslations } from "@/components/i18n-provider"
 
 import { useCallback, useEffect, useState } from "react"
 import { Loader2, RefreshCw, RotateCcw } from "lucide-react"
@@ -20,11 +22,11 @@ interface Props {
 }
 
 const statusLabel: Record<OrganizerDirective["status"], string> = {
-  submitted: "待处理",
-  processing: "处理中",
-  approved: "已批准",
-  rejected: "已驳回",
-  cancelled: "已取消",
+  submitted: "platform_pending",
+  processing: "platform_processing",
+  approved: "platform_approved",
+  rejected: "platform_rejected",
+  cancelled: "platform_cancelled",
 }
 
 export function ConferenceDirectiveWorkspace({
@@ -33,6 +35,8 @@ export function ConferenceDirectiveWorkspace({
   lifecycle,
   onError,
 }: Props) {
+  const { t, locale } = usePlatformTranslations()
+
   const [directives, setDirectives] = useState<OrganizerDirective[]>([])
   const [loading, setLoading] = useState(false)
   const [releasingId, setReleasingId] = useState<string>()
@@ -44,7 +48,7 @@ export function ConferenceDirectiveWorkspace({
       const result = await listOrganizerDirectives(token, conferenceId, true)
       setDirectives(result.directives)
     } catch (error) {
-      onError(error, "加载指令失败")
+      onError(error, "platform_load_directives_failed")
     } finally {
       setLoading(false)
     }
@@ -55,14 +59,14 @@ export function ConferenceDirectiveWorkspace({
   }, [load])
 
   async function release(item: OrganizerDirective): Promise<void> {
-    const reason = window.prompt("请输入释放认领的原因")?.trim()
+    const reason = window.prompt(t("platform_release_reason_prompt"))?.trim()
     if (!reason) return
     setReleasingId(item.id)
     try {
       await releaseOrganizerDirective(token, conferenceId, item.id, reason)
       await load()
     } catch (error) {
-      onError(error, "释放认领失败")
+      onError(error, "platform_release_failed")
     } finally {
       setReleasingId(undefined)
     }
@@ -72,7 +76,7 @@ export function ConferenceDirectiveWorkspace({
     return (
       <Card>
         <CardContent className="py-10 text-center text-muted-foreground">
-          大会激活后才能提交和处理指令。
+          {t("platform_draft_directives_hint")}
         </CardContent>
       </Card>
     )
@@ -82,9 +86,11 @@ export function ConferenceDirectiveWorkspace({
     <section className="space-y-4">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="font-semibold">指令管理</h2>
+          <h2 className="font-semibold">
+            {t("platform_directive_management")}
+          </h2>
           <p className="text-sm text-muted-foreground">
-            组织者可查看全部指令并附原因释放异常认领；不能代发、批准或驳回。
+            {t("platform_directives_intro")}
           </p>
         </div>
         <Button
@@ -92,13 +98,14 @@ export function ConferenceDirectiveWorkspace({
           disabled={loading}
           onClick={() => void load()}
         >
-          {loading ? <Loader2 className="animate-spin" /> : <RefreshCw />}刷新
+          {loading ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+          {t("platform_refresh")}
         </Button>
       </div>
       {directives.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            暂无指令记录
+            {t("platform_no_directives")}
           </CardContent>
         </Card>
       ) : (
@@ -110,10 +117,11 @@ export function ConferenceDirectiveWorkspace({
                   <CardTitle className="text-base">{item.title}</CardTitle>
                   <p className="text-sm text-muted-foreground">
                     {item.author.committeeName} · {item.author.seatName} →{" "}
-                    {item.targetCommitteeName} · 第 {item.revision} 版
+                    {item.targetCommitteeName} ·{" "}
+                    {t("platform_revision", { revision: item.revision })}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {new Date(item.createdAt).toLocaleString("zh-CN")}
+                    {new Date(item.createdAt).toLocaleString(locale)}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -122,7 +130,7 @@ export function ConferenceDirectiveWorkspace({
                       item.status === "processing" ? "default" : "secondary"
                     }
                   >
-                    {statusLabel[item.status]}
+                    {t(statusLabel[item.status])}
                   </Badge>
                   {lifecycle === "active" && item.status === "processing" && (
                     <Button
@@ -136,7 +144,7 @@ export function ConferenceDirectiveWorkspace({
                       ) : (
                         <RotateCcw />
                       )}
-                      释放认领
+                      {t("platform_release_claim")}
                     </Button>
                   )}
                 </div>
@@ -148,12 +156,14 @@ export function ConferenceDirectiveWorkspace({
               </div>
               {item.claimedBySeatId && (
                 <p className="text-muted-foreground">
-                  认领席位：{item.claimedBySeatId}
+                  {t("platform_claimed_seat")}
+                  {item.claimedBySeatId}
                 </p>
               )}
               {item.processingNote && (
                 <p className="rounded-lg bg-muted p-3">
-                  处理说明：{item.processingNote}
+                  {t("platform_processing_note")}
+                  {item.processingNote}
                 </p>
               )}
             </CardContent>

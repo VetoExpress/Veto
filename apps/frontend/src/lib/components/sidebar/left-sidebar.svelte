@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import { leftBarPinned } from '$lib/classes/stores/battle/battle-ui-store'
   import { quintOut } from 'svelte/easing'
   import { fade, fly } from 'svelte/transition'
@@ -76,19 +77,19 @@
       <CardHeader class="border-b px-5 py-4">
         <CardTitle class="flex items-center gap-2 text-sm font-semibold tracking-wide">
           <Swords class="h-4 w-4 text-red-500" />
-          阵营控制台
+          {t('components_faction_console')}
           <Button
             variant="ghost"
             size="icon"
             class="ml-auto size-6 shrink-0 text-muted-foreground hover:text-foreground"
-            title="关闭"
+            title={t('components_close')}
             onclick={() => leftBarPinned.set(false)}
           >
             <X class="size-3.5" />
           </Button>
         </CardTitle>
         <CardDescription class="text-xs text-muted-foreground"
-          >先选阵营，再进行单位部署</CardDescription
+          >{t('components_select_before_deploy')}</CardDescription
         >
       </CardHeader>
 
@@ -103,13 +104,13 @@
               class="flex items-center gap-1.5 text-xs tracking-wide text-muted-foreground uppercase"
             >
               <Flag class="h-3.5 w-3.5" />
-              新建阵营
+              {t('components_new_faction')}
             </Label>
             <Input
               id={nameInputId}
               type="text"
               bind:value={newFactionName}
-              placeholder="键入阵营名称"
+              placeholder={t('components_faction_name_input')}
               onkeydown={(e: KeyboardEvent) => e.key === 'Enter' && handleAddFaction()}
             />
           </div>
@@ -121,7 +122,7 @@
             disabled={!newFactionName.trim()}
           >
             <Plus class="mr-1 h-4 w-4" />
-            添加阵营
+            {t('components_add_faction')}
           </Button>
         </div>
 
@@ -132,7 +133,7 @@
               class="mt-6 mb-2 flex items-center gap-1.5 text-xs tracking-wide text-muted-foreground uppercase"
             >
               <List class="h-3.5 w-3.5" />
-              现有阵营
+              {t('components_existing_factions')}
             </Label>
             <ScrollArea class="faction-scroll min-h-0 flex-1 border-t border-dashed pt-5 pr-2">
               <div class="space-y-2 pb-4">
@@ -144,7 +145,7 @@
                   <div
                     class="rounded-lg border border-dashed px-3 py-8 text-center text-xs text-muted-foreground"
                   >
-                    暂无阵营，请先创建
+                    {t('components_no_factions')}
                   </div>
                 {/if}
               </div>
@@ -153,7 +154,7 @@
             <div
               class="flex h-full items-center justify-center rounded-lg border border-dashed text-center text-sm text-muted-foreground"
             >
-              请先创建或加载战局
+              {t('components_load_battle_first')}
             </div>
           {/if}
         </div>

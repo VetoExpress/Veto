@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import {
     currentBattle,
     currentFaction,
@@ -223,12 +224,12 @@
 <Card class="veto-sidebar absolute z-[100] h-full w-[24rem] gap-0">
   <CardHeader class="border-b px-5 py-4">
     <CardTitle class="flex items-center gap-2 text-sm font-semibold tracking-wide">
-      <Swords class="size-4" />军事单位
+      <Swords class="size-4" />{t('components_military_units')}
       <Button
         variant="ghost"
         size="icon"
         class="ml-auto size-6 shrink-0 text-muted-foreground hover:text-foreground"
-        title="关闭"
+        title={t('components_close')}
         onclick={() => currentFactionId.set(null)}
       >
         <X class="size-3.5" />
@@ -247,7 +248,7 @@
             <Input
               class="h-7 flex-1 text-xs"
               bind:value={factionEditName}
-              placeholder="阵营名称"
+              placeholder={t('components_faction_name')}
               onkeydown={(e: KeyboardEvent) => {
                 if (e.key === 'Enter') saveEditFaction()
                 if (e.key === 'Escape') editingFaction = false
@@ -255,7 +256,7 @@
             />
           </div>
           <div class="flex items-center gap-2">
-            <Label class="shrink-0 text-xs text-muted-foreground">颜色</Label>
+            <Label class="shrink-0 text-xs text-muted-foreground">{t('components_color')}</Label>
             <input
               type="color"
               bind:value={factionEditColor}
@@ -263,9 +264,9 @@
             />
           </div>
           <div class="flex items-center gap-2">
-            <Label class="shrink-0 text-xs text-muted-foreground">立场</Label>
+            <Label class="shrink-0 text-xs text-muted-foreground">{t('components_side')}</Label>
             <div class="flex gap-1.5">
-              {#each [{ v: 'blue', l: '蓝方', c: '#1d4ed8' }, { v: 'red', l: '红方', c: '#dc2626' }, { v: 'neutral', l: '中立', c: '#16a34a' }] as opt}
+              {#each [{ v: 'blue', l: t('components_blue_side'), c: '#1d4ed8' }, { v: 'red', l: t('components_red_side'), c: '#dc2626' }, { v: 'neutral', l: t('components_neutral_side'), c: '#16a34a' }] as opt}
                 <button
                   type="button"
                   class="rounded border px-2 py-0.5 text-[11px] font-medium transition-all {factionEditSide ===
@@ -285,7 +286,7 @@
               class="h-7 px-2 text-xs text-muted-foreground"
               onclick={() => (editingFaction = false)}
             >
-              <X class="mr-1 size-3" />取消
+              <X class="mr-1 size-3" />{t('components_cancel')}
             </Button>
             <Button
               size="sm"
@@ -293,7 +294,7 @@
               onclick={saveEditFaction}
               disabled={!factionEditName.trim()}
             >
-              <Check class="mr-1 size-3" />保存
+              <Check class="mr-1 size-3" />{t('components_save')}
             </Button>
           </div>
         </div>
@@ -311,7 +312,7 @@
             variant="ghost"
             size="icon"
             class="size-6 shrink-0 text-muted-foreground hover:text-foreground"
-            title="编辑阵营信息"
+            title={t('components_edit_faction')}
             onclick={startEditFaction}
           >
             <Pencil class="size-3" />
@@ -319,14 +320,14 @@
         </div>
       {/if}
     {:else}
-      <CardDescription class="text-xs text-muted-foreground">部署军事单位</CardDescription>
+      <CardDescription class="text-xs text-muted-foreground">{t('components_deploy_units')}</CardDescription>
     {/if}
   </CardHeader>
   <CardContent class="sidebar-body overflow-y-auto px-4 py-4">
     <div class="space-y-3">
       <div class="space-y-2">
         {#if !$currentFaction}
-          <p class="py-4 text-center text-xs text-muted-foreground">请先选择阵营</p>
+          <p class="py-4 text-center text-xs text-muted-foreground">{t('components_select_faction_first')}</p>
         {:else}
           <!-- 军种选择（注册表驱动，自动包含所有军种，包括 Mod 添加的） -->
           <BranchSelector
@@ -362,7 +363,7 @@
               <div class="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
                 {#each cat.componentGroups ?? [] as group (group.key)}
                   <p class="text-xs font-medium text-muted-foreground">
-                    选择类型 · {mods.getLabel('category.' + cat.id, cat.id)}
+                    {t('components_select_category', { category: mods.getLabel('category.' + cat.id, cat.id) })}
                   </p>
                   <div class="grid grid-cols-2 gap-1">
                     {#each group.types as typeId}
@@ -380,7 +381,7 @@
                       </button>
                     {/each}
                   </div>
-                  <p class="text-xs font-medium text-muted-foreground">质量等级</p>
+                  <p class="text-xs font-medium text-muted-foreground">{t('components_quality')}</p>
                   <div class="grid grid-cols-3 gap-1">
                     {#each group.qualities as qualityId}
                       <button
@@ -396,7 +397,7 @@
                   </div>
                 {/each}
                 <div class="flex items-center gap-2">
-                  <span class="shrink-0 text-xs text-muted-foreground">数量</span>
+                  <span class="shrink-0 text-xs text-muted-foreground">{t('components_quantity')}</span>
                   <Input
                     type="number"
                     bind:value={pendingCount}
@@ -412,10 +413,10 @@
                     class="h-7 px-2 text-xs text-muted-foreground"
                     onclick={() => (pendingCategoryId = null)}
                   >
-                    <X class="mr-1 size-3" />取消
+                    <X class="mr-1 size-3" />{t('components_cancel')}
                   </Button>
                   <Button size="sm" class="h-7 px-2 text-xs" onclick={confirmCreateUnit}>
-                    <Check class="mr-1 size-3" />创建
+                    <Check class="mr-1 size-3" />{t('components_create')}
                   </Button>
                 </div>
               </div>
@@ -451,7 +452,7 @@
               {/each}
               {#if $currentFaction.units.filter((u) => u.branchId === $currentBranch).length === 0}
                 <p class="py-4 text-center text-xs text-muted-foreground">
-                  暂无单位，选择上方类型即可创建
+                  {t('components_no_units')}
                 </p>
               {/if}
             </div>

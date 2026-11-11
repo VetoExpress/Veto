@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   /**
    * active-speaker-card.svelte
    * ──────────────────────────
@@ -48,7 +49,7 @@
       ? 'text-red-600 dark:text-red-400'
       : 'text-emerald-700 dark:text-emerald-400'}"
   >
-    {isPaused ? '计时已暂停' : isUrgent ? '⚠ 时间即将耗尽' : '正在发言'}
+    {isPaused ? t('procedure_timer_paused') : isUrgent ? t('procedure_time_is_running_out') : t('procedure_speaking')}
   </div>
   <div class="mt-1 text-2xl font-bold text-foreground">
     {seatName}
@@ -63,7 +64,7 @@
     {formatTime(remainingSec)}
   </div>
   <div class="mt-1 text-xs text-muted-foreground">
-    已用 {elapsedSec}秒 / 共 {totalSec}秒
+    {t('procedure_speech_elapsed_total', { value1: elapsedSec, value2: totalSec })}
   </div>
 
   <div class="mt-4">

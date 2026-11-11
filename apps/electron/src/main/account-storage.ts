@@ -2,6 +2,7 @@ import { safeStorage } from 'electron'
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
 import type { AccountStorage, StoredAccount } from './account-session'
+import { t } from './i18n'
 
 function isStoredAccount(value: unknown): value is StoredAccount {
   if (!value || typeof value !== 'object') return false
@@ -33,10 +34,10 @@ export function createAccountStorage(userDataPath: string): AccountStorage {
         if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null
         throw error
       }
-      if (!(await available())) throw new Error('安全存储不可用')
+      if (!(await available())) throw new Error(t('electron_account_secure_storage_unavailable'))
       const { result } = await safeStorage.decryptStringAsync(encrypted)
       const account: unknown = JSON.parse(result)
-      if (!isStoredAccount(account)) throw new Error('账号存储损坏')
+      if (!isStoredAccount(account)) throw new Error(t('electron_account_storage_corrupted'))
       return account
     },
     async save(account) {

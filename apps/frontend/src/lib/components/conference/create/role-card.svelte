@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import { ChevronDown, Trash2 } from '@lucide/svelte'
   import { cn } from '$lib/classes/utils'
   import type { RoleTemplate } from '$lib/classes/types/event'
@@ -34,21 +35,21 @@
       <div class="flex min-w-60 flex-1 flex-col gap-1.5">
         <Input
           bind:value={role.name}
-          placeholder="角色名称"
-          aria-label="角色名称"
+          placeholder={t('procedure_role_name')}
+          aria-label={t('procedure_role_name')}
           aria-invalid={showNameError || undefined}
           class="max-w-72"
         />
         {#if showNameError}
-          <Field.FieldError>请输入角色名称</Field.FieldError>
+          <Field.FieldError>{t('procedure_enter_role_name')}</Field.FieldError>
         {/if}
       </div>
       <Badge variant={showCapabilitiesError ? 'destructive' : 'outline'}>
-        {role.capabilities.length} 项权限
+        {t('procedure_capability_count', { value1: role.capabilities.length })}
       </Badge>
       <Collapsible.Trigger
-        aria-label={open ? '收起权限' : '展开权限'}
-        title={open ? '收起权限' : '展开权限'}
+        aria-label={open ? t('procedure_collapse_capabilities') : t('procedure_expand_capabilities')}
+        title={open ? t('procedure_collapse_capabilities') : t('procedure_expand_capabilities')}
         class={cn(
           buttonVariants({ variant: 'ghost', size: 'icon' }),
           'transition-transform',
@@ -56,12 +57,12 @@
         )}
       >
         <ChevronDown />
-        <span class="sr-only">{open ? '收起权限' : '展开权限'}</span>
+        <span class="sr-only">{open ? t('procedure_collapse_capabilities') : t('procedure_expand_capabilities')}</span>
       </Collapsible.Trigger>
       <Button
         variant="ghost"
         size="icon"
-        title={usage > 0 ? '角色已被席位使用' : '删除角色'}
+        title={usage > 0 ? t('procedure_this_role_is_assigned_to_a_seat') : t('procedure_delete_role')}
         disabled={usage > 0}
         onclick={() => wizard.removeRole(role.id)}
       >
@@ -71,7 +72,7 @@
 
     <Collapsible.Content>
       <Field.FieldSet class="mt-4">
-        <Field.FieldLegend variant="label">权限</Field.FieldLegend>
+        <Field.FieldLegend variant="label">{t('procedure_capabilities_2')}</Field.FieldLegend>
         <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {#each CAPABILITY_OPTIONS as option (option.value)}
             <label
@@ -88,7 +89,7 @@
           {/each}
         </div>
         {#if showCapabilitiesError}
-          <Field.FieldError>请至少勾选一项权限</Field.FieldError>
+          <Field.FieldError>{t('procedure_select_at_least_one_capability')}</Field.FieldError>
         {/if}
       </Field.FieldSet>
     </Collapsible.Content>

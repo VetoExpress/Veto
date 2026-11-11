@@ -1,4 +1,6 @@
 "use client"
+import { message } from "@/i18n/messages"
+import { usePlatformTranslations } from "@/components/i18n-provider"
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import {
@@ -41,6 +43,8 @@ export function ConferenceFilesWorkspace({
   lifecycle,
   onError,
 }: Props) {
+  const { t, locale } = usePlatformTranslations()
+
   const [now, setNow] = useState(() => Date.now())
   const [expiredByServer, setExpiredByServer] = useState(false)
   const expired =
@@ -62,20 +66,19 @@ export function ConferenceFilesWorkspace({
     "fileType" | "createdAt" | "author" | "fileName"
   >("createdAt")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
-  const loadSequence = useRef(0)
-
   const statusLabel: Record<OrganizerFile["status"], string> = {
-    submitted: "待审核",
-    published: "已发布",
-    rejected: "已打回",
-    cancelled: "已取消",
-    withdrawn: "已撤回",
+    submitted: "platform_pending_review",
+    published: "platform_published",
+    rejected: "platform_returned",
+    cancelled: "platform_cancelled",
+    withdrawn: "platform_withdrawn",
   }
+  const loadSequence = useRef(0)
 
   function scopeLabel(item: OrganizerFile): string {
     const scope =
       item.status === "submitted" ? item.requestedVisibility : item.visibility
-    return `${item.status === "submitted" ? "申请：" : ""}${scope === "conference" ? "全大会" : "本委员会"}`
+    return `${item.status === "submitted" ? t("platform_requested_prefix") : ""}${scope === "conference" ? t("platform_whole_conference") : t("platform_this_committee")}`
   }
 
   const sortedFiles = [...files].sort((a, b) => {
@@ -85,10 +88,10 @@ export function ConferenceFilesWorkspace({
         : sortKey === "author"
           ? `${a.author.committeeName} / ${a.author.seatName}`.localeCompare(
               `${b.author.committeeName} / ${b.author.seatName}`,
-              "zh-CN",
+              locale,
               { numeric: true }
             )
-          : a[sortKey].localeCompare(b[sortKey], "zh-CN", { numeric: true })
+          : a[sortKey].localeCompare(b[sortKey], locale, { numeric: true })
     return (
       (sortDirection === "asc" ? compare : -compare) || a.id.localeCompare(b.id)
     )
@@ -121,7 +124,8 @@ export function ConferenceFilesWorkspace({
       setFiles(result.files)
       setFileTypes(types.fileTypes)
     } catch (error) {
-      if (sequence === loadSequence.current) onError(error, "加载文件失败")
+      if (sequence === loadSequence.current)
+        onError(error, "platform_load_files_failed")
     } finally {
       if (sequence === loadSequence.current) setLoading(false)
     }
@@ -140,7 +144,7 @@ export function ConferenceFilesWorkspace({
       setReason("")
       await load()
     } catch (error) {
-      onError(error, "撤回文件失败")
+      onError(error, "platform_withdraw_file_failed")
     } finally {
       setBusy(false)
     }
@@ -158,7 +162,7 @@ export function ConferenceFilesWorkspace({
     } catch (error) {
       if (error instanceof ConferenceApiError && error.code === "FILES_EXPIRED")
         setExpiredByServer(true)
-      onError(error, "下载文件失败")
+      onError(error, "platform_download_failed")
     }
   }
 
@@ -166,7 +170,7 @@ export function ConferenceFilesWorkspace({
     return (
       <Card>
         <CardContent className="py-10 text-center text-muted-foreground">
-          大会激活后可查看文件记录。
+          {t("platform_draft_files_hint")}
         </CardContent>
       </Card>
     )
@@ -179,16 +183,18 @@ export function ConferenceFilesWorkspace({
         className="rounded-lg border bg-muted/40 p-4 text-sm leading-6"
       >
         {expired
-          ? "文件保存期限已过，已停止下载和上传，文件内容将自动清理且无法恢复。文件记录和审核历史仍保留。"
+          ? t("platform_files_expired_hint")
           : filesExpireAt
-            ? `请在 ${formatSchedule(filesExpireAt)} 前下载并保存所需文件到本地。会议结束后 3 天（72 小时）自动清理全部文件内容，届时无法下载或恢复。`
-            : "尚未设置会议结束时间，暂无自动清理期限。设置后，文件将在结束时间的 3 天（72 小时）后自动清理，请提前下载保存到本地。"}
+            ? t("platform_files_deadline_hint", {
+                value1: formatSchedule(filesExpireAt, locale),
+              })
+            : t("platform_files_no_deadline_hint")}
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="font-semibold">文件管理</h2>
+          <h2 className="font-semibold">{t("platform_file_management")}</h2>
           <p className="text-sm text-muted-foreground">
-            查看各委员会的提交、审核结果和发布范围；组织者可撤回已发布文件。
+            {t("platform_files_intro")}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -196,7 +202,7 @@ export function ConferenceFilesWorkspace({
             htmlFor="organizer-file-type"
             className="text-sm text-muted-foreground"
           >
-            文件类型
+            {t("platform_file_type")}
           </label>
           <select
             id="organizer-file-type"
@@ -204,7 +210,7 @@ export function ConferenceFilesWorkspace({
             onChange={(event) => setSelectedType(event.target.value)}
             className="rounded-md border border-input bg-background px-3 py-2 text-sm"
           >
-            <option value="">全部类型</option>
+            <option value="">{t("platform_all_types")}</option>
             {fileTypes.map((type) => (
               <option key={type} value={type}>
                 {type}
@@ -216,7 +222,8 @@ export function ConferenceFilesWorkspace({
             disabled={loading}
             onClick={() => void load()}
           >
-            {loading ? <Loader2 className="animate-spin" /> : <RefreshCw />}刷新
+            {loading ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+            {t("platform_refresh")}
           </Button>
         </div>
       </div>
@@ -224,13 +231,13 @@ export function ConferenceFilesWorkspace({
         <table className="w-full min-w-[900px] text-sm">
           <thead className="border-b bg-muted/50 text-left">
             <tr>
-              <th className="px-3 py-3 font-medium">标题</th>
+              <th className="px-3 py-3 font-medium">{t("platform_title")}</th>
               {(
                 [
-                  { key: "fileType", label: "类型" },
-                  { key: "createdAt", label: "时间" },
-                  { key: "author", label: "上传者" },
-                  { key: "fileName", label: "文件名" },
+                  { key: "fileType", label: t("platform_type") },
+                  { key: "createdAt", label: t("platform_time") },
+                  { key: "author", label: t("platform_uploader") },
+                  { key: "fileName", label: t("platform_file_name") },
                 ] as const
               ).map((column) => (
                 <th
@@ -247,9 +254,11 @@ export function ConferenceFilesWorkspace({
                   <button
                     className="inline-flex items-center gap-1 hover:text-foreground"
                     onClick={() => sortBy(column.key)}
-                    aria-label={`按${column.label}排序`}
+                    aria-label={t("platform_sort_by", {
+                      value1: t(column.label),
+                    })}
                   >
-                    {column.label}
+                    {t(column.label)}
                     {sortKey === column.key ? (
                       sortDirection === "asc" ? (
                         <ArrowUp className="size-3.5" />
@@ -262,9 +271,13 @@ export function ConferenceFilesWorkspace({
                   </button>
                 </th>
               ))}
-              <th className="px-3 py-3 font-medium">可视范围</th>
-              <th className="px-3 py-3 font-medium">状态</th>
-              <th className="px-3 py-3 text-right font-medium">操作</th>
+              <th className="px-3 py-3 font-medium">
+                {t("platform_visibility")}
+              </th>
+              <th className="px-3 py-3 font-medium">{t("platform_status")}</th>
+              <th className="px-3 py-3 text-right font-medium">
+                {t("platform_actions")}
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -274,7 +287,9 @@ export function ConferenceFilesWorkspace({
                   colSpan={8}
                   className="px-3 py-10 text-center text-muted-foreground"
                 >
-                  {loading ? "正在加载文件…" : "暂无文件记录"}
+                  {loading
+                    ? t("platform_loading_files")
+                    : t("platform_no_files")}
                 </td>
               </tr>
             ) : (
@@ -287,25 +302,28 @@ export function ConferenceFilesWorkspace({
                     {item.title}
                     {item.replacesFileId && (
                       <p className="mt-1 text-xs font-normal text-muted-foreground">
-                        重新提交：{item.replacesFileId}
+                        {t("platform_resubmitted")}
+                        {item.replacesFileId}
                       </p>
                     )}
                     {item.reviewNote && (
                       <p
                         className={`mt-1 max-w-56 text-xs font-normal ${item.status === "rejected" ? "text-destructive" : "text-muted-foreground"}`}
                       >
-                        审核说明：{item.reviewNote}
+                        {t("platform_review_note")}
+                        {item.reviewNote}
                       </p>
                     )}
                     {item.withdrawalReason && (
                       <p className="mt-1 max-w-56 text-xs font-normal text-destructive">
-                        撤回原因：{item.withdrawalReason}
+                        {t("platform_withdrawal_reason_prefix")}
+                        {item.withdrawalReason}
                       </p>
                     )}
                   </td>
                   <td className="px-3 py-3">{item.fileType}</td>
                   <td className="px-3 py-3 whitespace-nowrap">
-                    {new Date(item.createdAt).toLocaleString("zh-CN")}
+                    {new Date(item.createdAt).toLocaleString(locale)}
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap">
                     {item.author.committeeName} / {item.author.seatName}
@@ -325,11 +343,11 @@ export function ConferenceFilesWorkspace({
                         item.status === "published" ? "default" : "secondary"
                       }
                     >
-                      {statusLabel[item.status]}
+                      {t(statusLabel[item.status])}
                       {item.objectDeletedAt
-                        ? " · 内容已清理"
+                        ? t("platform_content_deleted_suffix")
                         : expired
-                          ? " · 已到期"
+                          ? t("platform_expired_suffix")
                           : ""}
                     </Badge>
                   </td>
@@ -346,7 +364,7 @@ export function ConferenceFilesWorkspace({
                                 setReason("")
                               }}
                             >
-                              撤回
+                              {t("platform_withdraw")}
                             </Button>
                           )}
                           <Button
@@ -356,13 +374,13 @@ export function ConferenceFilesWorkspace({
                             onClick={() => void download(item)}
                           >
                             <Download />
-                            下载
+                            {t("platform_download")}
                           </Button>
                         </div>
                         {lifecycle === "active" && withdrawId === item.id && (
                           <div className="mt-2 flex min-w-56 flex-col gap-2 text-left">
                             <Label htmlFor={`file-withdraw-${item.id}`}>
-                              撤回原因
+                              {t("platform_withdrawal_reason")}
                             </Label>
                             <input
                               id={`file-withdraw-${item.id}`}
@@ -383,7 +401,7 @@ export function ConferenceFilesWorkspace({
                                   setReason("")
                                 }}
                               >
-                                取消
+                                {t("platform_cancel")}
                               </Button>
                               <Button
                                 variant="destructive"
@@ -391,7 +409,7 @@ export function ConferenceFilesWorkspace({
                                 disabled={busy || !reason.trim()}
                                 onClick={() => void withdraw(item)}
                               >
-                                确认撤回
+                                {t("platform_confirm_withdraw")}
                               </Button>
                             </div>
                           </div>

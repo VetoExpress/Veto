@@ -31,6 +31,7 @@ import {
 import { gameClock, TIME_SCALES, TIME_SCALE_LABELS } from '$lib/classes/services/engine/game-clock.store'
 import { globalSettings } from '$lib/classes/stores/app/global-settings.store'
 import { get } from 'svelte/store'
+import { t } from '$lib/i18n'
 
 export interface ShortcutDef {
   /** 显示用按键（大写），例如 'S'、'Z'、'Escape' */
@@ -52,35 +53,42 @@ function defineShortcuts(
   group: ShortcutDef['group'],
   defs: ShortcutDefWithoutGroup[]
 ): ShortcutDef[] {
-  return defs.map((d) => ({ ...d, group }))
+  return defs.map((definition) => ({
+    key: definition.key,
+    ctrl: definition.ctrl,
+    shift: definition.shift,
+    alt: definition.alt,
+    get description() { return definition.description },
+    group
+  }))
 }
 
 /** 危机推演快捷键 */
 const BATTLE_SHORTCUTS = defineShortcuts('危机推演', [
-  { key: '1', description: '第一流速' },
-  { key: '2', description: '第二流速' },
-  { key: '3', description: '第三流速' },
-  { key: '4', description: '第四流速' },
-  { key: 'M', description: '切换测量距离模式' },
-  { key: 'Space', description: '暂停/继续' },
-  { key: 'A', description: '打开侧边栏' },
-  { key: 'Q', description: '打开单位面板' },
-  { key: 'S', description: '打开状态面板' },
-  { key: 'S', ctrl: true, description: '保存战局' },
-  { key: 'Z', ctrl: true, description: '撤销操作' },
-  { key: 'Escape', description: '退出当前交互模式' },
-  { key: 'F3', description: '在选中路线节点后插入新节点' },
-  { key: 'D', description: '切换单位拖拽' }
+  { key: '1', get description() { return t('services_speed_first') } },
+  { key: '2', get description() { return t('services_speed_second') } },
+  { key: '3', get description() { return t('services_speed_third') } },
+  { key: '4', get description() { return t('services_speed_fourth') } },
+  { key: 'M', get description() { return t('services_shortcut_measure') } },
+  { key: 'Space', get description() { return t('services_shortcut_pause') } },
+  { key: 'A', get description() { return t('services_shortcut_sidebar') } },
+  { key: 'Q', get description() { return t('services_shortcut_units') } },
+  { key: 'S', get description() { return t('services_shortcut_status') } },
+  { key: 'S', ctrl: true, get description() { return t('services_shortcut_save') } },
+  { key: 'Z', ctrl: true, get description() { return t('services_shortcut_undo') } },
+  { key: 'Escape', get description() { return t('services_shortcut_exit') } },
+  { key: 'F3', get description() { return t('services_shortcut_insert') } },
+  { key: 'D', get description() { return t('services_shortcut_drag') } }
 ])
 
 /** 模拟大会快捷键 */
 const CONFERENCE_SHORTCUTS = defineShortcuts('模拟大会', [
-  { key: 'Escape', description: '退出全屏模式' },
-  { key: '↑', alt: true, description: '展示区上移' },
-  { key: '↓', alt: true, description: '展示区下移' },
-  { key: '←', alt: true, description: '展示区左移' },
-  { key: '→', alt: true, description: '展示区右移' },
-  { key: '0', alt: true, description: '重置展示区位置' }
+  { key: 'Escape', get description() { return t('services_shortcut_fullscreen') } },
+  { key: '↑', alt: true, get description() { return t('services_shortcut_up') } },
+  { key: '↓', alt: true, get description() { return t('services_shortcut_down') } },
+  { key: '←', alt: true, get description() { return t('services_shortcut_left') } },
+  { key: '→', alt: true, get description() { return t('services_shortcut_right') } },
+  { key: '0', alt: true, get description() { return t('services_shortcut_reset') } }
 ])
 
 /** 所有快捷键的元数据，供设置页面展示用 */

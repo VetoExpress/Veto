@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { procedureMessage, renderProcedureMessage, type ProcedureMessage } from '$lib/components/conference/common/message'
+  import { t } from '$lib/i18n'
   import { onDestroy, onMount } from 'svelte'
   import '$units'
   import Map from '$lib/components/map/map.svelte'
@@ -28,7 +30,7 @@
   } = $props()
   let loaded = $state(false)
   let configured = $state(false)
-  let error = $state('')
+  let error = $state<ProcedureMessage>('')
   let disposed = false
   useKeyboardShortcuts()
 
@@ -57,7 +59,7 @@
       activateBattle()
       loaded = true
     } catch (cause) {
-      if (!disposed) error = cause instanceof Error ? cause.message : '加载大会推演失败。'
+      if (!disposed) error = cause instanceof Error ? cause.message : procedureMessage('procedure_failed_to_load_conference_simulation')
     }
   })
 
@@ -76,9 +78,9 @@
 </script>
 
 {#if error}
-  <p role="alert" class="p-6 text-sm text-destructive">{error}</p>
+  <p role="alert" class="p-6 text-sm text-destructive">{renderProcedureMessage(error)}</p>
 {:else if !loaded}
-  <p role="status" class="p-6 text-sm text-muted-foreground">正在加载大会推演…</p>
+  <p role="status" class="p-6 text-sm text-muted-foreground">{t('procedure_loading_conference_simulation')}</p>
 {:else if !configured}
   <div class="min-h-0 flex-1 overflow-y-auto">
     <BattleSetup {conferenceId} {conferenceName} oncreated={activateBattle} />

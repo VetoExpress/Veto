@@ -2,10 +2,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { IpcMainInvokeEvent } from 'electron'
 import { AuthError } from '@vetoexpress/auth'
 
-const { handlers } = vi.hoisted(() => ({
+vi.mock('../logger')
+
+const { handlers, accountWindow } = vi.hoisted(() => ({
+  accountWindow: {
+    isDestroyed: () => false,
+    webContents: { mainFrame: { origin: 'veto://app' }, send: vi.fn() }
+  },
   handlers: new Map<string, (event: IpcMainInvokeEvent, ...args: unknown[]) => Promise<unknown>>()
 }))
 vi.mock('electron', () => ({
+  BrowserWindow: { getAllWindows: () => [accountWindow] },
   ipcMain: {
     handle: (channel: string, handler: typeof handlers extends Map<string, infer T> ? T : never) =>
       handlers.set(channel, handler)
@@ -13,6 +20,7 @@ vi.mock('electron', () => ({
 }))
 vi.mock('@electron-toolkit/utils', () => ({ is: { dev: true } }))
 import { isAccountOrigin, registerAccountIpc } from '../ipc/account'
+import { updateLocale } from '../i18n'
 
 const snapshot = { user: null, persistent: false, warning: null }
 function event(origin: string, subframe = false) {
@@ -24,6 +32,7 @@ function event(origin: string, subframe = false) {
 }
 describe('account IPC', () => {
   const account = {
+    getSnapshot: vi.fn(),
     getSession: vi.fn(),
     getAccessToken: vi.fn(),
     adoptToken: vi.fn(),
@@ -38,9 +47,29 @@ describe('account IPC', () => {
     vi.resetAllMocks()
     handlers.clear()
     for (const method of Object.values(account)) method.mockResolvedValue(snapshot)
+    account.getSnapshot.mockReturnValue(snapshot)
     registerAccountIpc(account)
   })
-  afterEach(() => vi.unstubAllEnvs())
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    updateLocale('zh-CN')
+  })
+  it('localizes validation errors at return time and replays account state on language change', async () => {
+    const login = handlers.get('veto:account:login')!
+    updateLocale('en-US')
+    expect(await login(event('veto://app'), {}, 'password')).toMatchObject({
+      ok: false,
+      error: 'Please enter your email and password'
+    })
+    await vi.waitFor(() =>
+      expect(accountWindow.webContents.send).toHaveBeenCalledWith('veto:account:changed', snapshot)
+    )
+    account.login.mockRejectedValueOnce(new AuthError('upstream custom error', 400))
+    expect(await login(event('veto://app'), 'test@example.test', 'password')).toMatchObject({
+      error: 'upstream custom error',
+      status: 400
+    })
+  })
   it('accepts the local app and official platform, rejects unrelated pages and subframes', async () => {
     const get = handlers.get('veto:account:get-session')!
     expect(await get(event('veto://app'))).toEqual({ ok: true, session: snapshot })

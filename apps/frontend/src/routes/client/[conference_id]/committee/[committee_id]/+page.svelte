@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import { PanelLeft } from '@lucide/svelte'
   import { page } from '$app/stores'
 
@@ -28,11 +29,11 @@
   )
 
   const conferenceName = $derived(
-    cloudProjection?.conference.name ?? conference?.name ?? '当前大会'
+    cloudProjection?.conference.name ?? conference?.name ?? t('procedure_current_conference')
   )
-  const committeeName = $derived(cloudProjection?.committee.name ?? committee?.name ?? '当前委员会')
+  const committeeName = $derived(cloudProjection?.committee.name ?? committee?.name ?? t('procedure_current_committee'))
   const organizer = $derived(
-    cloudProjection?.conference.organizer ?? conference?.organizer ?? '未填写'
+    cloudProjection?.conference.organizer ?? conference?.organizer ?? t('procedure_not_provided')
   )
   const seatName = $derived(cloudResult ? cloudResult.seatShortName || cloudResult.seatName : null)
   const participantCount = $derived(
@@ -48,33 +49,33 @@
       <Empty.Media variant="icon">
         <PanelLeft class="size-5" />
       </Empty.Media>
-      <Empty.Title>从侧边栏开始你的会议</Empty.Title>
-      <Empty.Description>选择左侧可用功能，查看会议内容或进入主席台。</Empty.Description>
+      <Empty.Title>{t('procedure_start_your_conference_from_the_sidebar')}</Empty.Title>
+      <Empty.Description>{t('procedure_choose_an_available_feature_on_the_left_to_view_content_or_enter_the_chair_workspace')}</Empty.Description>
     </Empty.Header>
 
     <Empty.Content class="max-w-xl">
       <dl class="grid w-full gap-3 text-left sm:grid-cols-2">
         <div class="rounded-lg border bg-background/60 p-3">
-          <dt class="text-xs text-muted-foreground">大会</dt>
+          <dt class="text-xs text-muted-foreground">{t('procedure_conference')}</dt>
           <dd class="mt-1 truncate text-sm font-medium text-foreground">{conferenceName}</dd>
         </div>
         <div class="rounded-lg border bg-background/60 p-3">
-          <dt class="text-xs text-muted-foreground">委员会</dt>
+          <dt class="text-xs text-muted-foreground">{t('procedure_committee')}</dt>
           <dd class="mt-1 truncate text-sm font-medium text-foreground">{committeeName}</dd>
         </div>
         <div class="rounded-lg border bg-background/60 p-3">
-          <dt class="text-xs text-muted-foreground">组织方</dt>
+          <dt class="text-xs text-muted-foreground">{t('procedure_organizer')}</dt>
           <dd class="mt-1 truncate text-sm font-medium text-foreground">{organizer}</dd>
         </div>
         <div class="rounded-lg border bg-background/60 p-3">
           {#if seatName && cloudResult}
-            <dt class="text-xs text-muted-foreground">当前身份</dt>
+            <dt class="text-xs text-muted-foreground">{t('procedure_current_identity')}</dt>
             <dd class="mt-1 truncate text-sm font-medium text-foreground">
               {seatName} · {cloudResult.roleName}
             </dd>
           {:else}
-            <dt class="text-xs text-muted-foreground">参会席位</dt>
-            <dd class="mt-1 text-sm font-medium text-foreground">{participantCount} 个</dd>
+            <dt class="text-xs text-muted-foreground">{t('procedure_participants')}</dt>
+            <dd class="mt-1 text-sm font-medium text-foreground">{t('procedure_participant_count', { value1: participantCount })}</dd>
           {/if}
         </div>
       </dl>

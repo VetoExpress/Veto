@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import { onDestroy } from 'svelte'
   import { Check, Pencil, Trash2, X } from '@lucide/svelte'
   import type { ParticipantSeat } from '$lib/classes/types/delegate'
@@ -86,11 +87,11 @@
   <table class="w-full text-sm">
     <thead class="bg-muted/50 text-xs text-muted-foreground">
       <tr>
-        <th class="px-4 py-3 text-left font-medium">席位</th>
-        <th class="px-4 py-3 text-left font-medium">简称</th>
-        <th class="w-36 px-4 py-3 text-center font-medium">出席状态</th>
-        <th class="w-24 px-4 py-3 text-center font-medium">投票权</th>
-        <th class="px-4 py-3 text-right font-medium">操作</th>
+        <th class="px-4 py-3 text-left font-medium">{t('procedure_seat')}</th>
+        <th class="px-4 py-3 text-left font-medium">{t('procedure_abbreviation')}</th>
+        <th class="w-36 px-4 py-3 text-center font-medium">{t('procedure_attendance')}</th>
+        <th class="w-24 px-4 py-3 text-center font-medium">{t('procedure_voting_rights')}</th>
+        <th class="px-4 py-3 text-right font-medium">{t('procedure_actions')}</th>
       </tr>
     </thead>
     <tbody>
@@ -102,7 +103,7 @@
             {#if editingSeatId === seat.id}
               <Input
                 bind:value={editName}
-                aria-label="席位名称"
+                aria-label={t('procedure_seat_name')}
                 onkeydown={(event) => handleEditorKeydown(event, seat)}
               />
             {:else}
@@ -116,7 +117,7 @@
                   {seat.name}
                 </span>
                 {#if isObserver}
-                  <Badge variant="outline">观察员</Badge>
+                  <Badge variant="outline">{t('procedure_observer')}</Badge>
                 {/if}
               </div>
             {/if}
@@ -125,8 +126,8 @@
             {#if editingSeatId === seat.id}
               <Input
                 bind:value={editShortName}
-                aria-label="席位简称"
-                placeholder="可选"
+                aria-label={t('procedure_seat_abbreviation')}
+                placeholder={t('procedure_optional')}
                 onkeydown={(event) => handleEditorKeydown(event, seat)}
               />
             {:else}
@@ -142,19 +143,19 @@
                 spacing={1}
                 value={seat.procedure.attendance}
                 onValueChange={(value: string) => handleAttendanceChange(seat.id, value)}
-                aria-label={`设置 ${seat.name} 的出席状态`}
+                aria-label={t('procedure_set_attendance_for_value', { value1: seat.name })}
               >
                 <ToggleGroup.Item
                   value="present"
                   class="data-[state=on]:border-blue-300 data-[state=on]:bg-blue-100 data-[state=on]:text-blue-700 dark:data-[state=on]:border-blue-700 dark:data-[state=on]:bg-blue-950/60 dark:data-[state=on]:text-blue-300"
                 >
-                  出席
+                  {t('procedure_present_2')}
                 </ToggleGroup.Item>
                 <ToggleGroup.Item
                   value="absent"
                   class="data-[state=on]:border-red-300 data-[state=on]:bg-red-100 data-[state=on]:text-red-700 dark:data-[state=on]:border-red-700 dark:data-[state=on]:bg-red-950/60 dark:data-[state=on]:text-red-300"
                 >
-                  缺席
+                  {t('procedure_absent')}
                 </ToggleGroup.Item>
               </ToggleGroup.Root>
             </div>
@@ -168,10 +169,10 @@
                   setSeatVotingRights(seat.id, hasVotingRights)}
                 title={isPresent
                   ? seat.procedure.hasVotingRights
-                    ? '拥有投票权'
-                    : '观察员（无投票权）'
-                  : '未出席，不可设置投票权'}
-                aria-label={`设置 ${seat.name} 的投票权`}
+                    ? t('procedure_has_voting_rights')
+                    : t('procedure_observer_no_voting_rights')
+                  : t('procedure_absent_voting_rights_cannot_be_changed')}
+                aria-label={t('procedure_set_voting_rights_for_value', { value1: seat.name })}
               />
             </div>
           </td>
@@ -181,8 +182,8 @@
                 <Button
                   variant="ghost"
                   size="icon"
-                  title="取消编辑"
-                  aria-label="取消编辑"
+                  title={t('procedure_cancel_editing')}
+                  aria-label={t('procedure_cancel_editing')}
                   onclick={cancelEditing}
                 >
                   <X />
@@ -190,8 +191,8 @@
                 <Button
                   variant="ghost"
                   size="icon"
-                  title="保存席位"
-                  aria-label="保存席位"
+                  title={t('procedure_save_seat')}
+                  aria-label={t('procedure_save_seat')}
                   disabled={!editName.trim()}
                   onclick={() => saveSeat(seat)}
                 >
@@ -201,8 +202,8 @@
                 <Button
                   variant="ghost"
                   size="icon"
-                  title="编辑席位"
-                  aria-label="编辑席位"
+                  title={t('procedure_edit_seat')}
+                  aria-label={t('procedure_edit_seat')}
                   onclick={() => startEditing(seat)}
                 >
                   <Pencil />
@@ -211,12 +212,12 @@
               <Button
                 variant={deleteConfirmSeatId === seat.id ? 'destructive' : 'ghost'}
                 size="sm"
-                title="双击以删除席位"
+                title={t('procedure_double_click_to_delete_seat')}
                 onclick={() => handleDelete(seat)}
               >
                 <Trash2 data-icon="inline-start" />
                 {#key deleteConfirmSeatId === seat.id}
-                  删除
+                  {t('procedure_delete')}
                 {/key}
               </Button>
             </div>
@@ -224,7 +225,7 @@
         </tr>
       {:else}
         <tr>
-          <td colspan="5" class="px-4 py-10 text-center text-muted-foreground">暂无参会席位</td>
+          <td colspan="5" class="px-4 py-10 text-center text-muted-foreground">{t('procedure_no_participants')}</td>
         </tr>
       {/each}
     </tbody>

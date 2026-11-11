@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import type { AccountSnapshot, DesktopAccountAPI } from '@vetoexpress/auth/desktop'
 import type { AccountUpdate } from '@vetoexpress/auth'
+import type { Locale } from '@vetoexpress/i18n'
 
 // Custom APIs for renderer
 const api = {}
@@ -9,6 +10,18 @@ const api = {}
 // ── Veto Plugin API ────────────────────────────────────────────────────
 
 const veto = {
+  i18n: {
+    getLocale: (): Promise<Locale> => ipcRenderer.invoke('veto:i18n:get-locale'),
+    setLocale: (locale: Locale): Promise<void> =>
+      ipcRenderer.invoke('veto:i18n:set-locale', locale),
+    onLocaleChanged: (callback: (locale: Locale) => void): (() => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, locale: Locale) => callback(locale)
+      ipcRenderer.on('veto:i18n:locale-changed', listener)
+      return () => {
+        ipcRenderer.removeListener('veto:i18n:locale-changed', listener)
+      }
+    }
+  },
   account: {
     getAccessToken: () => ipcRenderer.invoke('veto:account:get-access-token'),
     adoptToken: (token: string, onlyIfSignedOut?: boolean) =>

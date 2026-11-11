@@ -1,11 +1,14 @@
 import type { Metadata } from "next"
+import { localizedMetadata } from "@/i18n/metadata"
 
-export const metadata: Metadata = {
-  title: "账号",
-  robots: {
-    index: false,
-    follow: false,
-  },
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    ...(await localizedMetadata("platform_account")),
+    robots: {
+      index: false,
+      follow: false,
+    },
+  }
 }
 
 export default function AccountLayout({

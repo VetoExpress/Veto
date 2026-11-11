@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import { Search, Plus, Swords } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import { ScrollArea } from '$lib/components/ui/scroll-area/index.js'
@@ -40,8 +41,8 @@
     >
       <div class="flex flex-col items-center gap-3 text-muted-foreground">
         <Swords size={48} class="opacity-30" />
-        <p class="text-lg font-medium">请从左侧选择一个模式</p>
-        <p class="text-sm opacity-70">选择推演模式以查看和管理战局</p>
+        <p class="text-lg font-medium">{t('settings_select_mode')}</p>
+        <p class="text-sm opacity-70">{t('settings_select_mode_description')}</p>
       </div>
     </div>
   {:else}
@@ -49,15 +50,15 @@
     <div class="grid grid-cols-3 items-center gap-6 border-b px-8 py-5">
       <!-- 左侧：标题 -->
       <div>
-        <h2 class="text-xl font-semibold text-foreground">战局管理</h2>
+        <h2 class="text-xl font-semibold text-foreground">{t('settings_battle_management')}</h2>
         <p class="mt-0.5 text-sm text-muted-foreground">
-          {$battles.length} 个战局
+          {t('settings_battle_count', { count: $battles.length })}
         </p>
       </div>
 
       <!-- 中间：搜索 -->
       <InputGroup.Root>
-        <InputGroup.Input bind:value={query} placeholder="搜索战局..." />
+        <InputGroup.Input bind:value={query} placeholder={t('settings_search_battles')} />
         <InputGroup.Addon>
           <Search class="h-4 w-4" />
         </InputGroup.Addon>
@@ -67,7 +68,7 @@
       <div class="flex justify-end">
         <Button onclick={() => (dialogOpen = true)} class="gap-2">
           <Plus size={16} />
-          新建战局
+          {t('settings_new_battle')}
         </Button>
       </div>
     </div>
@@ -79,11 +80,11 @@
           <Card.Root class="border-dashed bg-card/30 py-16 text-center shadow-none">
             <Card.Content class="p-0">
               {#if query.trim() && $battles.length > 0}
-                <p class="text-muted-foreground">未找到匹配的战局</p>
-                <p class="mt-1 text-sm text-muted-foreground/70">试试其他关键词？</p>
+                <p class="text-muted-foreground">{t('settings_no_battle_matches')}</p>
+                <p class="mt-1 text-sm text-muted-foreground/70">{t('settings_try_keywords')}</p>
               {:else}
-                <p class="text-muted-foreground">暂无已保存的战局</p>
-                <p class="mt-1 text-sm text-muted-foreground/70">创建一个新战局开始推演</p>
+                <p class="text-muted-foreground">{t('settings_no_saved_battles')}</p>
+                <p class="mt-1 text-sm text-muted-foreground/70">{t('settings_create_battle_hint')}</p>
               {/if}
             </Card.Content>
           </Card.Root>

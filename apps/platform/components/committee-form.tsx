@@ -1,4 +1,6 @@
 "use client"
+import { message } from "@/i18n/messages"
+import { usePlatformTranslations } from "@/components/i18n-provider"
 
 import type { JSX } from "react"
 import { Plus } from "lucide-react"
@@ -29,7 +31,7 @@ const selectClassName =
   "h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
 
 const committeeTypeLabels: Record<CommitteeInput["type"], string> = {
-  cabinet: "委员会 / Cabinet",
+  cabinet: message("platform_committee_cabinet"),
   mpc: "MPC",
   ipc: "IPC",
 }
@@ -49,6 +51,8 @@ export function CommitteeForm({
   allowExistingRemoval = true,
   onChange,
 }: CommitteeFormProps): JSX.Element {
+  const { t, locale } = usePlatformTranslations()
+
   const reference = value.id ?? value.clientId ?? "committee"
 
   const exportRows: SeatInviteExportRow[] = value.seats.flatMap((seat) => {
@@ -82,7 +86,9 @@ export function CommitteeForm({
   function importedRoleLabel(roleName: string): string {
     const reference = roleReferenceForImportedName(roleName)
     const role = roles.find((item) => roleReference(item) === reference)
-    return role?.name || (roleName ? "未匹配角色" : "无可用角色")
+    return (
+      role?.name || (roleName ? "unmatched" : t("platform_no_available_role"))
+    )
   }
 
   function importSeats(seats: ImportedSeat[]): void {
@@ -105,7 +111,9 @@ export function CommitteeForm({
     <div className="flex flex-col gap-7">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
-          <Label htmlFor={`committee-name-${reference}`}>委员会名称</Label>
+          <Label htmlFor={`committee-name-${reference}`}>
+            {t("platform_committee_name")}
+          </Label>
           <Input
             id={`committee-name-${reference}`}
             value={value.name}
@@ -117,10 +125,17 @@ export function CommitteeForm({
           />
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor={`committee-type-${reference}`}>委员会类型</Label>
+          <Label htmlFor={`committee-type-${reference}`}>
+            {t("platform_committee_type")}
+          </Label>
           <Select
             value={value.type}
-            items={committeeTypeLabels}
+            items={Object.fromEntries(
+              Object.entries(committeeTypeLabels).map(([key, label]) => [
+                key,
+                t(label),
+              ])
+            )}
             disabled={disabled}
             onValueChange={(newValue) => {
               const type = newValue as CommitteeInput["type"]
@@ -144,13 +159,13 @@ export function CommitteeForm({
               id={`committee-type-${reference}`}
               className={selectClassName}
             >
-              <SelectValue placeholder="选择委员会类型" />
+              <SelectValue placeholder={t("platform_select_committee_type")} />
             </SelectTrigger>
 
             <SelectContent>
               {Object.entries(committeeTypeLabels).map(([type, label]) => (
                 <SelectItem key={type} value={type}>
-                  {label}
+                  {t(label)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -165,16 +180,19 @@ export function CommitteeForm({
         <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 id={`seats-${reference}`} className="font-medium">
-              席位
+              {t("platform_seat")}
             </h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              每个委员会至少需要一个席位。
+              {t("platform_committee_needs_seat")}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <SeatImportDialog
               disabled={disabled}
-              target={{ value: reference, label: value.name || "未命名委员会" }}
+              target={{
+                value: reference,
+                label: value.name || t("platform_unnamed_committee"),
+              }}
               roleLabel={importedRoleLabel}
               onImport={importSeats}
             />
@@ -206,7 +224,7 @@ export function CommitteeForm({
               }
             >
               <Plus aria-hidden="true" />
-              添加席位
+              {t("platform_add_seat")}
             </Button>
           </div>
         </div>

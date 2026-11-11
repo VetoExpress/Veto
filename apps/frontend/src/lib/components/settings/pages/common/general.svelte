@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, getLocale, setLocale } from '$lib/i18n'
   import SettingCard from '../../settings-card.svelte'
   import { Kbd, KbdGroup } from '$lib/components/ui/kbd'
   import * as Accordion from '$lib/components/ui/accordion/index.js'
@@ -16,6 +17,7 @@
   import { getThemeTransitionClipPaths } from './theme-transition'
 
   const GROUPS = ['危机推演', '模拟大会'] as const
+  const groupLabels = $derived({ '危机推演': t('settings_group_battle'), '模拟大会': t('settings_group_conference') })
 
   const shortcutsByGroup = Object.fromEntries(
     GROUPS.map((g) => [g, SHORTCUT_DEFS.filter((d) => d.group === g)])
@@ -94,13 +96,13 @@
           const [imported, skipped] = importBattles(data)
           if (imported > 0) {
             toast.success(
-              `成功导入 ${imported} 个战局${skipped > 0 ? `，跳过 ${skipped} 个重复` : ''}`
+              t('settings_import_result', { imported, skipped })
             )
           } else {
-            toast.warning(`未导入任何战局${skipped > 0 ? `（${skipped} 个已存在或格式无效）` : ''}`)
+            toast.warning(t('settings_import_empty', { skipped }))
           }
         } catch {
-          toast.error('JSON 解析失败，请检查文件格式')
+          toast.error(t('settings_invalid_json'))
         }
       }
       reader.readAsText(file)
@@ -109,9 +111,9 @@
   }
 
   function handleClearAll() {
-    showConfirm('清除所有战局数据', '此操作不可撤销，所有战局将被永久删除。', () => {
+    showConfirm(t('settings_clear_battles'), t('settings_clear_battles_confirm'), () => {
       clearAllBattles()
-      toast.success('已清除所有战局数据')
+      toast.success(t('settings_battles_cleared'))
     })
   }
 </script>
@@ -119,10 +121,10 @@
 <div class="space-y-8" in:fly={{ y: 8, duration: 320, opacity: 0 }}>
   <!-- 界面 -->
   <div>
-    <div class="mb-1 text-xl font-bold text-stone-800 dark:text-stone-100">界面</div>
+    <div class="mb-1 text-xl font-bold text-stone-800 dark:text-stone-100">{t('settings_appearance')}</div>
     <div class="space-y-3">
       <!-- 主题 -->
-      <SettingCard title="界面主题" description="选择浅色或暗色界面主题。">
+      <SettingCard title={t('settings_theme')} description={t('settings_theme_description')}>
         <div class="flex gap-1.5">
           <Button
             variant={userPrefersMode.current === 'light' ? 'secondary' : 'ghost'}
@@ -130,7 +132,7 @@
             onclick={(event) => handleThemeChange('light', event)}
           >
             <Sun size={13} class="mr-1.5" />
-            浅色
+            {t('settings_light')}
           </Button>
           <Button
             variant={userPrefersMode.current === 'dark' ? 'secondary' : 'ghost'}
@@ -138,25 +140,25 @@
             onclick={(event) => handleThemeChange('dark', event)}
           >
             <Moon size={13} class="mr-1.5" />
-            暗色
+            {t('settings_dark')}
           </Button>
         </div>
       </SettingCard>
 
       <!-- 语言 -->
-      <SettingCard title="界面语言" description="切换界面显示语言。部分界面可能需要刷新后生效。">
+      <SettingCard title={t('settings_language')} description={t('settings_language_description')}>
         <div class="flex gap-1.5">
           <Button
-            variant={$globalSettings.language === 'zh-cn' ? 'secondary' : 'ghost'}
+            variant={getLocale() === 'zh-CN' ? 'secondary' : 'ghost'}
             size="sm"
-            onclick={() => globalSettings.patch({ language: 'zh-cn' })}
+            onclick={() => { void setLocale('zh-CN'); globalSettings.patch({ language: 'zh-CN' }) }}
           >
             中文
           </Button>
           <Button
-            variant={$globalSettings.language === 'en' ? 'secondary' : 'ghost'}
+            variant={getLocale() === 'en-US' ? 'secondary' : 'ghost'}
             size="sm"
-            onclick={() => globalSettings.patch({ language: 'en' })}
+            onclick={() => { void setLocale('en-US'); globalSettings.patch({ language: 'en-US' }) }}
           >
             English
           </Button>
@@ -165,8 +167,8 @@
 
       <!-- 隐私 -->
       <SettingCard
-        title="匿名使用统计"
-        description="发送匿名打开事件，包括应用版本、运行平台（Web 或操作系统）和随机安装 ID。关闭后从下次打开开始生效。"
+        title={t('settings_analytics')}
+        description={t('settings_analytics_description')}
       >
         <Switch
           checked={$globalSettings.usageAnalyticsEnabled}
@@ -178,25 +180,25 @@
 
   <!-- 快捷键 -->
   <div>
-    <div class="mb-1 text-xl font-bold text-stone-800 dark:text-stone-100">快捷键</div>
-    <p class="mb-5 text-sm text-muted-foreground">当前版本快捷键为只读，后续版本支持自定义。</p>
+    <div class="mb-1 text-xl font-bold text-stone-800 dark:text-stone-100">{t('settings_shortcuts')}</div>
+    <p class="mb-5 text-sm text-muted-foreground">{t('settings_shortcuts_description')}</p>
 
     <div class="space-y-6">
-      {#each GROUPS as group}
+      {#each GROUPS as group (group)}
         <div>
           <Accordion.Root type="single">
             <Accordion.Item value="item-1">
               <Accordion.Trigger
                 class="mb-2 text-sm font-semibold text-stone-500 dark:text-stone-400"
               >
-                {group}
+                {groupLabels[group]}
               </Accordion.Trigger>
               <Accordion.Content>
                 {#if shortcutsByGroup[group].length === 0}
-                  <p class="text-xs text-muted-foreground">暂无快捷键</p>
+                  <p class="text-xs text-muted-foreground">{t('settings_no_shortcuts')}</p>
                 {:else}
                   <div class="space-y-2">
-                    {#each shortcutsByGroup[group] as def}
+                    {#each shortcutsByGroup[group] as def (SHORTCUT_DEFS.indexOf(def))}
                       <SettingCard title={def.description}>
                         <KbdGroup>
                           {#if def.ctrl}<Kbd>Ctrl</Kbd>{/if}
@@ -218,15 +220,15 @@
 
   <!-- 数据管理 -->
   <div>
-    <div class="mb-1 text-xl font-bold text-stone-800 dark:text-stone-100">数据管理</div>
+    <div class="mb-1 text-xl font-bold text-stone-800 dark:text-stone-100">{t('settings_data_management')}</div>
     <div class="space-y-3">
-      <SettingCard title="导入战局" description="从 JSON 文件导入战局，重复 ID 自动跳过。">
+      <SettingCard title={t('settings_import_battles')} description={t('settings_import_battles_description')}>
         <Button variant="outline" size="sm" onclick={handleImport}>
           <Upload size={13} class="mr-1.5" />
-          从文件导入
+          {t('settings_import_file')}
         </Button>
       </SettingCard>
-      <SettingCard title="清除所有战局" description="永久删除本地所有战局数据，无法恢复。">
+      <SettingCard title={t('settings_clear_battles')} description={t('settings_clear_battles_description')}>
         <Button
           variant="outline"
           size="sm"
@@ -234,7 +236,7 @@
           onclick={handleClearAll}
         >
           <Trash2 size={13} class="mr-1.5" />
-          清除所有数据
+          {t('settings_clear_all')}
         </Button>
       </SettingCard>
     </div>

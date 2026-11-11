@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import { get } from 'svelte/store'
   import {
     currentBattle,
@@ -102,14 +103,14 @@
   }
 
   function handleClearLog() {
-    showConfirm('清空行动日志', '此操作不可撤销，确定要清空所有行动记录吗？', () => clearLog())
+    showConfirm(t('settings_clear_log'), t('settings_clear_log_confirm'), () => clearLog())
   }
 
   function handleDelete() {
     const battle = get(currentBattle)
     const id = get(currentBattleId)
     if (!battle || !id) return
-    showConfirm(`删除战局 "${battle.name}"`, '此操作不可撤销，战局数据将永久删除。', () => {
+    showConfirm(t('settings_delete_battle_title', { name: battle.name }), t('settings_delete_battle_confirm'), () => {
       deleteBattle(id)
       goto('/')
     })
@@ -121,9 +122,9 @@
 <div class="space-y-6 pb-10" in:fly={{ y: 8, duration: 320, opacity: 0 }}>
   <!-- 基本信息 -->
   <div>
-    <div class="mb-3 text-xl font-bold">基本信息</div>
+    <div class="mb-3 text-xl font-bold">{t('settings_battle_information')}</div>
     <div class="space-y-3">
-      <SettingCard let:id title="战局名称" description="修改后失焦自动保存。">
+      <SettingCard let:id title={t('settings_battle_name')} description={t('settings_battle_name_hint')}>
         <Input
           {id}
           class="w-56"
@@ -135,7 +136,7 @@
         />
       </SettingCard>
 
-      <SettingCard let:id title="推演起始日期" description="战局时间轴的起始点。">
+      <SettingCard let:id title={t('settings_battle_start')} description={t('settings_battle_start_hint')}>
         <DatePicker bind:value={startDateDraft} class="z-1001 w-44" />
       </SettingCard>
     </div>
@@ -143,23 +144,23 @@
 
   <!-- 地图设置 -->
   <div>
-    <div class="mb-3 text-xl font-bold">地图设置</div>
+    <div class="mb-3 text-xl font-bold">{t('settings_map_settings')}</div>
     <div class="space-y-3">
-      <SettingCard let:id title="图标风格" description="北约标准图标 或 简单图标。">
+      <SettingCard let:id title={t('settings_icon_style')} description={t('settings_icon_style_hint')}>
         <div class="flex gap-2">
           <Button
             variant={iconStyleDraft === 'nato' ? 'default' : 'outline'}
             size="sm"
             onclick={() => saveIconStyle('nato')}
           >
-            北约标准
+            {t('settings_nato')}
           </Button>
           <Button
             variant={iconStyleDraft === 'simple' ? 'default' : 'outline'}
             size="sm"
             onclick={() => saveIconStyle('simple')}
           >
-            简单图标
+            {t('settings_simple_icons')}
           </Button>
         </div>
       </SettingCard>
@@ -168,12 +169,12 @@
 
   <!-- 模拟设置 -->
   <div>
-    <div class="mb-3 text-xl font-bold">模拟设置</div>
+    <div class="mb-3 text-xl font-bold">{t('settings_simulation_settings')}</div>
     <div class="space-y-3">
       <SettingCard
         let:id
-        title="自定义时间流速"
-        description="保存后将在控制栏中作为可选档位显示，不会立即生效。"
+        title={t('settings_custom_speed')}
+        description={t('settings_custom_speed_hint')}
       >
         <div class="flex items-center gap-2">
           <Input
@@ -188,7 +189,7 @@
               if (e.key === 'Enter') (e.target as HTMLElement).blur()
             }}
           />
-          <span class="text-sm text-muted-foreground">秒/秒</span>
+          <span class="text-sm text-muted-foreground">{t('settings_seconds_per_second')}</span>
         </div>
       </SettingCard>
     </div>
@@ -196,17 +197,17 @@
 
   <!-- 事件系统 -->
   <div>
-    <div class="mb-3 text-xl font-bold">事件系统</div>
+    <div class="mb-3 text-xl font-bold">{t('settings_event_system')}</div>
     <div class="space-y-3">
-      <SettingCard let:id title="突发事件配置" description="配置战局中的随机突发事件及其触发概率。">
+      <SettingCard let:id title={t('settings_event_configuration')} description={t('settings_event_configuration_hint')}>
         <div class="flex items-center gap-3">
           <span class="text-sm text-muted-foreground">
-            已启用 <span class="font-semibold text-amber-600">{enabledEventCount}</span>
-            / {eventSettingsDraft.length} 项
+            {t('settings_events_enabled')} <span class="font-semibold text-amber-600">{enabledEventCount}</span>
+            / {eventSettingsDraft.length} {t('settings_items')}
           </span>
           <Button variant="outline" size="sm" onclick={() => (eventDrawerOpen = true)}>
             <Zap size={13} class="mr-1.5" />
-            配置事件
+            {t('settings_configure_events')}
           </Button>
         </div>
       </SettingCard>
@@ -215,19 +216,19 @@
 
   <!-- 数据管理 -->
   <div>
-    <div class="mb-3 text-xl font-bold">数据管理</div>
+    <div class="mb-3 text-xl font-bold">{t('settings_data_management')}</div>
     <div class="space-y-3">
-      <SettingCard let:id title="导出战局数据" description="将当前战局数据导出为 JSON 文件。">
+      <SettingCard let:id title={t('settings_export_battle')} description={t('settings_export_battle_hint')}>
         <Button variant="outline" size="sm" onclick={handleExport}>
           <Download size={13} class="mr-1.5" />
-          导出 JSON
+          {t('settings_export_json')}
         </Button>
       </SettingCard>
 
       <SettingCard
         let:id
-        title="清空行动日志"
-        description="清除所有已记录的行动历史，不影响单位和阵营。"
+        title={t('settings_clear_log')}
+        description={t('settings_clear_log_hint')}
       >
         <Button
           variant="outline"
@@ -236,14 +237,14 @@
           onclick={handleClearLog}
         >
           <ScrollText size={13} class="mr-1.5" />
-          清空日志
+          {t('settings_clear_log_button')}
         </Button>
       </SettingCard>
 
-      <SettingCard let:id title="删除战局" description="永久删除此战局，所有数据将无法恢复。">
+      <SettingCard let:id title={t('settings_delete_battle')} description={t('settings_delete_battle_hint')}>
         <Button variant="destructive" size="sm" onclick={handleDelete}>
           <Trash2 size={13} class="mr-1.5" />
-          删除战局
+          {t('settings_delete_battle')}
         </Button>
       </SettingCard>
     </div>

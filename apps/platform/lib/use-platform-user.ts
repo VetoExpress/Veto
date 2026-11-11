@@ -1,4 +1,6 @@
 "use client"
+import { message } from "@/i18n/messages"
+import { usePlatformTranslations } from "@/components/i18n-provider"
 
 import { useEffect, useState } from "react"
 
@@ -14,6 +16,8 @@ export function usePlatformUser(
   token: string | undefined,
   onUnauthorized?: () => void
 ) {
+  const { t, locale } = usePlatformTranslations()
+
   const [profile, setProfile] = useState<{
     token?: string
     user?: PlatformUser
@@ -55,7 +59,9 @@ export function usePlatformUser(
             return
           }
           setError(
-            caught instanceof Error ? caught.message : "加载用户信息失败"
+            caught instanceof Error
+              ? caught.message
+              : message("platform_load_user_failed")
           )
         })
     }

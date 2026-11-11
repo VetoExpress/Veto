@@ -1,4 +1,5 @@
 import { writable } from 'svelte/store';
+import { t } from '$lib/i18n';
 import type { Battle } from '$lib/classes/types/battle';
 
 export interface GameClockState {
@@ -17,9 +18,9 @@ export const TIME_SCALES = [60, 3600, 86400] as const;
 export type TimeScale = (typeof TIME_SCALES)[number];
 
 export const TIME_SCALE_LABELS: Record<number, string> = {
-	60: '1分/秒',
-	3600: '1时/秒',
-	86400: '1日/秒'
+	get 60() { return t('services_speed_minute') },
+	get 3600() { return t('services_speed_hour') },
+	get 86400() { return t('services_speed_day') }
 };
 
 const DEFAULT_START = new Date('2026-01-01T00:00:00');

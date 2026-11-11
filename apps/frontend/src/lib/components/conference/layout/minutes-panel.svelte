@@ -1,8 +1,10 @@
 <script lang="ts">
+  import { t, getLocale } from '$lib/i18n'
   import { ScrollText, Gavel, Mic, Vote, MessageSquare, Coffee, Pause, Play, Flag, FileText, Calendar, Check, X, UserPlus, UserCheck } from '@lucide/svelte'
   import { currentCommittee } from '$lib/classes/stores/conference/conference-store'
   import { ACTION_LABELS } from '$lib/classes/types/conference'
   import type { ConferenceActionType } from '$lib/classes/types/conference'
+  import { getEntryDescription } from '$lib/classes/utils/committee/entry-description'
 
   const conf = $derived($currentCommittee)
 
@@ -12,7 +14,7 @@
 
   function formatTime(ts: number): string {
     const d = new Date(ts)
-    return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    return d.toLocaleTimeString(getLocale(), { hour: '2-digit', minute: '2-digit', second: '2-digit' })
   }
 
   function getEventIcon(eventType: ConferenceActionType): typeof ScrollText {
@@ -75,9 +77,9 @@
 <aside class="flex h-full w-[300px] shrink-0 flex-col border-l bg-muted/20">
   <div class="flex items-center gap-2 border-b px-4 py-3">
     <ScrollText size={14} class="text-muted-foreground" />
-    <span class="text-xs font-semibold text-foreground">会议记录</span>
+    <span class="text-xs font-semibold text-foreground">{t('procedure_meeting_records')}</span>
     <span class="ml-auto text-[10px] text-muted-foreground">
-      {conf?.minutes.length ?? 0} 条
+      {t('procedure_meeting_entry_count', { value1: conf?.minutes.length ?? 0 })}
     </span>
   </div>
 
@@ -85,7 +87,7 @@
     {#if recentMinutes.length === 0}
       <div class="flex flex-col items-center gap-2 px-4 py-12 text-center">
         <ScrollText size={28} class="opacity-20" />
-        <p class="text-xs text-muted-foreground">暂无会议记录</p>
+        <p class="text-xs text-muted-foreground">{t('procedure_no_meeting_records')}</p>
       </div>
     {:else}
       <div class="relative">
@@ -110,7 +112,7 @@
                 </span>
               </div>
               <p class="mt-0.5 text-[11px] leading-relaxed text-foreground">
-                {entry.description}
+                {getEntryDescription(entry)}
               </p>
             </div>
           </div>

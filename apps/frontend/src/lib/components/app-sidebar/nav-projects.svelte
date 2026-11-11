@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import EllipsisIcon from '@lucide/svelte/icons/ellipsis'
   import FolderIcon from '@lucide/svelte/icons/folder'
   import ShareIcon from '@lucide/svelte/icons/share'
@@ -21,9 +22,9 @@
 </script>
 
 <Sidebar.Group class="group-data-[collapsible=icon]:hidden">
-  <Sidebar.GroupLabel>Projects</Sidebar.GroupLabel>
+  <Sidebar.GroupLabel>{t('settings_projects')}</Sidebar.GroupLabel>
   <Sidebar.Menu>
-    {#each projects as item (item.name)}
+    {#each projects as item (item.url)}
       <Sidebar.MenuItem>
         <Sidebar.MenuButton>
           {#snippet child({ props })}
@@ -38,23 +39,23 @@
             {#snippet child({ props })}
               <Sidebar.MenuAction showOnHover {...props}>
                 <EllipsisIcon />
-                <span class="sr-only">More</span>
+                <span class="sr-only">{t('settings_more')}</span>
               </Sidebar.MenuAction>
             {/snippet}
           </DropdownMenu.Trigger>
           <DropdownMenu.Content class="w-48" side="bottom" align="end">
             <DropdownMenu.Item>
               <FolderIcon class="text-muted-foreground" />
-              <span>View Project</span>
+              <span>{t('settings_view_project')}</span>
             </DropdownMenu.Item>
             <DropdownMenu.Item>
               <ShareIcon class="text-muted-foreground" />
-              <span>Share Project</span>
+              <span>{t('settings_share_project')}</span>
             </DropdownMenu.Item>
             <DropdownMenu.Separator />
             <DropdownMenu.Item>
               <Trash2Icon class="text-muted-foreground" />
-              <span>Delete Project</span>
+              <span>{t('settings_delete_project')}</span>
             </DropdownMenu.Item>
           </DropdownMenu.Content>
         </DropdownMenu.Root>
@@ -63,7 +64,7 @@
     <Sidebar.MenuItem>
       <Sidebar.MenuButton>
         <EllipsisIcon />
-        <span>More</span>
+        <span>{t('settings_more')}</span>
       </Sidebar.MenuButton>
     </Sidebar.MenuItem>
   </Sidebar.Menu>

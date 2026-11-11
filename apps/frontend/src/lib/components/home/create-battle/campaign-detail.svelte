@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import SwordsIcon from '@lucide/svelte/icons/swords'
   import ScaleIcon from '@lucide/svelte/icons/scale'
   import ExternalLinkIcon from '@lucide/svelte/icons/external-link'
@@ -40,7 +41,7 @@
       {#if manifest.repo}
         <Badge variant="outline" class="text-[10px]">
           <ExternalLinkIcon size={10} class="mr-0.5" />
-          仓库
+          {t('settings_repository')}
         </Badge>
       {/if}
     </div>
@@ -68,5 +69,5 @@
     {manifest.description}
   </p>
 {:else}
-  <p class="text-sm italic text-muted-foreground/60">暂无简介</p>
+  <p class="text-sm italic text-muted-foreground/60">{t('settings_no_description')}</p>
 {/if}

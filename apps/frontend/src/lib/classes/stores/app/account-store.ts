@@ -1,4 +1,5 @@
 import { writable } from 'svelte/store'
+import { t } from '$lib/i18n'
 import type { AccountUpdate } from '@vetoexpress/auth'
 import type { AccountResult, AccountSnapshot, DesktopAccountAPI } from '@vetoexpress/auth/desktop'
 
@@ -39,7 +40,7 @@ export function createAccountStore() {
   ) {
     if (!api || pending) {
       if (reportFailure)
-        throw new Error(pending ? '账号操作进行中，请稍后重试。' : '桌面账号不可用。')
+        throw new Error(pending ? t('services_account_busy') : t('services_desktop_unavailable'))
       return
     }
     const bridge = api
@@ -51,11 +52,11 @@ export function createAccountStore() {
       if (connection === generation) apply(result)
       if (!result.ok && reportFailure) throw new Error(result.error)
     } catch (error) {
-      const message = error instanceof Error ? error.message : '账号操作失败，请重试。'
+      const message = error instanceof Error ? error.message : t('services_account_failed')
       if (connection === generation)
         state.update((current) => ({
           ...current,
-          error: reportFailure ? message : '账号操作失败，请重试。'
+          error: reportFailure ? message : t('services_account_failed')
         }))
       if (reportFailure) throw new Error(message)
     } finally {
@@ -87,7 +88,7 @@ export function createAccountStore() {
             state.update((current) => ({
               ...current,
               ready: true,
-              error: '无法读取账号状态，请重试。'
+              error: t('services_account_read_failed')
             }))
         })
       return () => {

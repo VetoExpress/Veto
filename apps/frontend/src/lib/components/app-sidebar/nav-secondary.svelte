@@ -17,7 +17,7 @@
 <Sidebar.Group bind:ref {...restProps}>
   <Sidebar.GroupContent>
     <Sidebar.Menu>
-      {#each items as item (item.title)}
+      {#each items as item (item.url)}
         <Sidebar.MenuItem>
           <Sidebar.MenuButton size="sm">
             {#snippet child({ props })}

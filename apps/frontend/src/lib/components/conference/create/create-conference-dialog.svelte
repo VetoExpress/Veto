@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import { tick, untrack } from 'svelte'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
@@ -116,11 +117,11 @@
     <Dialog.Header>
       <div class="flex flex-col items-start justify-between">
         <div class="min-w-0">
-          <Dialog.Title>创建大会</Dialog.Title>
+          <Dialog.Title>{t('procedure_create_conference')}</Dialog.Title>
           <Dialog.Description>
             {wizard.mode === 'singleton'
-              ? '配置一场独立主持的会议与席位'
-              : '配置大会、委员会、角色权限与席位'}
+              ? t('procedure_configure_one_independently_chaired_meeting_and_its_seats')
+              : t('procedure_configure_the_conference_committees_roles_capabilities_and_seats')}
           </Dialog.Description>
         </div>
 
@@ -171,19 +172,19 @@
         }}
       >
         <ArrowLeft data-icon="inline-start" />
-        上一步
+        {t('procedure_previous')}
       </Button>
       {#if !isLastStep}
         <Button disabled={wizard.creating} onclick={handleNext}>
-          下一步
+          {t('procedure_next')}
           <ArrowRight data-icon="inline-end" />
         </Button>
       {:else}
         <Button disabled={wizard.creating} onclick={() => void handleSubmit()}>
           {#if wizard.creating}
-            创建中
+            {t('procedure_creating')}
           {:else}
-            创建大会
+            {t('procedure_create_conference')}
           {/if}
           <Check data-icon="inline-end" />
         </Button>

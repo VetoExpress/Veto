@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import { ArrowLeft } from '@lucide/svelte'
   import type { LucideIcon } from '@lucide/svelte'
   import type { Snippet } from 'svelte'
@@ -22,7 +23,7 @@
     title,
     subtitle,
     backHref,
-    backLabel = '返回大会',
+    backLabel,
     iconClass = '',
     class: className,
     showBackButton = true,
@@ -34,7 +35,7 @@
   {#if showBackButton}
     <Button variant="ghost" size="sm" class="gap-1.5 text-xs" href={backHref}>
       <ArrowLeft size={14} />
-      {backLabel}
+      {backLabel ?? t('procedure_back_to_conference')}
     </Button>
     <div class="h-4 w-px bg-border"></div>
   {/if}

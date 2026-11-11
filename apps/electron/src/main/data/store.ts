@@ -21,12 +21,7 @@ const log = createLogger('DataStore')
 
 /** 数据域 */
 export type StoreDomain =
-  | 'conferences'
-  | 'checkpoints'
-  | 'events'
-  | 'battles'
-  | 'settings'
-  | 'tools'
+  'conferences' | 'checkpoints' | 'events' | 'battles' | 'settings' | 'preferences' | 'tools'
 
 /** 数据域 → 文件名映射 */
 const FILES: Record<StoreDomain, string> = {
@@ -35,6 +30,7 @@ const FILES: Record<StoreDomain, string> = {
   events: 'conference-events.json',
   battles: 'battles.json',
   settings: 'settings.json',
+  preferences: 'preferences.json',
   tools: 'tools.json'
 }
 
@@ -64,7 +60,7 @@ export function loadStore<T>(domain: StoreDomain): T | null {
     return JSON.parse(raw) as T
   } catch (err) {
     log.error(`Failed to read ${domain}:`, err)
-    if (domain === 'conferences' || domain === 'checkpoints') throw err
+    if (domain === 'conferences' || domain === 'checkpoints' || domain === 'preferences') throw err
     return null
   }
 }

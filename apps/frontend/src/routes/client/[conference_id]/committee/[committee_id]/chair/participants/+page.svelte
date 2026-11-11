@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { procedureMessage, renderProcedureMessage, type ProcedureMessage } from '$lib/components/conference/common/message'
+  import { t } from '$lib/i18n'
   import { goto } from '$app/navigation'
   import { page } from '$app/state'
   import { Plus, RotateCcw, Users } from '@lucide/svelte'
@@ -59,10 +61,10 @@
   const stats = $derived(
     thresholds
       ? [
-          { value: thresholds.presentCount, label: `出席 / ${thresholds.totalCount}` },
-          { value: thresholds.votingCount, label: '可投票' },
-          { value: thresholds.simpleMajorityThreshold, label: '简单多数' },
-          { value: thresholds.twoThirdsThreshold, label: '2/3 多数' }
+          { value: thresholds.presentCount, label: t('procedure_present_value', { value1: thresholds.totalCount }) },
+          { value: thresholds.votingCount, label: t('procedure_eligible_to_vote') },
+          { value: thresholds.simpleMajorityThreshold, label: t('procedure_simple_majority') },
+          { value: thresholds.twoThirdsThreshold, label: t('procedure_two_thirds_majority') }
         ]
       : []
   )
@@ -79,7 +81,7 @@
   let newSeatName = $state('')
   let newSeatShortName = $state('')
   let newSeatVotingRights = $state(true)
-  let addSeatError = $state('')
+  let addSeatError = $state<ProcedureMessage>('')
 
   function openAddSeatDialog(): void {
     newSeatName = ''
@@ -93,17 +95,17 @@
     event.preventDefault()
     const name = newSeatName.trim()
     if (!name) {
-      addSeatError = '请输入席位名称'
+      addSeatError = procedureMessage('procedure_enter_a_seat_name')
       return
     }
     if (!conf || !participantSeatGroupId) {
-      addSeatError = '当前大会没有可用的参会席位组'
+      addSeatError = procedureMessage('procedure_no_participant_seat_group_is_available_in_this_conference')
       return
     }
 
     const seatId = addSeat(name, participantSeatGroupId)
     if (!seatId) {
-      addSeatError = '席位添加失败，请稍后重试'
+      addSeatError = procedureMessage('procedure_failed_to_add_seat_try_again_later')
       return
     }
 
@@ -114,12 +116,12 @@
 </script>
 
 <svelte:head>
-  <title>{VETO_NAME} - 参会席位</title>
+  <title>{t('procedure_participants_page_title', { value1: VETO_NAME })}</title>
 </svelte:head>
 
 <PageTopBar
   icon={Users}
-  title="参会席位"
+  title={t('procedure_participants')}
   subtitle={conf?.name}
   backHref={resolve(`/client/${conferenceId}/committee/${committeeId}/chair`)}
 >
@@ -132,7 +134,7 @@
       onclick={openAddSeatDialog}
     >
       <Plus size={12} />
-      增加席位
+      {t('procedure_add_seat')}
     </Button>
     <AlertDialog bind:open={showResetConfirm}>
       <AlertDialogTrigger>
@@ -145,19 +147,19 @@
             disabled={!conf || sortedSeats.length === 0}
           >
             <RotateCcw size={12} />
-            重新点名
+            {t('procedure_restart_roll_call')}
           </Button>
         {/snippet}
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>重新点名</AlertDialogTitle>
+          <AlertDialogTitle>{t('procedure_restart_roll_call')}</AlertDialogTitle>
           <AlertDialogDescription>
-            此操作将把所有参会席位的出席状态重置为"缺席"，并将大会阶段回退到"点名"阶段。确定要继续吗？
+            {t('procedure_this_resets_all_participants_to_absent_and_returns_the_meeting_to_roll_call_continue')}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>取消</AlertDialogCancel>
+          <AlertDialogCancel>{t('procedure_cancel')}</AlertDialogCancel>
           <AlertDialogAction
             onclick={() => {
               resetRollCall()
@@ -165,7 +167,7 @@
               goto(resolve(`/client/${conferenceId}/committee/${committeeId}/chair/roll-call`))
             }}
           >
-            确认重新点名
+            {t('procedure_confirm_restart')}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -176,40 +178,40 @@
 <Dialog.Root bind:open={showAddSeatDialog}>
   <Dialog.Content class="sm:max-w-md">
     <Dialog.Header>
-      <Dialog.Title>增加席位</Dialog.Title>
-      <Dialog.Description>为“{conf?.name ?? '当前委员会'}”添加一个参会席位。</Dialog.Description>
+      <Dialog.Title>{t('procedure_add_seat')}</Dialog.Title>
+      <Dialog.Description>{t('procedure_add_committee_participant', { value1: conf?.name ?? t('procedure_current_committee') })}</Dialog.Description>
     </Dialog.Header>
     <form class="flex flex-col gap-4" onsubmit={submitNewSeat}>
       <Field.FieldGroup>
         <Field.Field>
-          <Field.FieldLabel for="new-seat-name">席位名称</Field.FieldLabel>
+          <Field.FieldLabel for="new-seat-name">{t('procedure_seat_name')}</Field.FieldLabel>
           <Input
             id="new-seat-name"
             bind:value={newSeatName}
-            placeholder="例如：法国"
+            placeholder={t('procedure_for_example_france')}
             aria-invalid={!!addSeatError || undefined}
           />
         </Field.Field>
         <Field.Field>
-          <Field.FieldLabel for="new-seat-short-name">席位简称（可选）</Field.FieldLabel>
-          <Input id="new-seat-short-name" bind:value={newSeatShortName} placeholder="例如：FRA" />
+          <Field.FieldLabel for="new-seat-short-name">{t('procedure_seat_abbreviation_optional')}</Field.FieldLabel>
+          <Input id="new-seat-short-name" bind:value={newSeatShortName} placeholder={t('procedure_for_example_fra')} />
         </Field.Field>
         <Field.Field>
           <div class="flex items-center justify-between gap-4 rounded-md border px-3 py-2.5">
             <div class="space-y-0.5">
-              <Field.FieldLabel for="new-seat-voting-rights">投票权</Field.FieldLabel>
-              <p class="text-xs text-muted-foreground">关闭后该席位将作为观察员加入</p>
+              <Field.FieldLabel for="new-seat-voting-rights">{t('procedure_voting_rights')}</Field.FieldLabel>
+              <p class="text-xs text-muted-foreground">{t('procedure_turn_off_to_add_this_seat_as_an_observer')}</p>
             </div>
             <Switch id="new-seat-voting-rights" bind:checked={newSeatVotingRights} />
           </div>
         </Field.Field>
       </Field.FieldGroup>
-      {#if addSeatError}<Field.FieldError>{addSeatError}</Field.FieldError>{/if}
+      {#if addSeatError}<Field.FieldError>{renderProcedureMessage(addSeatError)}</Field.FieldError>{/if}
       <Dialog.Footer>
         <Button type="button" variant="outline" onclick={() => (showAddSeatDialog = false)}>
-          取消
+          {t('procedure_cancel')}
         </Button>
-        <Button type="submit">增加席位</Button>
+        <Button type="submit">{t('procedure_add_seat')}</Button>
       </Dialog.Footer>
     </form>
   </Dialog.Content>
@@ -239,8 +241,8 @@
             <EmptyMedia variant="icon">
               <Users size={24} />
             </EmptyMedia>
-            <EmptyTitle>未找到大会</EmptyTitle>
-            <EmptyDescription>请先创建大会</EmptyDescription>
+            <EmptyTitle>{t('procedure_conference_not_found')}</EmptyTitle>
+            <EmptyDescription>{t('procedure_create_a_conference_first')}</EmptyDescription>
           </EmptyHeader>
         </Empty>
       </div>

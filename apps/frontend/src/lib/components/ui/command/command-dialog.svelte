@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
 	import type { Command as CommandPrimitive, Dialog as DialogPrimitive } from "bits-ui";
 	import type { Snippet } from "svelte";
 	import Command from "./command.svelte";
@@ -9,8 +10,8 @@
 		open = $bindable(false),
 		ref = $bindable(null),
 		value = $bindable(""),
-		title = "Command Palette",
-		description = "Search for a command to run",
+		title,
+		description,
 		portalProps,
 		children,
 		...restProps
@@ -25,8 +26,8 @@
 
 <Dialog.Root bind:open {...restProps}>
 	<Dialog.Header class="sr-only">
-		<Dialog.Title>{title}</Dialog.Title>
-		<Dialog.Description>{description}</Dialog.Description>
+		<Dialog.Title>{title ?? t('settings_command_palette')}</Dialog.Title>
+		<Dialog.Description>{description ?? t('settings_command_search')}</Dialog.Description>
 	</Dialog.Header>
 	<Dialog.Content class="overflow-hidden p-0" {portalProps}>
 		<Command

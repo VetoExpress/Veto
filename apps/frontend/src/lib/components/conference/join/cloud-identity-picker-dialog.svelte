@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, getLocale } from '$lib/i18n'
   import { Armchair, Clock } from '@lucide/svelte'
 
   import type { CloudMembership } from '$lib/classes/stores/conference/cloud-membership-store'
@@ -20,7 +21,7 @@
   } = $props()
 
   function identityTitle(membership: CloudMembership): string {
-    if (membership.isChair) return '主席'
+    if (membership.isChair) return t('procedure_chair')
     return membership.seatShortName || membership.seatName
   }
 
@@ -34,7 +35,7 @@
   }
 
   function formatTime(ts: number): string {
-    return new Date(ts).toLocaleString('zh-CN', { dateStyle: 'short', timeStyle: 'short' })
+    return new Date(ts).toLocaleString(getLocale(), { dateStyle: 'short', timeStyle: 'short' })
   }
 
   function handleSelect(membership: CloudMembership): void {
@@ -46,7 +47,7 @@
 <Dialog.Root {open} {onOpenChange}>
   <Dialog.Content class="sm:max-w-md">
     <Dialog.Header>
-      <Dialog.Title>选择身份</Dialog.Title>
+      <Dialog.Title>{t('procedure_choose_identity')}</Dialog.Title>
       <Dialog.Description>{description}</Dialog.Description>
     </Dialog.Header>
 

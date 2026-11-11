@@ -1,3 +1,5 @@
+import { t, getLocale } from '$lib/i18n'
+
 const apiBase = (import.meta.env.VITE_CLOUD_API_URL || 'https://api.miaoyww.top/v1').replace(/\/$/, '')
 
 export interface PlatformConference {
@@ -14,19 +16,20 @@ export interface PlatformConference {
 
 export async function accountRequest<T>(path: string, init: RequestInit = {}, expectedEmail?: string): Promise<T> {
   const bridge = typeof window === 'undefined' ? undefined : window.veto?.account
-  if (!bridge?.getAccessToken) throw new Error('请先登录桌面账号')
+  if (!bridge?.getAccessToken) throw new Error(t('services_desktop_signin'))
   const result = await bridge.getAccessToken()
   if (!result.ok) throw new Error(result.error)
-  if (!result.token || !result.session.user) throw new Error('请先登录桌面账号')
-  if (expectedEmail && result.session.user.email !== expectedEmail) throw new Error('账号已切换，请重试')
+  if (!result.token || !result.session.user) throw new Error(t('services_desktop_signin'))
+  if (expectedEmail && result.session.user.email !== expectedEmail) throw new Error(t('services_account_changed'))
   const headers = new Headers(init.headers)
   headers.set('Authorization', `Bearer ${result.token}`)
+  headers.set('Accept-Language', getLocale())
   if (init.body) headers.set('Content-Type', 'application/json')
   const response = await fetch(`${apiBase}/${path}`, { ...init, headers, signal: AbortSignal.timeout(20_000) })
   const payload = await response.json().catch(() => null)
   if (!response.ok) {
     if (response.status === 401) await bridge.signOut(result.token)
-    throw new Error(payload?.error?.message || '无法连接大会服务，请稍后重试')
+    throw new Error(payload?.error?.message || t('services_conference_unavailable'))
   }
   return payload as T
 }

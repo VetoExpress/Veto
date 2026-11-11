@@ -1,5 +1,6 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
 import type { DesktopAccountAPI } from '@vetoexpress/auth/desktop'
+import type { Locale } from '@vetoexpress/i18n'
 
 // global.d.ts
 export {}
@@ -13,6 +14,11 @@ declare global {
 }
 
 export interface VetoAPI {
+  i18n: {
+    getLocale: () => Promise<Locale>
+    setLocale: (locale: Locale) => Promise<void>
+    onLocaleChanged: (callback: (locale: Locale) => void) => () => void
+  }
   account: DesktopAccountAPI
   openExternal: (url: string) => Promise<void>
   plugins: {

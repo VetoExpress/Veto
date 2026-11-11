@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   /**
    * conference/[conference_id]/motion.svelte
    * ─────────────────────────────────────────
@@ -62,7 +63,7 @@
   )
 
   const majorityLabel = $derived(
-    resolution?.votingMajority === 'simple_majority' ? '简单多数' : '2/3多数'
+    resolution?.votingMajority === 'simple_majority' ? t('procedure_simple_majority') : t('procedure_two_thirds_majority_2')
   )
 
   function handleApprove(): void {
@@ -98,7 +99,7 @@
 </script>
 
 <svelte:head>
-  <title>{VETO_NAME} - 动议表决</title>
+  <title>{t('procedure_motion_page_title', { value1: VETO_NAME })}</title>
 </svelte:head>
 
 <div class="flex h-full w-full flex-col bg-background">
@@ -106,7 +107,7 @@
     {@const Icon = MOTION_ICONS[pendingMotion.type] ?? Presentation}
     <PageTopBar
       icon={Icon}
-      title="动议表决"
+      title={t('procedure_motion_vote_2')}
       subtitle={conf.name}
       backHref={resolve(`/client/${conferenceId}/committee/${committeeId}/chair`)}
     />
@@ -120,7 +121,7 @@
         >
           <div class="flex items-center justify-center gap-2">
             <Icon size={24} class="text-indigo-600 dark:text-indigo-400" />
-            <span class="text-lg font-semibold text-indigo-700 dark:text-indigo-400">动议裁决</span>
+            <span class="text-lg font-semibold text-indigo-700 dark:text-indigo-400">{t('procedure_motion_ruling')}</span>
           </div>
 
           <div class="mt-4 space-y-2">
@@ -128,8 +129,7 @@
               {MOTION_LABELS[pendingMotion.type]}
             </div>
             <div class="text-base text-muted-foreground">
-              由 <span class="font-semibold text-foreground">{proposerDel?.name}</span>
-              提出
+              {t('procedure_motion_proposed_by_name', { name: proposerDel?.name ?? '' })}
             </div>
 
             {#if pendingMotion.type === 'moderated_caucus'}
@@ -137,48 +137,35 @@
                 class="mt-3 rounded-md bg-background/50 px-4 py-2.5 text-sm text-muted-foreground"
               >
                 <p>
-                  主题：
+                  {t('procedure_topic')}
                   <span class="font-medium text-foreground">{(pendingMotion as any).topic}</span>
                 </p>
-                <p class="mt-0.5">
-                  总时长 <span class="font-medium text-foreground">
-                    {(pendingMotion as any).totalTimeSec / 60} 分钟
-                  </span>
-                  ，每人发言
-                  <span class="font-medium text-foreground">
-                    {(pendingMotion as any).speakingTimePerPersonSec} 秒
-                  </span>
-                  ，最多
-                  <span class="font-medium text-foreground">
-                    {(pendingMotion as any).maxSpeakers}
-                  </span>
-                  人
-                </p>
+                <p class="mt-0.5">{t('procedure_caucus_motion_summary', { minutes: (pendingMotion as any).totalTimeSec / 60, seconds: (pendingMotion as any).speakingTimePerPersonSec, speakers: (pendingMotion as any).maxSpeakers })}</p>
               </div>
             {:else if pendingMotion.type === 'moderated_debate'}
               <div
                 class="mt-3 rounded-md bg-background/50 px-4 py-2.5 text-sm text-muted-foreground"
               >
                 <p>
-                  主题：
+                  {t('procedure_topic')}
                   <span class="font-medium text-foreground">{pendingMotion.topic}</span>
                 </p>
-                <p class="mt-0.5">时长 {pendingMotion.durationSec / 60} 分钟</p>
+                <p class="mt-0.5">{t('procedure_motion_duration', { value1: pendingMotion.durationSec / 60 })}</p>
               </div>
             {:else if pendingMotion.type === 'unmoderated_caucus' || pendingMotion.type === 'unmoderated_debate'}
               <div class="mt-3 text-sm text-muted-foreground">
-                时长 {(pendingMotion as any).durationSec / 60} 分钟
+                {t('procedure_motion_duration', { value1: (pendingMotion as any).durationSec / 60 })}
               </div>
             {:else if pendingMotion.type === 'modify_speaking_time'}
               <div class="mt-3 text-sm text-muted-foreground">
-                新发言时间：
+                {t('procedure_new_speaking_time')}
                 <span class="font-medium text-foreground">
-                  {(pendingMotion as any).newTimeSec} 秒
+                  {t('procedure_duration_seconds', { value1: (pendingMotion as any).newTimeSec })}
                 </span>
               </div>
             {:else if pendingMotion.type === 'closure_debate'}
               <div class="mt-3 text-sm text-muted-foreground">
-                结束当前议题辩论，进入投票表决阶段
+                {t('procedure_close_debate_on_the_current_topic_then_start_the_pre_vote_roll_call')}
               </div>
             {:else if pendingMotion.type === 'substantive_vote'}
               <div
@@ -194,7 +181,7 @@
           <div
             class="mt-4 inline-flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-100 px-3 py-1 text-xs font-medium text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950 dark:text-indigo-400"
           >
-            表决规则：{majorityLabel}
+            {t('procedure_motion_voting_rule', { value1: majorityLabel })}
           </div>
         </div>
 
@@ -202,8 +189,8 @@
 
         <!-- 主席裁决 -->
         <div class="text-center">
-          <p class="text-base font-medium text-foreground">请支持该动议的席位高举国家牌</p>
-          <p class="mt-1 text-sm text-muted-foreground">主席团观察举牌后手动裁决</p>
+          <p class="text-base font-medium text-foreground">{t('procedure_seats_supporting_this_motion_please_raise_your_placards')}</p>
+          <p class="mt-1 text-sm text-muted-foreground">{t('procedure_the_chair_rules_after_observing_the_placards')}</p>
         </div>
 
         <div class="flex items-center justify-center gap-4">
@@ -214,11 +201,11 @@
             onclick={handleReject}
           >
             <X size={18} />
-            否决
+            {t('procedure_reject_2')}
           </Button>
           <Button size="lg" class="min-w-[140px] gap-2 text-base" onclick={handleApprove}>
             <Check size={18} />
-            通过
+            {t('procedure_approve_2')}
           </Button>
         </div>
       </div>
@@ -227,8 +214,8 @@
     <div class="flex flex-1 items-center justify-center">
       <div class="flex flex-col items-center gap-4 text-muted-foreground">
         <Vote size={48} class="opacity-30" />
-        <p class="text-lg font-medium">没有待表决的动议</p>
-        <Button variant="outline" size="sm" onclick={goBack}>返回会议</Button>
+        <p class="text-lg font-medium">{t('procedure_no_motion_awaiting_a_vote')}</p>
+        <Button variant="outline" size="sm" onclick={goBack}>{t('procedure_back_to_meeting')}</Button>
       </div>
     </div>
   {/if}

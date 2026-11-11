@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import SettingsButton from '$lib/components/buttons/settings-button.svelte'
   import { Button } from '$lib/components/ui/button'
     import { leftBarPinned, unitsCardOpen, unitDragEnabled } from '$lib/classes/stores/battle/battle-ui-store'
@@ -57,7 +58,7 @@
     <Button
       variant="ghost"
       size="icon"
-      title="打开左侧栏"
+      title={t('components_open_sidebar')}
       class={$leftBarPinned ? 'text-foreground' : ''}
       onclick={toggleLeftSidebar}
     >
@@ -66,7 +67,7 @@
     <Button
       variant="ghost"
       size="icon"
-      title="测量距离 (M)"
+      title={t('components_measure_shortcut')}
       class={$interactionMode === 'measure' ? 'text-amber-500' : ''}
       onclick={() => interactionMode.set($interactionMode === 'measure' ? 'select' : 'measure')}
     >
@@ -75,7 +76,7 @@
     <Button
       variant="ghost"
       size="icon"
-      title="推演单位态势"
+      title={t('components_unit_overview')}
       class={$unitsCardOpen ? 'text-foreground' : ''}
       onclick={() => ($unitsCardOpen = !$unitsCardOpen)}
     >
@@ -85,7 +86,7 @@
     <Button
       variant="ghost"
       size="icon"
-      title="手动攻击 (A)"
+      title={t('components_attack_shortcut')}
       class={$interactionMode === 'attack' ? 'text-rose-500' : ''}
       disabled={!$selectedPlacedUnitId}
       onclick={handleAttackMode}
@@ -96,7 +97,7 @@
     <Button
       variant="ghost"
       size="icon"
-      title="取消任务 (X)"
+      title={t('components_cancel_task_shortcut')}
       disabled={!$selectedPlacedUnitId}
       onclick={handleCancelTask}
     >
@@ -106,7 +107,7 @@
     <Button
       variant="ghost"
       size="icon"
-      title={$autoAttackEnabled ? '自动攻击 (开启)' : '自动攻击 (关闭)'}
+      title={$autoAttackEnabled ? t('components_auto_attack_on') : t('components_auto_attack_off')}
       class={$autoAttackEnabled ? 'text-amber-500' : ''}
       onclick={toggleAutoAttack}
     >
@@ -115,13 +116,13 @@
     <Button
       variant="ghost"
       size="icon"
-      title={$unitDragEnabled ? '单位拖拽 (开启) (D)' : '单位拖拽 (关闭) (D)'}
+      title={$unitDragEnabled ? t('components_unit_drag_on') : t('components_unit_drag_off')}
       class={!$unitDragEnabled ? '' : 'text-amber-500'}
       onclick={toggleUnitDrag}
     >
       <Hand />
     </Button>
-    <Button variant="ghost" size="icon" title="保存 (Ctrl+S)" onclick={saveBattleWithToast}>
+    <Button variant="ghost" size="icon" title={t('components_save_shortcut')} onclick={saveBattleWithToast}>
       <Save />
     </Button>
     <div class="settings-wrap">

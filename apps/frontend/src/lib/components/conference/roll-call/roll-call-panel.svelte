@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import { Check, X, Users, Flag } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import {
@@ -78,7 +79,7 @@
         <div class="flex w-full flex-col items-center gap-2">
           <div class="flex items-center gap-3 text-sm text-muted-foreground">
             <Users size={14} />
-            <span>点名中 · 第 {currentIndex + 1} / {totalCount} 位</span>
+            <span>{t('procedure_roll_call_progress', { value1: currentIndex + 1, value2: totalCount })}</span>
           </div>
           <!-- 进度条 -->
           <div class="h-1.5 w-full overflow-hidden rounded-full bg-muted">
@@ -89,9 +90,9 @@
           </div>
           <!-- 实时统计 -->
           <div class="flex gap-4 text-xs text-muted-foreground">
-            <span>已出席 <span class="font-semibold text-emerald-600">{presentCount}</span></span>
-            <span>简单多数 <span class="font-semibold text-amber-600">{thresholds.simpleMajorityThreshold}</span></span>
-            <span>2/3多数 <span class="font-semibold text-rose-600">{thresholds.twoThirdsThreshold}</span></span>
+            <span>{t('procedure_present')} <span class="font-semibold text-emerald-600">{presentCount}</span></span>
+            <span>{t('procedure_simple_majority')} <span class="font-semibold text-amber-600">{thresholds.simpleMajorityThreshold}</span></span>
+            <span>{t('procedure_two_thirds_majority_2')} <span class="font-semibold text-rose-600">{thresholds.twoThirdsThreshold}</span></span>
           </div>
         </div>
 
@@ -125,7 +126,7 @@
                 onclick={markPresent}
               >
                 <Check size={20} />
-                出席
+                {t('procedure_present_2')}
                 <span class="text-xs opacity-60">P</span>
               </Button>
               <Button
@@ -135,7 +136,7 @@
                 onclick={markAbsent}
               >
                 <X size={20} />
-                缺席
+                {t('procedure_absent')}
                 <span class="text-xs opacity-40">A</span>
               </Button>
             </div>
@@ -146,7 +147,7 @@
                 class="text-xs text-muted-foreground hover:text-foreground"
                 onclick={goBack}
               >
-                ← 返回上一位
+                {t('procedure_previous_seat')}
               </button>
             {/if}
           </div>
@@ -158,22 +159,22 @@
       <div class="flex w-full max-w-lg flex-col items-center gap-8">
         <div class="flex items-center gap-2">
           <Flag size={24} class="text-indigo-500" />
-          <h2 class="text-2xl font-bold text-foreground">点名完成</h2>
+          <h2 class="text-2xl font-bold text-foreground">{t('procedure_roll_call_complete')}</h2>
         </div>
 
         <!-- 统计卡片 -->
         <div class="grid w-full grid-cols-3 gap-4">
           <div class="rounded-xl border-2 border-emerald-200 bg-emerald-50 p-6 text-center dark:border-emerald-800 dark:bg-emerald-950/30">
             <div class="text-3xl font-bold text-emerald-700 dark:text-emerald-400">{presentCount}</div>
-            <div class="mt-1 text-sm text-muted-foreground">出席 / {totalCount}</div>
+            <div class="mt-1 text-sm text-muted-foreground">{t('procedure_roll_call_present_total', { value1: totalCount })}</div>
           </div>
           <div class="rounded-xl border-2 border-amber-200 bg-amber-50 p-6 text-center dark:border-amber-800 dark:bg-amber-950/30">
             <div class="text-3xl font-bold text-amber-700 dark:text-amber-400">{thresholds.simpleMajorityThreshold}</div>
-            <div class="mt-1 text-sm text-muted-foreground">简单多数</div>
+            <div class="mt-1 text-sm text-muted-foreground">{t('procedure_simple_majority')}</div>
           </div>
           <div class="rounded-xl border-2 border-rose-200 bg-rose-50 p-6 text-center dark:border-rose-800 dark:bg-rose-950/30">
             <div class="text-3xl font-bold text-rose-700 dark:text-rose-400">{thresholds.twoThirdsThreshold}</div>
-            <div class="mt-1 text-sm text-muted-foreground">2/3 多数</div>
+            <div class="mt-1 text-sm text-muted-foreground">{t('procedure_two_thirds_majority')}</div>
           </div>
         </div>
 
@@ -187,7 +188,7 @@
                   {seat.name}
                 </span>
                 <span class={cn('text-xs font-medium', isPresent ? 'text-emerald-600' : 'text-muted-foreground')}>
-                  {isPresent ? '出席' : '缺席'}
+                  {isPresent ? t('procedure_present_2') : t('procedure_absent')}
                 </span>
               </div>
             {/each}
@@ -201,7 +202,7 @@
             size="lg"
             onclick={goBack}
           >
-            ← 返回修改
+            {t('procedure_back_to_edit')}
           </Button>
           <Button
             size="lg"
@@ -209,7 +210,7 @@
             onclick={handleComplete}
           >
             <Flag size={18} />
-            完成点名
+            {t('procedure_complete_roll_call')}
           </Button>
         </div>
       </div>

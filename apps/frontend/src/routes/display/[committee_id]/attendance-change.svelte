@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   /**
    * attendance-change.svelte
    * ──────────────────────────
@@ -38,7 +39,7 @@
           ? 'text-[#5B92E5]'
           : 'text-white/30'}"
       >
-        {status === 'present' ? '出席 PRESENT' : '缺席 ABSENT'}
+        {status === 'present' ? t('components_present_badge') : t('components_absent_badge')}
       </span>
     </div>
   </div>

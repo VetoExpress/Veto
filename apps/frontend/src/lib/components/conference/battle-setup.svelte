@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { procedureMessage, renderProcedureMessage, type ProcedureMessage } from '$lib/components/conference/common/message'
+  import { t } from '$lib/i18n'
   import { onMount, untrack } from 'svelte'
   import { CalendarDate, type DateValue } from '@internationalized/date'
   import { Button } from '$lib/components/ui/button'
@@ -26,7 +28,7 @@
   let installedPlugins = $state<InstalledPlugin[]>([])
   let campaignDialogOpen = $state(false)
   let saving = $state(false)
-  let error = $state('')
+  let error = $state<ProcedureMessage>('')
   const factionPlugins = $derived(installedPlugins.filter((plugin) => plugin.manifest.type === 'faction'))
   const campaignPlugins = $derived(installedPlugins.filter((plugin) => plugin.manifest.type === 'campaign'))
 
@@ -35,7 +37,7 @@
     try {
       installedPlugins = await dbGetAllPlugins()
     } catch {
-      error = '无法加载插件，可继续使用基础数据配置推演。'
+      error = procedureMessage('procedure_unable_to_load_plugins_you_can_continue_with_the_base_data')
     }
   })
 
@@ -43,7 +45,7 @@
     if (saving || !name.trim()) return
     if (!Number.isFinite(draft.timeScale) || draft.timeScale <= 0 ||
       !Number.isFinite(draft.pixelsPerKm) || draft.pixelsPerKm < 1 || draft.pixelsPerKm > 500) {
-      error = '时间流速必须大于 0，地图比例尺须在 1 至 500 之间。'
+      error = procedureMessage('procedure_time_speed_must_be_greater_than_0_and_map_scale_must_be_between_1_and_500')
       return
     }
     saving = true
@@ -62,7 +64,7 @@
       campaignDialogOpen = false
       oncreated()
     } catch (cause) {
-      error = cause instanceof Error ? cause.message : '保存推演配置失败，请重试。'
+      error = cause instanceof Error ? cause.message : procedureMessage('procedure_failed_to_save_simulation_settings_try_again')
     } finally {
       saving = false
     }
@@ -72,24 +74,24 @@
 <div class="mx-auto w-full max-w-xl px-6 py-8">
   <Card.Root>
     <Card.Header>
-      <Card.Title>配置大会军事推演</Card.Title>
-      <Card.Description>配置将保存到当前大会，下次进入时自动恢复。</Card.Description>
+      <Card.Title>{t('procedure_configure_conference_military_simulation')}</Card.Title>
+      <Card.Description>{t('procedure_configuration_is_saved_to_this_conference_and_restored_next_time')}</Card.Description>
     </Card.Header>
     <Card.Content>
       <FreeModeForm bind:draft {factionPlugins} hasAnyMods={factionPlugins.length > 0}
         onenter={() => void initialize(draft.name)} />
       {#if error}
-        <p role="alert" class="text-sm text-destructive">{error}</p>
+        <p role="alert" class="text-sm text-destructive">{renderProcedureMessage(error)}</p>
       {/if}
     </Card.Content>
     <Card.Footer class="flex justify-end gap-2">
       {#if campaignPlugins.length > 0}
         <Button variant="outline" disabled={saving} onclick={() => campaignDialogOpen = true}>
-          使用战役包预设
+          {t('procedure_use_campaign_preset')}
         </Button>
       {/if}
       <Button disabled={saving || !draft.name.trim()} onclick={() => void initialize(draft.name)}>
-        {saving ? '正在保存…' : '开始推演'}
+        {saving ? t('procedure_saving') : t('procedure_start_simulation')}
       </Button>
     </Card.Footer>
   </Card.Root>

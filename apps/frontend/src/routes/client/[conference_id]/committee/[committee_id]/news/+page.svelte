@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { procedureMessage, renderProcedureMessage, type ProcedureMessage } from '$lib/components/conference/common/message'
+  import { t, getLocale } from '$lib/i18n'
   import { onMount } from 'svelte'
   import { fileNotifications } from '$lib/classes/stores/cloud/file-notification-store.svelte'
   import { Newspaper, RefreshCw, Send } from '@lucide/svelte'
@@ -38,8 +40,8 @@
   let ready = $state(false)
   let loading = $state(false)
   let busy = $state(false)
-  let error = $state('')
-  let draftError = $state('')
+  let error = $state<ProcedureMessage>('')
+  let draftError = $state<ProcedureMessage>('')
   const token = $derived(cloudSession.session?.result.token ?? '')
   const identity = $derived(cloudSession.session?.result.identity)
   const canView = $derived(cloudSession.hasCapability('view_news'))
@@ -50,7 +52,7 @@
   const currentList = $derived(tab === 'published' ? published : tab === 'mine' ? mine : workflow)
 
   function formatTime(value: number): string {
-    return new Intl.DateTimeFormat('zh-CN', {
+    return new Intl.DateTimeFormat(getLocale(), {
       timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit',
       hour: '2-digit', minute: '2-digit', hour12: false
     }).format(value)
@@ -70,7 +72,7 @@
     }
   }
 
-  function message(caught: unknown, fallback: string): string {
+  function message(caught: unknown, fallback: ProcedureMessage): ProcedureMessage {
     return caught instanceof CloudNewsError ? caught.message : fallback
   }
 
@@ -91,7 +93,7 @@
       timeline = timelineResult?.timeline ?? null
       error = ''
     } catch (caught) {
-      error = message(caught, '加载新闻失败')
+      error = message(caught, procedureMessage('procedure_failed_to_load_news'))
     } finally {
       loading = false
     }
@@ -110,7 +112,7 @@
   async function submit(): Promise<void> {
     if (!token || !canDraft || busy || !source.trim() || !title.trim() || !content.trim()) return
     if (!timeline && !validManualTime(manualTime)) {
-      error = '请填写有效的内容时间（UTC+8）'
+      error = procedureMessage('procedure_enter_a_valid_content_time_utc_8')
       return
     }
     busy = true
@@ -121,7 +123,7 @@
       tab = 'mine'
       await load()
     } catch (caught) {
-      error = message(caught, '提交新闻失败')
+      error = message(caught, procedureMessage('procedure_failed_to_submit_news'))
     } finally {
       busy = false
     }
@@ -145,7 +147,7 @@
       try {
         revisions = (await listNewsRevisions(token, item.id)).revisions
       } catch (caught) {
-        error = message(caught, '加载修订记录失败')
+        error = message(caught, procedureMessage('procedure_failed_to_load_revision_history'))
       }
     }
   }
@@ -158,7 +160,7 @@
       selectedId = null
       await load()
     } catch (caught) {
-      error = message(caught, '审核新闻失败')
+      error = message(caught, procedureMessage('procedure_failed_to_review_news'))
       if (caught instanceof CloudNewsError && caught.status === 409) await load()
     } finally {
       busy = false
@@ -173,7 +175,7 @@
       selectedId = null
       await load()
     } catch (caught) {
-      error = message(caught, '撤回新闻失败')
+      error = message(caught, procedureMessage('procedure_failed_to_withdraw_news'))
     } finally {
       busy = false
     }
@@ -205,7 +207,7 @@
           }
         }
       } catch {
-        draftError = '无法读取本地草稿'
+        draftError = procedureMessage('procedure_unable_to_read_local_draft')
       }
     }
     ready = true
@@ -224,55 +226,55 @@
       } else localStorage.removeItem(draftKey)
       draftError = ''
     } catch {
-      draftError = '本地草稿保存失败，请先复制内容备份'
+      draftError = procedureMessage('procedure_failed_to_save_local_draft_copy_the_content_as_a_backup')
     }
   })
 </script>
 
-<svelte:head><title>新闻 · Veto</title></svelte:head>
+<svelte:head><title>{t('procedure_news_veto')}</title></svelte:head>
 
 <div class="mx-auto flex w-full max-w-5xl flex-col gap-6 p-6">
   <header class="flex items-start justify-between gap-4">
-    <div><h1 class="flex items-center gap-2 text-xl font-semibold"><Newspaper />新闻</h1><p class="mt-1 text-sm text-muted-foreground">大会新闻与审核</p></div>
-    <Button variant="outline" size="sm" disabled={loading} onclick={() => void load()}><RefreshCw class={loading ? 'animate-spin' : ''} />刷新</Button>
+    <div><h1 class="flex items-center gap-2 text-xl font-semibold"><Newspaper />{t('procedure_news')}</h1><p class="mt-1 text-sm text-muted-foreground">{t('procedure_conference_news_and_review')}</p></div>
+    <Button variant="outline" size="sm" disabled={loading} onclick={() => void load()}><RefreshCw class={loading ? 'animate-spin' : ''} />{t('procedure_refresh')}</Button>
   </header>
 
   {#if !token}
-    <Card.Root><Card.Content class="py-10 text-center text-muted-foreground">新闻仅在 Cloud Conference 中提供。</Card.Content></Card.Root>
+    <Card.Root><Card.Content class="py-10 text-center text-muted-foreground">{t('procedure_news_is_available_in_cloud_conferences')}</Card.Content></Card.Root>
   {:else}
-    {#if error}<p class="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</p>{/if}
-    {#if draftError}<p class="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">{draftError}</p>{/if}
+    {#if error}<p class="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">{renderProcedureMessage(error)}</p>{/if}
+    {#if draftError}<p class="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">{renderProcedureMessage(draftError)}</p>{/if}
     {#if otherDraft}
-      <Card.Root><Card.Header><Card.Title>其他席位的本地草稿</Card.Title><Card.Description>此草稿属于席位 {otherDraft.seatId}，仅供查看和复制。</Card.Description></Card.Header><Card.Content class="space-y-2"><p class="text-sm">{otherDraft.source} · {otherDraft.title}</p><Textarea readonly rows={5} value={otherDraft.content} /></Card.Content></Card.Root>
+      <Card.Root><Card.Header><Card.Title>{t('procedure_local_drafts_from_another_seat')}</Card.Title><Card.Description>{t('procedure_other_seat_draft_notice', { value1: otherDraft.seatId })}</Card.Description></Card.Header><Card.Content class="space-y-2"><p class="text-sm">{otherDraft.source} · {otherDraft.title}</p><Textarea readonly rows={5} value={otherDraft.content} /></Card.Content></Card.Root>
     {/if}
 
     {#if canDraft}
       <Card.Root>
-        <Card.Header><Card.Title>{editingId ? '修订被驳回新闻' : '起草新闻'}</Card.Title><Card.Description>草稿仅保存在本机，提交后进入大会审核队列。</Card.Description></Card.Header>
+        <Card.Header><Card.Title>{editingId ? t('procedure_revise_rejected_news') : t('procedure_draft_news')}</Card.Title><Card.Description>{t('procedure_drafts_are_saved_on_this_device_and_enter_the_conference_review_queue_after_submission')}</Card.Description></Card.Header>
         <Card.Content class="space-y-4">
           <div class="grid gap-4 sm:grid-cols-2">
-            <div class="space-y-1"><Label for="news-source">通讯社</Label><Input id="news-source" maxlength={120} bind:value={source} /></div>
-            <div class="space-y-1"><Label for="news-title">标题</Label><Input id="news-title" maxlength={200} bind:value={title} /></div>
+            <div class="space-y-1"><Label for="news-source">{t('procedure_news_agency')}</Label><Input id="news-source" maxlength={120} bind:value={source} /></div>
+            <div class="space-y-1"><Label for="news-title">{t('procedure_title')}</Label><Input id="news-title" maxlength={200} bind:value={title} /></div>
           </div>
-          {#if timeline}<p class="text-sm text-muted-foreground">内容时间将在提交审核时取大会 Timeline 当前时间。</p>
-          {:else}<div class="space-y-1"><Label for="news-time">内容时间（UTC+8）</Label><Input id="news-time" type="datetime-local" bind:value={manualTime} /></div>{/if}
-          <div class="space-y-1"><Label for="news-content">正文</Label><Textarea id="news-content" rows={8} maxlength={20000} bind:value={content} /></div>
+          {#if timeline}<p class="text-sm text-muted-foreground">{t('procedure_content_time_is_captured_from_the_conference_timeline_when_submitted_for_review')}</p>
+          {:else}<div class="space-y-1"><Label for="news-time">{t('procedure_content_time_utc_8')}</Label><Input id="news-time" type="datetime-local" bind:value={manualTime} /></div>{/if}
+          <div class="space-y-1"><Label for="news-content">{t('procedure_body')}</Label><Textarea id="news-content" rows={8} maxlength={20000} bind:value={content} /></div>
           <div class="flex justify-end gap-2">
-            {#if editingId}<Button variant="outline" disabled={busy} onclick={clearEditor}>取消修订</Button>{/if}
-            <Button disabled={busy || loading || !source.trim() || !title.trim() || !content.trim() || (!timeline && !validManualTime(manualTime))} onclick={() => void submit()}><Send />{busy ? '提交中…' : '提交审核'}</Button>
+            {#if editingId}<Button variant="outline" disabled={busy} onclick={clearEditor}>{t('procedure_cancel_revision')}</Button>{/if}
+            <Button disabled={busy || loading || !source.trim() || !title.trim() || !content.trim() || (!timeline && !validManualTime(manualTime))} onclick={() => void submit()}><Send />{busy ? t('procedure_submitting') : t('procedure_submit_for_review')}</Button>
           </div>
         </Card.Content>
       </Card.Root>
     {/if}
 
     <div class="flex flex-wrap gap-2">
-      {#if canView}<Button variant={tab === 'published' ? 'default' : 'outline'} onclick={() => (tab = 'published')}>已发布</Button>{/if}
-      {#if canDraft}<Button variant={tab === 'mine' ? 'default' : 'outline'} onclick={() => (tab = 'mine')}>我的稿件</Button>{/if}
-      {#if canReview}<Button variant={tab === 'workflow' ? 'default' : 'outline'} onclick={() => (tab = 'workflow')}>待审核 ({workflow.length})</Button>{/if}
+      {#if canView}<Button variant={tab === 'published' ? 'default' : 'outline'} onclick={() => (tab = 'published')}>{t('procedure_published_2')}</Button>{/if}
+      {#if canDraft}<Button variant={tab === 'mine' ? 'default' : 'outline'} onclick={() => (tab = 'mine')}>{t('procedure_my_articles')}</Button>{/if}
+      {#if canReview}<Button variant={tab === 'workflow' ? 'default' : 'outline'} onclick={() => (tab = 'workflow')}>{t('procedure_news_review_count', { value1: workflow.length })}</Button>{/if}
     </div>
 
-    {#if loading && currentList.length === 0}<p class="py-8 text-center text-sm text-muted-foreground">正在加载…</p>
-    {:else if currentList.length === 0}<Card.Root><Card.Content class="py-10 text-center text-muted-foreground">暂无新闻</Card.Content></Card.Root>
+    {#if loading && currentList.length === 0}<p class="py-8 text-center text-sm text-muted-foreground">{t('procedure_loading_2')}</p>
+    {:else if currentList.length === 0}<Card.Root><Card.Content class="py-10 text-center text-muted-foreground">{t('procedure_no_news')}</Card.Content></Card.Root>
     {:else}
       <section class="space-y-3">
         {#each currentList as item (item.id)}
@@ -280,22 +282,22 @@
             <Card.Header>
               <div class="flex items-start justify-between gap-4">
                 <div><Card.Title>{item.title}</Card.Title><Card.Description>{item.source} · {formatTime(item.contentTime)} · {item.author?.committeeName} / {item.author?.seatName}</Card.Description></div>
-                <Badge variant={item.status === 'published' ? 'default' : 'secondary'}>{item.status === 'submitted' ? '待审核' : item.status === 'rejected' ? '已驳回' : item.status === 'withdrawn' ? '已撤回' : '已发布'}</Badge>
+                <Badge variant={item.status === 'published' ? 'default' : 'secondary'}>{item.status === 'submitted' ? t('procedure_awaiting_review') : item.status === 'rejected' ? t('procedure_rejected') : item.status === 'withdrawn' ? t('procedure_withdrawn') : t('procedure_published_2')}</Badge>
               </div>
             </Card.Header>
             <Card.Content class="space-y-3">
               <p class="whitespace-pre-wrap text-sm leading-7">{item.content}</p>
-              {#if item.reviewNote}<p class="rounded-md bg-muted p-3 text-sm">审核说明：{item.reviewNote}</p>{/if}
+              {#if item.reviewNote}<p class="rounded-md bg-muted p-3 text-sm">{t('procedure_news_review_note', { value1: item.reviewNote })}</p>{/if}
               <div class="flex gap-2">
-                {#if tab === 'mine' || (tab === 'workflow' && item.status === 'submitted') || (tab === 'published' && canWithdraw)}<Button size="sm" variant="outline" onclick={() => void openItem(item)}>{selectedId === item.id ? '收起操作' : '查看操作'}</Button>{/if}
-                {#if tab === 'mine' && item.status === 'rejected'}<Button size="sm" onclick={() => edit(item)}>修改重交</Button>{/if}
+                {#if tab === 'mine' || (tab === 'workflow' && item.status === 'submitted') || (tab === 'published' && canWithdraw)}<Button size="sm" variant="outline" onclick={() => void openItem(item)}>{selectedId === item.id ? t('procedure_hide_actions') : t('procedure_view_actions')}</Button>{/if}
+                {#if tab === 'mine' && item.status === 'rejected'}<Button size="sm" onclick={() => edit(item)}>{t('procedure_revise_and_resubmit_2')}</Button>{/if}
               </div>
               {#if selectedId === item.id}
-                {#if tab === 'mine' && revisions.length > 0}<div class="space-y-2 border-t pt-3"><h3 class="text-sm font-medium">修订记录</h3>{#each revisions as revision}<p class="text-xs text-muted-foreground">第 {revision.revision} 版 · {formatTime(revision.contentTime)} · {revision.decision === 'rejected' ? `驳回：${revision.reviewNote}` : revision.decision === 'approved' ? '通过' : '待审核'}</p>{/each}</div>{/if}
+                {#if tab === 'mine' && revisions.length > 0}<div class="space-y-2 border-t pt-3"><h3 class="text-sm font-medium">{t('procedure_revision_history')}</h3>{#each revisions as revision}<p class="text-xs text-muted-foreground">{t('procedure_news_revision_summary', { value1: revision.revision, value2: formatTime(revision.contentTime), value3: revision.decision === 'rejected' ? t('procedure_rejected_value', { value1: revision.reviewNote ?? '' }) : revision.decision === 'approved' ? t('procedure_approve_2') : t('procedure_awaiting_review') })}</p>{/each}</div>{/if}
                 {#if tab === 'workflow' && canReview}
-                  <div class="space-y-2 border-t pt-3"><Label for={`review-${item.id}`}>审核说明（驳回必填）</Label><Textarea id={`review-${item.id}`} rows={3} maxlength={2000} bind:value={decisionNote} /><div class="flex justify-end gap-2"><Button size="sm" variant="outline" disabled={busy || !decisionNote.trim()} onclick={() => void decide(item, 'reject')}>驳回</Button><Button size="sm" disabled={busy} onclick={() => void decide(item, 'approve')}>审核通过并发布</Button></div></div>
+                  <div class="space-y-2 border-t pt-3"><Label for={`review-${item.id}`}>{t('procedure_review_note_required_when_rejecting')}</Label><Textarea id={`review-${item.id}`} rows={3} maxlength={2000} bind:value={decisionNote} /><div class="flex justify-end gap-2"><Button size="sm" variant="outline" disabled={busy || !decisionNote.trim()} onclick={() => void decide(item, 'reject')}>{t('procedure_reject')}</Button><Button size="sm" disabled={busy} onclick={() => void decide(item, 'approve')}>{t('procedure_approve_and_publish')}</Button></div></div>
                 {/if}
-                {#if tab === 'published' && canWithdraw}<div class="space-y-2 border-t pt-3"><Label for={`withdraw-${item.id}`}>撤回原因</Label><Textarea id={`withdraw-${item.id}`} rows={2} maxlength={500} bind:value={withdrawalReason} /><div class="flex justify-end"><Button size="sm" variant="destructive" disabled={busy || !withdrawalReason.trim()} onclick={() => void withdraw(item)}>确认撤回</Button></div></div>{/if}
+                {#if tab === 'published' && canWithdraw}<div class="space-y-2 border-t pt-3"><Label for={`withdraw-${item.id}`}>{t('procedure_withdrawal_reason')}</Label><Textarea id={`withdraw-${item.id}`} rows={2} maxlength={500} bind:value={withdrawalReason} /><div class="flex justify-end"><Button size="sm" variant="destructive" disabled={busy || !withdrawalReason.trim()} onclick={() => void withdraw(item)}>{t('procedure_confirm_withdrawal')}</Button></div></div>{/if}
               {/if}
             </Card.Content>
           </Card.Root>

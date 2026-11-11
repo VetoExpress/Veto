@@ -1,4 +1,5 @@
 packages:
+  - "../../packages/i18n"
   - "../../packages/auth"
   - "../../packages/utils"
 
@@ -6,3 +7,12 @@ allowBuilds:
   sharp: true
   unrs-resolver: true
   msw: false
+  '@parcel/watcher': set this to true or false
+  '@swc/core': set this to true or false
+
+minimumReleaseAgeExclude:
+  - '@inlang/paraglide-js@3.2.2'
+  - icu-minify@4.14.10
+  - next-intl-swc-plugin-extractor@4.14.10
+  - next-intl@4.14.10
+  - use-intl@4.14.10

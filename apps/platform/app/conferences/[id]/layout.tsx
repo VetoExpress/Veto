@@ -1,7 +1,8 @@
 import type { Metadata } from "next"
+import { localizedMetadata } from "@/i18n/metadata"
 
-export const metadata: Metadata = {
-  title: "大会详情",
+export async function generateMetadata(): Promise<Metadata> {
+  return localizedMetadata("platform_conference_details")
 }
 
 export default function ConferenceLayout({

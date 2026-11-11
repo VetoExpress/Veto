@@ -8,6 +8,7 @@ import {
   type CloudSeatSession
 } from '$lib/classes/clients/cloud-join-client'
 import type { Capability } from '$lib/classes/types/delegate'
+import { t } from '$lib/i18n'
 import { applyCloudChairProjection } from '$lib/classes/stores/conference/cloud-membership-store'
 
 class CloudSessionStore {
@@ -82,7 +83,7 @@ class CloudSessionStore {
       if (requestSequence !== this.chairRequestSequence) return
       this.chairProjection = null
       this.chairError =
-        error instanceof CloudJoinError ? error.message : '无法获取主席席位信息，请重试'
+        error instanceof CloudJoinError ? error.message : t('services_chair_retry')
     } finally {
       if (requestSequence === this.chairRequestSequence) {
         this.loadingChairProjection = false

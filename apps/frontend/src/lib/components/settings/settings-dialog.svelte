@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import { onMount } from 'svelte'
   import { Settings, Info, X, Puzzle, Map, User, ChevronRight } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
@@ -30,13 +31,13 @@
     icon: typeof Settings
   }
 
-  let NAV_TOP: NavItem[] = $state([
-    { key: 'general', label: '常规设置', icon: Settings },
-    { key: 'mods', label: '模组设置', icon: Puzzle },
-    { key: 'committee', label: '会议设置', icon: Map }
+  const NAV_TOP: NavItem[] = $derived([
+    { key: 'general', label: t('settings_general'), icon: Settings },
+    { key: 'mods', label: t('settings_mods'), icon: Puzzle },
+    { key: 'committee', label: t('settings_committee'), icon: Map }
   ])
 
-  let NAV_BOTTOM: NavItem[] = $state([{ key: 'about', label: '关于', icon: Info }])
+  const NAV_BOTTOM: NavItem[] = $derived([{ key: 'about', label: t('settings_about'), icon: Info }])
 
   let open = $state(false)
 
@@ -79,12 +80,13 @@
       showCloseButton={false}
     >
       <!-- 关闭按钮 -->
-      <Dialog.Title class="sr-only">设置</Dialog.Title>
-      <Dialog.Description class="sr-only">管理账号、应用偏好与会议设置。</Dialog.Description>
+      <Dialog.Title class="sr-only">{t('settings_title')}</Dialog.Title>
+      <Dialog.Description class="sr-only">{t('settings_description')}</Dialog.Description>
       <Button
         class="absolute end-4 top-4 z-10 opacity-70 transition-opacity hover:opacity-100"
         variant="ghost"
         size="icon"
+        aria-label={t('settings_close')}
         onclick={() => settingsDialogOpen.set(false)}
       >
         <X size={18} />
@@ -93,8 +95,8 @@
         <!-- 左侧导航 -->
         <div class="flex w-[240px] shrink-0 flex-col bg-muted/50">
           <div class="px-5 pt-5 pb-2">
-            <h1 class="text-[26px] font-bold leading-none tracking-tight">设置</h1>
-            <p class="mt-1.5 text-sm text-muted-foreground">个性化与全局设置</p>
+            <h1 class="text-[26px] font-bold leading-none tracking-tight">{t('settings_title')}</h1>
+            <p class="mt-1.5 text-sm text-muted-foreground">{t('settings_personalization')}</p>
           </div>
 
           <!-- 用户卡片 -->
@@ -102,7 +104,7 @@
             <Button
               class="h-auto w-full justify-start gap-3 px-3 py-2.5 text-start"
               variant={activeSection === 'account' ? 'secondary' : 'ghost'}
-              aria-label="账号设置"
+              aria-label={t('settings_account_settings')}
               aria-current={activeSection === 'account' ? 'page' : undefined}
               onclick={() => (activeSection = 'account')}
             >
@@ -116,10 +118,10 @@
               </Avatar.Root>
               <div class="min-w-0 flex-1">
                 <div class="truncate text-sm font-medium">
-                  {$accountStore.user?.name ?? ($accountStore.ready ? '未登录' : '正在恢复账号…')}
+                  {$accountStore.user?.name ?? ($accountStore.ready ? t('settings_signed_out') : t('settings_restoring_account'))}
                 </div>
                 <div class="truncate text-xs text-muted-foreground">
-                  {$accountStore.user?.email ?? '登录与账号管理'}
+                  {$accountStore.user?.email ?? t('settings_account_management')}
                 </div>
               </div>
               <ChevronRight data-icon="inline-end" />
@@ -161,7 +163,7 @@
             <div class="flex items-center gap-2">
               <span class="text-sm font-semibold">Veto</span>
             </div>
-            <span class="text-xs text-muted-foreground">Version {version}</span>
+            <span class="text-xs text-muted-foreground">{t('settings_version')} {version}</span>
           </div>
         </div>
 

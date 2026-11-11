@@ -17,6 +17,7 @@ import type {
   YieldType,
   YieldPendingState,
   Motion,
+  MotionProposal,
   DraftResolution,
   VotingSession,
   VoteBallot,
@@ -35,7 +36,9 @@ import {
   type Seat,
   type Capability
 } from '$lib/classes/types/delegate'
-import { POINT_LABELS, MOTION_LABELS, type Attendance } from '$lib/classes/types/committee'
+import type { Attendance } from '$lib/classes/types/committee'
+import { translate, type MessageKey } from '@vetoexpress/i18n'
+import type { EntryMessageValues } from '../../../../../shared/action-types'
 import { getDisplayBridge, buildDisplayData } from '$lib/classes/clients/conference-display-client'
 import { emitServiceEvent } from '$lib/classes/services/event-bus-bridge'
 import { Timer } from '$lib/classes/services/timer/timer'
@@ -47,6 +50,16 @@ import { calcMaxSpeakers } from '$lib/classes/utils/committee/caucus'
 
 function generateId(): string {
   return crypto.randomUUID()
+}
+
+type EntryMessage = { messageKey: MessageKey; messageValues: EntryMessageValues }
+
+function message(messageKey: MessageKey, messageValues: EntryMessageValues = {}): EntryMessage {
+  return { messageKey, messageValues }
+}
+
+function cloneEntry(entry: ConferenceEntry): ConferenceEntry {
+  return { ...entry, ...(entry.messageValues ? { messageValues: { ...entry.messageValues } } : {}) }
 }
 
 function cloneSpeakerEntry(entry: SpeakerEntry): SpeakerEntry {
@@ -211,6 +224,7 @@ export class Committee {
   activeCaucus: CommitteeDTO['activeCaucus'] = $state(null)
   yieldPending: YieldPendingState | null = $state(null)
   caucusSetup: CommitteeDTO['caucusSetup'] = $state(null)
+  postRollCallPhase: CommitteeDTO['postRollCallPhase'] = $state(undefined)
   /** 主发言名单是否曾被填充过（用于判断清空后是否需要重新动议） */
   speakersListHasBeenPopulated: boolean = $state(false)
 
@@ -258,7 +272,7 @@ export class Committee {
     if (data.draftResolutions != null) this.draftResolutions = data.draftResolutions
     if (data.documentNames != null) this.documentNames = [...data.documentNames]
     if (data.votingSessions != null) this.votingSessions = data.votingSessions.map((session) => ({ ...session, ballots: session.ballots.map((ballot) => ({ ...ballot })) }))
-    if (data.minutes != null) this.minutes = data.minutes.map((entry) => ({ ...entry }))
+    if (data.minutes != null) this.minutes = data.minutes.map(cloneEntry)
 
     // 还原 speakerList
     if (data.speakerLists) {
@@ -278,6 +292,11 @@ export class Committee {
     if (data.activeSpeaker != null) this.activeSpeaker = data.activeSpeaker
     if (data.yieldPending != null) this.yieldPending = data.yieldPending
     if (data.caucusSetup != null) this.caucusSetup = data.caucusSetup
+    if (
+      data.postRollCallPhase === 'pending_speakers_list' ||
+      data.postRollCallPhase === 'voting'
+    )
+      this.postRollCallPhase = data.postRollCallPhase
   }
 
   // ================================================================
@@ -334,22 +353,25 @@ export class Committee {
     const absentNames = absentSeats.map((seat) => seat.shortName ?? seat.name).join('、')
 
     const observerCount = presentCount - votingCount
-    let detail =
-      observerCount > 0
-        ? `点名完成: 实到 ${presentCount}/${participants.length}（含观察员 ${observerCount}），可投票 ${votingCount}，简单多数 ${simpleMajority} 票，2/3多数 ${twoThirds} 票`
-        : `点名完成: 实到 ${presentCount}/${participants.length}，简单多数 ${simpleMajority} 票，2/3多数 ${twoThirds} 票`
-    if (absentSeats.length > 0) {
-      detail += `；缺席: ${absentNames}`
-    }
-    this.addConferenceEntry('roll_call_completed', detail)
-    this.addConferenceEntry('phase_changed', '进入阶段: 等待开启主发言名单')
-    this.phase = 'pending_speakers_list'
+    const nextPhase = this.postRollCallPhase ?? 'pending_speakers_list'
+    this.postRollCallPhase = undefined
+    this.addConferenceEntry('roll_call_completed', message('domain_log_roll_call', {
+      present: presentCount, total: participants.length, observers: observerCount,
+      voters: votingCount, simpleMajority, twoThirds, absentCount: absentSeats.length, absentNames
+    }))
+    this.addConferenceEntry(
+      'phase_changed',
+      nextPhase === 'voting'
+        ? message('domain_log_roll_call_to_voting')
+        : message('domain_log_phase', { phase: nextPhase })
+    )
+    this.phase = nextPhase
     this.touch()
   }
 
   resetRollCall(): void {
-    this.addConferenceEntry('roll_call_reset', '重新点名: 所有参会席位出席状态已重置')
-    this.addConferenceEntry('phase_changed', '进入阶段: 点名')
+    this.addConferenceEntry('roll_call_reset', message('domain_log_roll_call_reset'))
+    this.addConferenceEntry('phase_changed', message('domain_log_phase', { phase: 'roll_call' }))
     this.phase = 'roll_call'
     this.seats = this.seats.map((seat) =>
       seat.procedure
@@ -385,7 +407,7 @@ export class Committee {
     this.speakerList.readySpeaker(entryId)
     const entry = this.speakerList.entries.find((s) => s.id === entryId)
     if (entry) {
-      this.addConferenceEntry('speaker_ready', `${this.getSpeakerSeatName(entry)} 准备发言`)
+      this.addConferenceEntry('speaker_ready', message('domain_log_speaker_ready', { name: this.getSpeakerSeatName(entry) }))
     }
     this.touch()
   }
@@ -407,7 +429,7 @@ export class Committee {
 
     this.addConferenceEntry(
       'speaker_started',
-      `${this.getSpeakerSeatName(entry)} 开始发言 (${allocSec}秒)`
+      message('domain_log_speaker_started', { name: this.getSpeakerSeatName(entry), seconds: allocSec })
     )
     this.touch()
   }
@@ -445,22 +467,16 @@ export class Committee {
       this.speakerList.entries.length === 0
     ) {
       this.phase = 'pending_speakers_list'
-      this.addConferenceEntry('phase_changed', '主发言名单已清空，需重新动议开启')
+      this.addConferenceEntry('phase_changed', message('domain_log_speakers_empty'))
     }
 
     const speakerName = entry ? this.getSpeakerSeatName(entry) : speaker.entryId
-    let logMsg = `${speakerName} 发言结束`
     if (yieldChoice) {
-      const yieldLabels: Record<string, string> = {
-        chair: '让渡给主席团',
-        delegate: '让渡给另一位代表',
-        question: '让渡给提问',
-        comment: '让渡给评论'
-      }
-      logMsg += `（${yieldLabels[yieldChoice.type] ?? yieldChoice.type}，剩余 ${Math.round(remaining)} 秒）`
-      this.addConferenceEntry('yield', logMsg, { seatId: entry?.seatId })
+      this.addConferenceEntry('yield', message('domain_log_finished_yield', {
+        name: speakerName, type: yieldChoice.type, seconds: Math.round(remaining)
+      }), { seatId: entry?.seatId })
     } else {
-      this.addConferenceEntry('speaker_finished', logMsg, { seatId: entry?.seatId })
+      this.addConferenceEntry('speaker_finished', message('domain_log_speaker_finished', { name: speakerName }), { seatId: entry?.seatId })
     }
     this.touch()
   }
@@ -482,14 +498,9 @@ export class Committee {
     // 记录让渡选择到 speaker entry
     list.entries = list.entries.map((s) => (s.id === entry.id ? { ...s, yield: yieldChoice } : s))
 
-    const yieldLabels: Record<string, string> = {
-      chair: '让渡给主席团',
-      delegate: '让渡给另一位代表',
-      question: '让渡给提问',
-      comment: '让渡给评论'
-    }
-    const logMsg = `${this.getSpeakerSeatName(entry)} ${yieldLabels[yieldChoice.type] ?? yieldChoice.type}（剩余 ${Math.round(remaining)} 秒）`
-    this.addConferenceEntry('yield', logMsg, { seatId: entry.seatId })
+    this.addConferenceEntry('yield', message('domain_log_yield', {
+      name: this.getSpeakerSeatName(entry), type: yieldChoice.type, seconds: Math.round(remaining)
+    }), { seatId: entry.seatId })
 
     if (yieldChoice.type === 'chair') {
       this.resolveYieldToChair()
@@ -522,7 +533,7 @@ export class Committee {
       const originalSeat = this.getSeat(yp.originalSeatId)
       this.addConferenceEntry(
         'speaker_finished',
-        `${originalSeat?.name ?? yp.originalSeatId} 让渡给主席团，剩余时间作废`,
+        message('domain_log_yield_chair', { name: originalSeat?.name ?? yp.originalSeatId }),
         { seatId: yp.originalSeatId }
       )
     }
@@ -552,7 +563,7 @@ export class Committee {
     const originalSeat = this.getSeat(yp.originalSeatId)
     this.addConferenceEntry(
       'speaker_finished',
-      `${originalSeat?.name ?? yp.originalSeatId} 让渡给 ${targetDel.name}（剩余 ${Math.round(yp.remainingSec)} 秒）`,
+      message('domain_log_yield_delegate', { name: originalSeat?.name ?? yp.originalSeatId, target: targetDel.name, seconds: Math.round(yp.remainingSec) }),
       { seatId: yp.originalSeatId }
     )
     this.touch()
@@ -578,7 +589,7 @@ export class Committee {
     const originalSeat = this.getSeat(yp.originalSeatId)
     this.addConferenceEntry(
       'yield',
-      `${questionerDel.name} 向 ${originalSeat?.name ?? yp.originalSeatId} 提问（剩余 ${Math.round(yp.remainingSec)} 秒回答）`,
+      message('domain_log_yield_question', { name: originalSeat?.name ?? yp.originalSeatId, target: questionerDel.name, seconds: Math.round(yp.remainingSec) }),
       { seatId: questionerDel.id }
     )
     this.touch()
@@ -607,7 +618,7 @@ export class Committee {
     const originalSeat = this.getSeat(yp.originalSeatId)
     this.addConferenceEntry(
       'yield',
-      `${commenterDel.name} 获得 ${Math.round(yp.remainingSec)} 秒评论时间（来自 ${originalSeat?.name ?? yp.originalSeatId} 的让渡）`,
+      message('domain_log_yield_comment', { name: originalSeat?.name ?? yp.originalSeatId, target: commenterDel.name, seconds: Math.round(yp.remainingSec) }),
       { seatId: commenterDel.id }
     )
     this.touch()
@@ -622,21 +633,15 @@ export class Committee {
   //  动议
   // ================================================================
 
-  proposeMotion(motionData: Omit<Motion, 'id' | 'proposedAt' | 'status'>): string {
+  proposeMotion(motionData: MotionProposal): string {
     const id = generateId()
     const now = Date.now()
     const motion = { ...motionData, id, proposedAt: now, status: 'pending' } as Motion
 
     this.motions = [...this.motions, motion]
 
-    const motionLabel =
-      motion.type === 'moderated_caucus'
-        ? `有主持核心磋商: ${(motion as any).topic}`
-        : motion.type === 'moderated_debate'
-          ? `有主持的辩论: ${motion.topic}`
-          : MOTION_LABELS[motion.type] ?? motion.type
     const proposer = this.getSeat(motion.proposedBySeatId)
-    this.addConferenceEntry('motion_proposed', `${proposer?.name ?? motion.proposedBySeatId} 提出动议: ${motionLabel}`, {
+    this.addConferenceEntry('motion_proposed', this.motionMessage(motion, 'proposed', proposer?.name ?? motion.proposedBySeatId), {
       seatId: motion.proposedBySeatId,
       motionId: id
     })
@@ -648,35 +653,23 @@ export class Committee {
     const motion = this.motions.find((m) => m.id === motionId)
     if (!motion) return
 
-    const motionLabel =
-      motion.type === 'moderated_caucus'
-        ? `有主持核心磋商: ${(motion as any).topic}`
-        : motion.type === 'moderated_debate'
-          ? `有主持的辩论: ${motion.topic}`
-          : MOTION_LABELS[motion.type] ?? motion.type
-
     this.motions = this.motions.map((m) =>
       m.id === motionId ? { ...m, status: 'approved' as const } : m
     )
-    this.addConferenceEntry('motion_approved', `动议通过: ${motionLabel}`, { motionId })
+    this.addConferenceEntry('motion_approved', this.motionMessage(motion, 'approved'), { motionId })
     this.executeMotionAction(motion)
     this.touch()
   }
 
   rejectMotion(motionId: string): void {
     const motion = this.motions.find((m) => m.id === motionId)
-    const motionLabel = motion
-      ? motion.type === 'moderated_caucus'
-        ? `有主持核心磋商: ${(motion as any).topic}`
-        : motion.type === 'moderated_debate'
-          ? `有主持的辩论: ${motion.topic}`
-          : MOTION_LABELS[motion.type] ?? motion.type
-      : motionId
 
     this.motions = this.motions.map((m) =>
       m.id === motionId ? { ...m, status: 'rejected' as const } : m
     )
-    this.addConferenceEntry('motion_rejected', `动议未通过: ${motionLabel}`, { motionId })
+    this.addConferenceEntry('motion_rejected', motion
+      ? this.motionMessage(motion, 'rejected')
+      : message('domain_log_motion', { outcome: 'rejected', name: '', type: motionId, topic: '' }), { motionId })
     this.touch()
   }
 
@@ -732,7 +725,7 @@ export class Committee {
     this.votingSessions = this.votingSessions.map((s) => (!s.endedAt ? { ...s, endedAt: now } : s))
     this.phase = 'general_debate'
     this.speakersListHasBeenPopulated = false
-    this.addConferenceEntry('phase_changed', '进入阶段: 一般性辩论（主发言名单已开启）')
+    this.addConferenceEntry('phase_changed', message('domain_log_speakers_open'))
     this.touch()
   }
 
@@ -741,7 +734,7 @@ export class Committee {
       const entryId = this.activeSpeaker.entryId
       this.speakerList.remove(entryId)
       this.activeSpeaker = null
-      this.addConferenceEntry('speaker_finished', '发言人时间作废（磋商动议通过）')
+      this.addConferenceEntry('speaker_finished', message('domain_log_speaker_discarded'))
     }
     const proposerDelId = motion.proposedBySeatId
     this.phase = 'caucus_setup'
@@ -751,7 +744,7 @@ export class Committee {
       speakerSeatIds: proposerDelId ? [proposerDelId] : []
     }
     const topic = (motion as any).topic
-    this.addConferenceEntry('phase_changed', `进入阶段: 磋商准备${topic ? '（' + topic + '）' : ''}`)
+    this.addConferenceEntry('phase_changed', message('domain_log_caucus_setup', { topic: topic || '', hasTopic: topic ? 'yes' : 'no' }))
     this.touch()
   }
 
@@ -762,7 +755,7 @@ export class Committee {
     list.entries = list.entries.map((s) =>
       s.status === 'waiting' || s.status === 'ready' ? { ...s, allocatedTimeSec: newTime } : s
     )
-    this.addConferenceEntry('phase_changed', `发言时间已修改为 ${newTime} 秒`)
+    this.addConferenceEntry('phase_changed', message('domain_log_speaking_time', { seconds: newTime }))
     this.touch()
   }
 
@@ -772,10 +765,11 @@ export class Committee {
     }
     if (this.activeCaucus) {
       this.activeCaucus = null
-      this.addConferenceEntry('caucus_ended', '辩论结束，磋商终止')
+      this.addConferenceEntry('caucus_ended', message('domain_log_debate_ended'))
     }
-    this.phase = 'voting'
-    this.addConferenceEntry('phase_changed', '进入阶段: 投票表决')
+    this.phase = 'roll_call'
+    this.postRollCallPhase = 'voting'
+    this.addConferenceEntry('phase_changed', message('domain_log_before_vote'))
     this.touch()
   }
 
@@ -789,7 +783,7 @@ export class Committee {
       'motion',
       motion.id,
       majorityRule,
-      `对「${docName || '未命名文件'}」开始实质性投票 (${majorityRule === 'simple_majority' ? '简单多数' : '2/3多数'})`
+      message('domain_log_substantive_vote', { documentName: docName || '', hasDocumentName: docName ? 'yes' : 'no', majority: majorityRule })
     )
   }
 
@@ -802,10 +796,9 @@ export class Committee {
     this.setAttendance(seatId, newAttendance)
     const del = this.seats.find((d) => d.id === seatId)
     if (!opts?.silent) {
-      const label = newAttendance === 'present' ? '出席' : '缺席'
       this.addConferenceEntry(
         'attendance_changed',
-        `${del?.name ?? seatId} 出席状态变更为 ${label}`,
+        message('domain_log_attendance', { name: del?.name ?? seatId, attendance: newAttendance }),
         { seatId }
       )
     }
@@ -840,8 +833,7 @@ export class Committee {
     }
 
     const del = this.seats.find((d) => d.id === seatId)
-    const pointLabel = POINT_LABELS[point.type]
-    this.addConferenceEntry('point_proposed', `${del?.name ?? seatId} 提出${pointLabel}`, {
+    this.addConferenceEntry('point_proposed', message('domain_log_point', { name: del?.name ?? seatId, type: point.type }), {
       seatId
     })
     this.touch()
@@ -896,23 +888,11 @@ export class Committee {
     this.phase = 'caucus'
     this.activeCaucus = { motionId, type: caucusType, totalSec, elapsedSec: 0, paused: false }
 
-    const label =
-      caucusType === 'moderated'
-        ? '有主持核心磋商'
-        : caucusType === 'individual'
-          ? '个人演讲'
-          : caucusType === 'moderated_debate'
-            ? '有主持的辩论'
-            : caucusType === 'unmoderated_debate'
-              ? '自由辩论'
-              : '自由磋商'
     const eventType = caucusType === 'individual' ? 'individual_speech_started' : 'caucus_started'
-    this.addConferenceEntry(eventType, `${label}开始${topic ? ': ' + topic : ''}`, { motionId })
+    this.addConferenceEntry(eventType, message('domain_log_caucus_started', { type: caucusType, topic: topic ?? '', hasTopic: topic ? 'yes' : 'no' }), { motionId })
     this.addConferenceEntry(
       'phase_changed',
-      caucusType === 'moderated_debate' || caucusType === 'unmoderated_debate'
-        ? `进入阶段: ${label}`
-        : '进入阶段: 磋商'
+      message('domain_log_phase', { phase: caucusType === 'moderated_debate' || caucusType === 'unmoderated_debate' ? caucusType : 'caucus' })
     )
     this.touch()
   }
@@ -1010,10 +990,10 @@ export class Committee {
     const firstName = caucusSpeakers[0] ? this.getSpeakerSeatName(caucusSpeakers[0]) : ''
     this.addConferenceEntry(
       'caucus_started',
-      `有主持核心磋商开始${topic ? ': ' + topic : ''}，首位发言人（就绪）: ${firstName}`,
+      message('domain_log_caucus_first', { topic: topic ?? '', hasTopic: topic ? 'yes' : 'no', name: firstName }),
       { motionId }
     )
-    this.addConferenceEntry('phase_changed', '进入阶段: 磋商')
+    this.addConferenceEntry('phase_changed', message('domain_log_phase', { phase: 'caucus' }))
     this.touch()
   }
 
@@ -1042,8 +1022,8 @@ export class Committee {
           remainingSec: totalRemaining
         }
 
-        this.addConferenceEntry('caucus_paused', '名单已走完，返回磋商准备以添加更多发言人')
-        this.addConferenceEntry('phase_changed', '进入阶段: 磋商准备')
+        this.addConferenceEntry('caucus_paused', message('domain_log_caucus_exhausted'))
+        this.addConferenceEntry('phase_changed', message('domain_log_phase', { phase: 'caucus_setup' }))
       } else {
         this.endCaucus()
       }
@@ -1068,7 +1048,7 @@ export class Committee {
 
       this.activeSpeaker = null
 
-      this.addConferenceEntry('speaker_ready', `${nextName} 准备发言（等待主席开始计时）`)
+      this.addConferenceEntry('speaker_ready', message('domain_log_speaker_ready_wait', { name: nextName }))
     } else {
       this.endCaucus()
     }
@@ -1135,7 +1115,7 @@ export class Committee {
     }
 
     const speakerName = this.getSpeakerSeatName(readySpeaker)
-    this.addConferenceEntry('speaker_started', `${speakerName} 开始发言 (${perSpeakerSec}秒)`)
+    this.addConferenceEntry('speaker_started', message('domain_log_speaker_started', { name: speakerName, seconds: perSpeakerSec }))
     this.touch()
   }
 
@@ -1175,7 +1155,7 @@ export class Committee {
       }
       this.addConferenceEntry(
         'speaker_ready',
-        `${del?.name ?? seatId} 准备发言（等待主席开始计时）`
+        message('domain_log_speaker_ready_wait', { name: del?.name ?? seatId })
       )
     }
     this.touch()
@@ -1199,7 +1179,7 @@ export class Committee {
 
     this.addConferenceEntry(
       'speaker_cancelled',
-      `取消 ${this.getSpeakerSeatName(speaker)} 的准备状态`
+      message('domain_log_speaker_cancelled', { name: this.getSpeakerSeatName(speaker) })
     )
 
     this.transitionAfterCaucusSpeakerRemoved(
@@ -1228,16 +1208,8 @@ export class Committee {
     this.activeCaucus = null
     const eventType =
       caucusType === 'individual' ? 'individual_speech_ended' : 'caucus_ended'
-    const label =
-      caucusType === 'individual'
-        ? '个人演讲结束'
-        : caucusType === 'moderated_debate'
-          ? '有主持的辩论结束'
-          : caucusType === 'unmoderated_debate'
-            ? '自由辩论结束'
-            : '磋商结束'
-    this.addConferenceEntry(eventType, label)
-    this.addConferenceEntry('phase_changed', '进入阶段: 一般性辩论')
+    this.addConferenceEntry(eventType, message('domain_log_caucus_ended', { type: caucusType ?? '' }))
+    this.addConferenceEntry('phase_changed', message('domain_log_phase', { phase: 'general_debate' }))
     this.touch()
   }
 
@@ -1249,7 +1221,7 @@ export class Committee {
     targetType: VoteTargetType,
     targetId: string,
     majorityRule: MajorityRule,
-    descriptionOverride?: string
+    descriptionOverride?: string | EntryMessage
   ): string {
     const id = generateId()
 
@@ -1272,9 +1244,9 @@ export class Committee {
     this.phase = 'voting'
     this.votingSessions = [...this.votingSessions, session]
 
-    const desc = descriptionOverride ?? `开始投票表决 (${majorityRule === 'simple_majority' ? '简单多数' : '2/3多数'})`
+    const desc = descriptionOverride ?? message('domain_log_voting_started', { majority: majorityRule })
     this.addConferenceEntry('voting_started', desc)
-    this.addConferenceEntry('phase_changed', '进入阶段: 投票表决')
+    this.addConferenceEntry('phase_changed', message('domain_log_phase', { phase: 'voting' }))
     this.touch()
     return id
   }
@@ -1375,6 +1347,7 @@ export class Committee {
 
     let newMotions = this.motions
     let newPhase = this.phase
+    let newPostRollCallPhase = this.postRollCallPhase
     let newActiveSpeaker = this.activeSpeaker
     let newActiveCaucus = this.activeCaucus
     let newDefaultSpeakingTimeSec = this.defaultSpeakingTimeSec
@@ -1386,7 +1359,7 @@ export class Committee {
         if (motion.type === 'substantive_vote') {
           const docName = (motion as any).documentName as string
           newSpeakersList = []
-          this.addConferenceEntry('phase_changed', '主发言名单已结束')
+          this.addConferenceEntry('phase_changed', message('domain_log_speakers_closed'))
         } else {
           const motionStatus: 'approved' | 'rejected' =
             result === 'passed' ? 'approved' : 'rejected'
@@ -1399,19 +1372,20 @@ export class Committee {
               newPhase = 'suspended'
               newActiveSpeaker = null
               newActiveCaucus = null
-              this.addConferenceEntry('meeting_suspended', '暂时休会')
-              this.addConferenceEntry('phase_changed', '进入阶段: 休会')
+              this.addConferenceEntry('meeting_suspended', message('domain_log_suspended'))
+              this.addConferenceEntry('phase_changed', message('domain_log_phase', { phase: 'suspended' }))
             } else if (motion.type === 'close_meeting') {
               newPhase = 'closed'
               newActiveSpeaker = null
               newActiveCaucus = null
-              this.addConferenceEntry('meeting_closed', '会议闭幕')
-              this.addConferenceEntry('phase_changed', '进入阶段: 闭幕')
+              this.addConferenceEntry('meeting_closed', message('domain_log_closed'))
+              this.addConferenceEntry('phase_changed', message('domain_log_phase', { phase: 'closed' }))
             } else if (motion.type === 'closure_debate') {
-              newPhase = 'voting'
+              newPhase = 'roll_call'
+              newPostRollCallPhase = 'voting'
               newActiveSpeaker = null
               newActiveCaucus = null
-              this.addConferenceEntry('phase_changed', '进入阶段: 投票表决')
+              this.addConferenceEntry('phase_changed', message('domain_log_before_vote'))
             } else if (
               motion.type === 'unmoderated_caucus' ||
               motion.type === 'moderated_debate' ||
@@ -1424,7 +1398,6 @@ export class Committee {
                   : motion.type === 'unmoderated_debate'
                     ? 'unmoderated_debate'
                     : 'unmoderated'
-              const label = MOTION_LABELS[motion.type]
               const topic = motion.type === 'moderated_debate' ? motion.topic : undefined
               newPhase = 'caucus'
               newActiveSpeaker = null
@@ -1435,8 +1408,8 @@ export class Committee {
                 elapsedSec: 0,
                 paused: false
               }
-              this.addConferenceEntry('caucus_started', `${label}开始${topic ? ': ' + topic : ''}`)
-              this.addConferenceEntry('phase_changed', `进入阶段: ${label}`)
+              this.addConferenceEntry('caucus_started', message('domain_log_caucus_started', { type: caucusType, topic: topic ?? '', hasTopic: topic ? 'yes' : 'no' }))
+              this.addConferenceEntry('phase_changed', message('domain_log_phase', { phase: caucusType }))
             } else if (motion.type === 'modify_speaking_time') {
               const newTime = (motion as any).newTimeSec as number
               newDefaultSpeakingTimeSec = newTime
@@ -1453,10 +1426,11 @@ export class Committee {
 
     this.addConferenceEntry(
       'voting_ended',
-      `投票结束: Yes ${yes} / No ${no} / Abstain ${abstain} → ${result === 'passed' ? '通过' : '未通过'}`
+      message('domain_log_voting_ended', { yes, no, abstain, result })
     )
 
     this.phase = newPhase
+    this.postRollCallPhase = newPostRollCallPhase
     this.activeSpeaker = newActiveSpeaker
     this.activeCaucus = newActiveCaucus
     this.defaultSpeakingTimeSec = newDefaultSpeakingTimeSec
@@ -1498,7 +1472,7 @@ export class Committee {
       createdAt: Date.now()
     }
     this.draftResolutions = [...this.draftResolutions, resolution]
-    this.addConferenceEntry('resolution_introduced', `决议草案提交: ${title}`, { resolutionId: id })
+    this.addConferenceEntry('resolution_introduced', message('domain_log_resolution', { title }), { resolutionId: id })
     this.touch()
     return id
   }
@@ -1511,15 +1485,15 @@ export class Committee {
     this.phase = 'suspended'
     this.activeSpeaker = null
     this.activeCaucus = null
-    this.addConferenceEntry('meeting_suspended', '暂时休会')
-    this.addConferenceEntry('phase_changed', '进入阶段: 休会')
+    this.addConferenceEntry('meeting_suspended', message('domain_log_suspended'))
+    this.addConferenceEntry('phase_changed', message('domain_log_phase', { phase: 'suspended' }))
     this.touch()
   }
 
   resumeMeeting(): void {
     this.phase = 'pending_speakers_list'
-    this.addConferenceEntry('meeting_resumed', '会议恢复')
-    this.addConferenceEntry('phase_changed', '进入阶段: 等待开启主发言名单')
+    this.addConferenceEntry('meeting_resumed', message('domain_log_resumed'))
+    this.addConferenceEntry('phase_changed', message('domain_log_phase', { phase: 'pending_speakers_list' }))
     this.touch()
   }
 
@@ -1527,8 +1501,8 @@ export class Committee {
     this.phase = 'closed'
     this.activeSpeaker = null
     this.activeCaucus = null
-    this.addConferenceEntry('meeting_closed', '会议闭幕')
-    this.addConferenceEntry('phase_changed', '进入阶段: 闭幕')
+    this.addConferenceEntry('meeting_closed', message('domain_log_closed'))
+    this.addConferenceEntry('phase_changed', message('domain_log_phase', { phase: 'closed' }))
     this.touch()
   }
 
@@ -1563,9 +1537,16 @@ export class Committee {
     phase_changed: 'conference:phase_changed'
   }
 
+  private motionMessage(motion: Motion, outcome: string, name = ''): EntryMessage {
+    return message('domain_log_motion', {
+      outcome, name, type: motion.type,
+      topic: motion.type === 'moderated_caucus' || motion.type === 'moderated_debate' ? motion.topic : ''
+    })
+  }
+
   addConferenceEntry(
     actionType: ConferenceActionType,
-    description: string,
+    description: string | EntryMessage,
     related?: {
       seatId?: string
       motionId?: string
@@ -1576,7 +1557,13 @@ export class Committee {
       id: generateId(),
       timestamp: Date.now(),
       actionType,
-      description,
+      description: typeof description === 'string'
+        ? description
+        : translate(description.messageKey, description.messageValues, 'zh-CN'),
+      ...(typeof description === 'string' ? {} : {
+        messageKey: description.messageKey,
+        messageValues: { ...description.messageValues }
+      }),
       ...related
     }
     this.minutes = [...this.minutes, entry]
@@ -1664,10 +1651,11 @@ export class Committee {
       draftResolutions: this.draftResolutions.map((resolution) => ({ ...resolution, sponsors: [...resolution.sponsors], signatories: [...resolution.signatories] })),
       documentNames: [...this.documentNames],
       votingSessions: this.votingSessions.map((session) => ({ ...session, ballots: session.ballots.map((ballot) => ({ ...ballot })) })),
-      minutes: this.minutes.map((entry) => ({ ...entry })),
+      minutes: this.minutes.map(cloneEntry),
       defaultSpeakingTimeSec: this.defaultSpeakingTimeSec,
       substantiveVotingMajority: this.substantiveVotingMajority,
       caucusSetup: this.caucusSetup,
+      postRollCallPhase: this.postRollCallPhase,
       activeCaucus: this.activeCaucus
         ? {
             ...this.activeCaucus,
@@ -1744,7 +1732,7 @@ export class Committee {
       procedure
     }
     this.seats = [...this.seats, seat]
-    this.addConferenceEntry('phase_changed', `席位已创建: ${name}`)
+    this.addConferenceEntry('phase_changed', message('domain_log_seat_created', { name }))
     this.touch()
     return id
   }

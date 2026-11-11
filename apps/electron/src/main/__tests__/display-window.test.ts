@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+vi.mock('../logger')
+vi.mock('@electron-toolkit/utils', () => ({ is: { dev: true } }))
 const { handlers, windows } = vi.hoisted(() => ({
   handlers: new Map<string, (...args: any[]) => any>(),
   windows: [] as any[]
@@ -8,6 +10,7 @@ vi.mock('electron', () => ({
     handle: (name: string, handler: (...args: any[]) => any) => handlers.set(name, handler)
   },
   BrowserWindow: class {
+    setTitle = vi.fn()
     loadURL = vi.fn()
     focus = vi.fn()
     isDestroyed = () => false

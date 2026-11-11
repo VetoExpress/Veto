@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { renderProcedureMessage, type ProcedureMessage } from '$lib/components/conference/common/message'
+  import { t } from '$lib/i18n'
   import { TriangleAlert } from '@lucide/svelte'
 
   import type { CloudJoinTarget } from '$lib/classes/clients/cloud-join-client'
@@ -22,7 +24,7 @@
     target: CloudJoinTarget
     hasStoredCredential?: boolean
     isSubmitting?: boolean
-    requestError?: string
+    requestError?: ProcedureMessage
     onBack: () => void
     onConfirm: () => void
     onOpenChange: (open: boolean) => void
@@ -35,8 +37,8 @@
 <Dialog.Root {open} {onOpenChange}>
   <Dialog.Content class="sm:max-w-lg">
     <Dialog.Header>
-      <Dialog.Title>确认大会</Dialog.Title>
-      <Dialog.Description>请确认邀请码对应的大会和席位。</Dialog.Description>
+      <Dialog.Title>{t('procedure_confirm_conference')}</Dialog.Title>
+      <Dialog.Description>{t('procedure_confirm_the_conference_and_seat_associated_with_this_invite_code')}</Dialog.Description>
     </Dialog.Header>
 
     <Card.Root>
@@ -47,22 +49,22 @@
             <Card.Description>{target.organizer}</Card.Description>
           </div>
           <Badge variant={seatClaimed ? 'destructive' : 'secondary'}>
-            {seatClaimed ? '已认领' : '可加入'}
+            {seatClaimed ? t('procedure_claimed') : t('procedure_available')}
           </Badge>
         </div>
       </Card.Header>
       <Card.Content>
         <dl class="grid gap-3 text-sm sm:grid-cols-2">
           <div class="flex flex-col gap-1">
-            <dt class="text-muted-foreground">委员会</dt>
+            <dt class="text-muted-foreground">{t('procedure_committee')}</dt>
             <dd class="font-medium">{target.committeeName}</dd>
           </div>
           <div class="flex flex-col gap-1">
-            <dt class="text-muted-foreground">席位</dt>
+            <dt class="text-muted-foreground">{t('procedure_seat')}</dt>
             <dd class="font-medium">{target.seatName}</dd>
           </div>
           <div class="flex flex-col gap-1 sm:col-span-2">
-            <dt class="text-muted-foreground">角色</dt>
+            <dt class="text-muted-foreground">{t('procedure_role')}</dt>
             <dd class="font-medium">{target.roleName}</dd>
           </div>
         </dl>
@@ -72,36 +74,36 @@
     {#if canRejoin}
       <Alert.Root>
         <TriangleAlert />
-        <Alert.Title>重新入会</Alert.Title>
+        <Alert.Title>{t('procedure_rejoin')}</Alert.Title>
         <Alert.Description>
           {hasStoredCredential
-            ? '已在本机找到入会密码，确认后将直接重新进入该席位。'
-            : '该席位没有设置入会密码，确认后将直接重新进入。'}
+            ? t('procedure_a_joining_password_was_found_on_this_device_confirm_to_rejoin_this_seat_directly')
+            : t('procedure_this_seat_has_no_joining_password_confirm_to_rejoin_directly')}
         </Alert.Description>
       </Alert.Root>
     {:else if seatClaimed}
       <Alert.Root variant="destructive">
         <TriangleAlert />
-        <Alert.Title>该席位已被认领</Alert.Title>
-        <Alert.Description>未在本机找到有效入会密码，继续后需要重新填写密码。</Alert.Description>
+        <Alert.Title>{t('procedure_this_seat_has_been_claimed')}</Alert.Title>
+        <Alert.Description>{t('procedure_no_valid_joining_password_was_found_on_this_device_continue_to_enter_it_again')}</Alert.Description>
       </Alert.Root>
     {/if}
 
     {#if requestError}
       <Alert.Root variant="destructive">
         <TriangleAlert />
-        <Alert.Title>无法重新入会</Alert.Title>
-        <Alert.Description>{requestError}</Alert.Description>
+        <Alert.Title>{t('procedure_unable_to_rejoin')}</Alert.Title>
+        <Alert.Description>{renderProcedureMessage(requestError)}</Alert.Description>
       </Alert.Root>
     {/if}
 
     <Dialog.Footer>
-      <Button variant="outline" onclick={onBack} disabled={isSubmitting}>返回</Button>
+      <Button variant="outline" onclick={onBack} disabled={isSubmitting}>{t('procedure_back')}</Button>
       <Button onclick={onConfirm} disabled={isSubmitting}>
         {#if isSubmitting}
-          正在重新入会
+          {t('procedure_rejoining')}
         {:else}
-          确认大会
+          {t('procedure_confirm_conference')}
         {/if}
       </Button>
     </Dialog.Footer>

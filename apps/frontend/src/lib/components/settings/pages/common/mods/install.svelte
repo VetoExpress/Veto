@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { messageText, type LocalizedMessage } from '$lib/components/ui/localized-message'
+  import { t } from '$lib/i18n'
   import {
     Upload,
     RefreshCw,
@@ -21,7 +23,7 @@
   // ── 本地 .csmod 导入 ──
   type ImportState = 'idle' | 'loading' | 'done' | 'error'
   let importState = $state<ImportState>('idle')
-  let importError = $state<string | null>(null)
+  let importError = $state<LocalizedMessage | null>(null)
   let importedName = $state<string | null>(null)
   let dragOver = $state(false)
   let fileInput: HTMLInputElement
@@ -37,7 +39,7 @@
       importedName = plugin.manifest.name
       importState = 'done'
     } catch (err) {
-      importError = err instanceof Error ? err.message : '导入失败'
+      importError = err instanceof Error ? err.message : () => t('settings_import_failed')
       importState = 'error'
     }
   }
@@ -66,7 +68,7 @@
   type FetchState = 'idle' | 'loading' | 'done' | 'error'
   let fetchState = $state<FetchState>('idle')
   let remotePlugins = $state<PluginManifest[]>([])
-  let fetchError = $state<string | null>(null)
+  let fetchError = $state<LocalizedMessage | null>(null)
   let installedIds = $state(new Set<string>())
   let starsMap = $state<Record<string, number>>({})
 
@@ -89,7 +91,7 @@
         window.dispatchEvent(new CustomEvent('veto:stars-loaded', { detail: stars }))
       })
     } catch (err) {
-      fetchError = err instanceof Error ? err.message : '未知错误'
+      fetchError = err instanceof Error ? err.message : () => t('settings_unknown_error')
       fetchState = 'error'
     }
   }
@@ -102,7 +104,7 @@
 <div class="space-y-5">
   <!-- ── 本地 .csmod 导入区 ── -->
   <div>
-    <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">本地导入</p>
+    <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">{t('settings_local_import')}</p>
 
     <!-- 隐藏 file input -->
     <input
@@ -130,8 +132,8 @@
       >
         <Upload class="size-7 opacity-60" />
         <div class="text-center">
-          <p class="text-sm font-medium">拖放 .vmod 文件，或点击选择</p>
-          <p class="mt-0.5 text-xs opacity-70">支持本地离线导入，无需网络</p>
+          <p class="text-sm font-medium">{t('settings_mod_drop')}</p>
+          <p class="mt-0.5 text-xs opacity-70">{t('settings_mod_offline')}</p>
         </div>
         <Button
           variant="outline"
@@ -143,7 +145,7 @@
           }}
         >
           <FolderOpen class="size-3.5" />
-          选择文件
+          {t('settings_choose_file')}
         </Button>
       </div>
     {:else if importState === 'loading'}
@@ -151,7 +153,7 @@
         class="flex min-h-36 flex-col items-center justify-center gap-3 rounded-lg border border-border text-muted-foreground"
       >
         <Loader class="size-6 animate-spin opacity-60" />
-        <p class="text-sm">正在解析并导入…</p>
+        <p class="text-sm">{t('settings_importing')}</p>
       </div>
     {:else if importState === 'done'}
       <div
@@ -160,8 +162,8 @@
         <div class="flex items-center gap-2 text-green-700 dark:text-green-400">
           <CheckCircle2 class="size-4 shrink-0" />
           <div>
-            <p class="text-sm font-medium">导入成功</p>
-            <p class="text-xs opacity-80">"{importedName}" 已载入并持久化</p>
+            <p class="text-sm font-medium">{t('settings_import_success')}</p>
+            <p class="text-xs opacity-80">{t('settings_mod_imported', { name: importedName ?? '' })}</p>
           </div>
         </div>
         <Button
@@ -169,7 +171,7 @@
           size="icon"
           class="size-7 shrink-0"
           onclick={resetImport}
-          title="导入另一个"
+          title={t('settings_import_another')}
         >
           <X class="size-4" />
         </Button>
@@ -181,8 +183,8 @@
         <div class="flex items-center gap-2 text-destructive">
           <AlertCircle class="size-4 shrink-0" />
           <div>
-            <p class="text-sm font-medium">导入失败</p>
-            <p class="text-xs opacity-80">{importError}</p>
+            <p class="text-sm font-medium">{t('settings_import_failed')}</p>
+            <p class="text-xs opacity-80">{messageText(importError)}</p>
           </div>
         </div>
         <Button
@@ -190,7 +192,7 @@
           size="icon"
           class="size-7 shrink-0"
           onclick={resetImport}
-          title="重试"
+          title={t('settings_retry')}
         >
           <X class="size-4" />
         </Button>
@@ -201,7 +203,7 @@
   <!-- 分隔线 -->
   <div class="flex items-center gap-3">
     <div class="h-px flex-1 bg-border"></div>
-    <span class="text-xs text-muted-foreground">在线安装</span>
+    <span class="text-xs text-muted-foreground">{t('settings_online_install')}</span>
     <div class="h-px flex-1 bg-border"></div>
   </div>
 
@@ -212,31 +214,31 @@
         class="flex min-h-48 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-stone-300 text-stone-400 dark:border-stone-700 dark:text-stone-500"
       >
         <Store size={28} class="opacity-40" />
-        <p class="text-sm">从 VetoExpress 官方插件库获取插件列表</p>
+        <p class="text-sm">{t('settings_registry_description')}</p>
         <Button variant="outline" size="sm" class="gap-1.5" onclick={loadRegistry}>
-          <RefreshCw class="size-3.5" />获取列表
+          <RefreshCw class="size-3.5" />{t('settings_fetch_list')}
         </Button>
       </div>
     {:else if fetchState === 'loading'}
       <div class="flex min-h-48 flex-col items-center justify-center gap-3 text-muted-foreground">
         <Loader class="size-7 animate-spin opacity-60" />
-        <p class="text-sm">正在从插件库拉取…</p>
+        <p class="text-sm">{t('settings_fetching')}</p>
       </div>
     {:else if fetchState === 'error'}
       <div
         class="flex min-h-48 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-destructive/40 text-destructive/70"
       >
         <WifiOff size={28} class="opacity-60" />
-        <p class="text-sm">{fetchError}</p>
+        <p class="text-sm">{messageText(fetchError)}</p>
         <Button variant="outline" size="sm" class="gap-1.5" onclick={loadRegistry}>
-          <RefreshCw class="size-3.5" />重试
+          <RefreshCw class="size-3.5" />{t('settings_retry')}
         </Button>
       </div>
     {:else}
       <div class="flex items-center justify-between">
-        <span class="text-xs text-muted-foreground">共 {remotePlugins.length} 个插件</span>
+        <span class="text-xs text-muted-foreground">{t('settings_plugin_count', { count: remotePlugins.length })}</span>
         <Button variant="ghost" size="sm" class="h-7 gap-1 px-2 text-xs" onclick={loadRegistry}>
-          <RefreshCw class="size-3" />刷新
+          <RefreshCw class="size-3" />{t('settings_refresh')}
         </Button>
       </div>
       <div class="flex flex-col gap-2">
@@ -248,7 +250,7 @@
           />
         {/each}
         {#if remotePlugins.length === 0}
-          <p class="py-8 text-center text-sm text-muted-foreground">暂无插件</p>
+          <p class="py-8 text-center text-sm text-muted-foreground">{t('settings_plugins_empty')}</p>
         {/if}
       </div>
     {/if}

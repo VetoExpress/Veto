@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import { onMount } from 'svelte'
   import '$units' // 初始化 ModRegistry 基础数据
   import JoinConferenceDialog from '$lib/components/conference/join-conference-dialog.svelte'
@@ -105,7 +106,7 @@
             <Sidebar.MenuItem>
               <Sidebar.MenuButton onclick={() => navigateToConference(activeConference.id)}>
                 <ArrowLeft />
-                <span>返回大会</span>
+                <span>{t('procedure_back_to_conference')}</span>
               </Sidebar.MenuButton>
             </Sidebar.MenuItem>
             <Sidebar.MenuItem>
@@ -115,7 +116,7 @@
                 onclick={() => navigateToCommittee(activeConference.id, activeCommittee.id)}
               >
                 <Users />
-                <span>委员会概览</span>
+                <span>{t('procedure_committee_overview')}</span>
               </Sidebar.MenuButton>
             </Sidebar.MenuItem>
 
@@ -128,7 +129,7 @@
                   goTo(`/conference/${conferenceId}/committee/${committeeId}/directives`)}
               >
                 <Radio />
-                <span>指令</span>
+                <span>{t('procedure_directives')}</span>
               </Sidebar.MenuButton>
             </Sidebar.MenuItem>
             <Sidebar.MenuItem>
@@ -137,7 +138,7 @@
                 onclick={() => goTo(`/conference/${conferenceId}/committee/${committeeId}/news`)}
               >
                 <Newspaper />
-                <span>新闻</span>
+                <span>{t('procedure_news')}</span>
               </Sidebar.MenuButton>
             </Sidebar.MenuItem>
             <Sidebar.MenuItem>
@@ -147,7 +148,7 @@
                   goTo(`/conference/${conferenceId}/committee/${committeeId}/situation`)}
               >
                 <Globe />
-                <span>局势</span>
+                <span>{t('procedure_situation_updates')}</span>
               </Sidebar.MenuButton>
             </Sidebar.MenuItem>
             <Sidebar.MenuItem>
@@ -156,7 +157,7 @@
                 onclick={() => goTo(`/conference/${conferenceId}/committee/${committeeId}/files`)}
               >
                 <FileText />
-                <span>文件</span>
+                <span>{t('procedure_files')}</span>
               </Sidebar.MenuButton>
             </Sidebar.MenuItem>
           </Sidebar.Menu>
@@ -165,21 +166,21 @@
             <Sidebar.MenuItem>
               <Sidebar.MenuButton onclick={() => goTo('/conference')}>
                 <House />
-                <span>首页</span>
+                <span>{t('procedure_home')}</span>
               </Sidebar.MenuButton>
             </Sidebar.MenuItem>
 
             <Sidebar.MenuItem>
               <Sidebar.MenuButton onclick={() => createConferenceDialogOpen.set(true)}>
                 <Plus />
-                <span>创建大会</span>
+                <span>{t('procedure_create_conference')}</span>
               </Sidebar.MenuButton>
             </Sidebar.MenuItem>
 
             <Sidebar.MenuItem>
               <Sidebar.MenuButton onclick={() => joinConferenceDialogOpen.set(true)}>
                 <LogIn />
-                <span>加入大会</span>
+                <span>{t('procedure_join_conference')}</span>
               </Sidebar.MenuButton>
             </Sidebar.MenuItem>
 
@@ -198,7 +199,7 @@
               <div
                 class="px-2 py-3 text-center text-xs text-muted-foreground group-data-[collapsible=icon]:hidden"
               >
-                暂无最近大会
+                {t('procedure_no_recent_conferences')}
               </div>
             {/if}
           </Sidebar.Menu>
@@ -215,7 +216,7 @@
         size="sm"
         class="no-drag px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
         onclick={() => (displayOnlyDialogOpen = true)}
-        title="显示窗口"
+        title={t('procedure_display_window')}
       >
         <Monitor />
       </Button>
@@ -226,7 +227,7 @@
           size="sm"
           class="no-drag px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
           onclick={openModsSettings}
-          title="插件"
+          title={t('procedure_plugins')}
         >
           <Puzzle />
         </Button>

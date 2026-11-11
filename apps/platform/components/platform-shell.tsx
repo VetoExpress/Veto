@@ -1,4 +1,9 @@
 "use client"
+import { message } from "@/i18n/messages"
+import {
+  LanguageSwitcher,
+  usePlatformTranslations,
+} from "@/components/i18n-provider"
 
 import type { ReactNode } from "react"
 import { useEffect, useState } from "react"
@@ -25,11 +30,11 @@ function usePlatformSubtitle(token: string | undefined, signOut: () => void) {
   const conferenceId = routeMatch?.[1]
   const committeeId = routeMatch?.[2]
 
-  const [subtitle, setSubtitle] = useState("Platform")
+  const [subtitle, setSubtitle] = useState("")
 
   useEffect(() => {
     if (!token || !conferenceId || conferenceId === "new") {
-      setSubtitle("Platform")
+      setSubtitle("")
       return
     }
 
@@ -56,7 +61,7 @@ function usePlatformSubtitle(token: string | undefined, signOut: () => void) {
           signOut()
           return
         }
-        setSubtitle("Platform")
+        setSubtitle("")
       })
 
     return () => {
@@ -67,12 +72,16 @@ function usePlatformSubtitle(token: string | undefined, signOut: () => void) {
   return subtitle
 }
 
-export function PlatformLoading({ label = "正在进入 Platform" }) {
+export function PlatformLoading({
+  label = message("platform_entering_platform"),
+}) {
+  const { t, locale } = usePlatformTranslations()
+
   return (
     <main className="grid min-h-svh place-items-center bg-background">
       <div className="flex items-center gap-3 text-sm text-muted-foreground">
         <Loader2 className="animate-spin" aria-hidden="true" />
-        {label}
+        {label.startsWith("platform_") ? t(label) : label}
       </div>
     </main>
   )
@@ -81,12 +90,14 @@ export function PlatformLoading({ label = "正在进入 Platform" }) {
 export function PlatformShell({
   children,
   backHref,
-  backLabel = "返回大会列表",
+  backLabel = message("platform_back_conferences"),
 }: {
   children: ReactNode
   backHref?: string
   backLabel?: string
 }) {
+  const { t, locale } = usePlatformTranslations()
+
   const pathname = usePathname()
   const { token, signOut } = usePlatformAuth()
   const { user } = usePlatformUser(token, signOut)
@@ -104,7 +115,9 @@ export function PlatformShell({
               ? "size-9 shrink-0 rounded-lg"
               : "size-11 shrink-0 rounded-full"
           )}
-          aria-label={backLabel}
+          aria-label={
+            backLabel.startsWith("platform_") ? t(backLabel) : backLabel
+          }
         >
           <ArrowLeft aria-hidden="true" />
         </Link>
@@ -118,14 +131,19 @@ export function PlatformShell({
       )}
       {!isDesktop && (
         <div className="min-w-0 leading-tight">
-          <p className="truncate font-semibold tracking-tight">云Veto</p>
-          <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
+          <p className="truncate font-semibold tracking-tight">
+            {t("platform_brand")}
+          </p>
+          <p className="truncate text-xs text-muted-foreground">
+            {subtitle || t("platform_brand")}
+          </p>
         </div>
       )}
     </div>
   )
   const accountActions = (
     <div className="flex shrink-0 items-center gap-2">
+      <LanguageSwitcher />
       <Link
         href="/account"
         className={cn(
@@ -138,7 +156,11 @@ export function PlatformShell({
             : "h-11 max-w-40 rounded-full pl-1.5",
           onAccountPage ? "shadow-sm" : "hover:bg-muted"
         )}
-        aria-label={user?.name ? `用户 ${user.name}` : "用户中心"}
+        aria-label={
+          user?.name
+            ? t("platform_user_name", { value1: user.name })
+            : t("platform_user_center")
+        }
       >
         <UserAvatar
           name={user?.name ?? "?"}
@@ -148,7 +170,9 @@ export function PlatformShell({
             "bg-muted text-foreground"
           )}
         />
-        <span className="truncate font-medium">{user?.name || "用户"}</span>
+        <span className="truncate font-medium">
+          {user?.name || t("platform_user")}
+        </span>
       </Link>
       <Button
         type="button"
@@ -156,7 +180,7 @@ export function PlatformShell({
         size="icon-lg"
         className={isDesktop ? "size-9 rounded-lg" : "size-11 rounded-full"}
         onClick={signOut}
-        aria-label="退出登录"
+        aria-label={t("platform_logout")}
       >
         <LogOut aria-hidden="true" />
       </Button>

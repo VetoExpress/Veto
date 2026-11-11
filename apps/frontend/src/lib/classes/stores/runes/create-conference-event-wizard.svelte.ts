@@ -6,6 +6,7 @@
 // 本目录（stores/runes/）为 rune 系 store 的约定位置。
 // ============================================================
 import type { Capability, SeatGroupType } from '../../types/delegate'
+import { t } from '$lib/i18n'
 import type { RoleTemplate } from '../../types/event'
 import { createConferenceFromDraft } from '../conference/conference-event-store'
 
@@ -233,7 +234,7 @@ export class ConferenceCreateWizard {
   }
 
   roleName(roleId: string): string {
-    return this.roles.find((role) => role.id === roleId)?.name || '未指定角色'
+    return this.roles.find((role) => role.id === roleId)?.name || t('services_no_role')
   }
 
   isMpcReporterRole(roleId: string): boolean {
@@ -385,12 +386,12 @@ export class ConferenceCreateWizard {
             : this.committees
       })
       if (!eventId) {
-        this.createError = '创建失败，请检查会议和席位配置'
+        this.createError = t('services_create_invalid')
         return null
       }
       return eventId
     } catch {
-      this.createError = '创建失败，请重试'
+      this.createError = t('services_create_failed')
       return null
     } finally {
       this.creating = false

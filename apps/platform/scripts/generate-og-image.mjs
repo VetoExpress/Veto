@@ -39,9 +39,7 @@ const background = Buffer.from(`
 const logo = await sharp(faviconPath).resize(340, 340).png().toBuffer()
 
 await sharp(background)
-  .composite([
-    { input: logo, left: 112, top: 145 },
-  ])
+  .composite([{ input: logo, left: 112, top: 145 }])
   .png()
   .toFile(outPath)
 

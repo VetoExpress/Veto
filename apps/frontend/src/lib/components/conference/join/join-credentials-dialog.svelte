@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { procedureMessage, renderProcedureMessage, type ProcedureMessage } from '$lib/components/conference/common/message'
+  import { t } from '$lib/i18n'
   import { CircleAlert } from '@lucide/svelte'
 
   import {
@@ -35,8 +37,8 @@
 
   let displayName = $state('')
   let password = $state('')
-  let nameError = $state('')
-  let requestError = $state('')
+  let nameError = $state<ProcedureMessage>('')
+  let requestError = $state<ProcedureMessage>('')
   let isSubmitting = $state(false)
 
   function handleOpenChange(value: boolean): void {
@@ -50,12 +52,12 @@
 
     if (isClaimMode) {
       const normalizedName = displayName.trim()
-      nameError = normalizedName ? '' : '请填写姓名'
+      nameError = normalizedName ? '' : procedureMessage('procedure_enter_your_name_2')
       if (nameError) return
     }
 
     if ((isClaimMode || target.hasPassword) && !password) {
-      requestError = '请填写入会密码'
+      requestError = procedureMessage('procedure_enter_joining_password_2')
       return
     }
 
@@ -73,7 +75,7 @@
           })
       onClaimed(result, password || undefined)
     } catch (error) {
-      requestError = error instanceof CloudJoinError ? error.message : '加入大会失败，请重试'
+      requestError = error instanceof CloudJoinError ? error.message : procedureMessage('procedure_failed_to_join_conference_try_again')
     } finally {
       isSubmitting = false
     }
@@ -84,37 +86,37 @@
   <Dialog.Content class="sm:max-w-md" showCloseButton={!isSubmitting}>
     <form onsubmit={handleSubmit} class="contents">
       <Dialog.Header>
-        <Dialog.Title>{isClaimMode ? '填写身份信息' : '验证席位密码'}</Dialog.Title>
+        <Dialog.Title>{isClaimMode ? t('procedure_enter_your_identity') : t('procedure_verify_seat_password')}</Dialog.Title>
         <Dialog.Description>
           {isClaimMode
-            ? `你将以“${target.seatName}”加入${target.committeeName}。`
-            : `该席位已认领，请验证“${target.seatName}”的入会密码。`}
+            ? t('procedure_you_will_join_value_as_value', { value1: target.seatName, value2: target.committeeName })
+            : t('procedure_this_seat_has_been_claimed_verify_the_joining_password_for_value', { value1: target.seatName })}
         </Dialog.Description>
       </Dialog.Header>
 
       <Field.FieldGroup>
         {#if isClaimMode}
           <Field.Field data-invalid={Boolean(nameError)}>
-            <Field.FieldLabel for="join-display-name">姓名</Field.FieldLabel>
+            <Field.FieldLabel for="join-display-name">{t('procedure_name')}</Field.FieldLabel>
             <Input
               id="join-display-name"
               bind:value={displayName}
               maxlength={80}
               autocomplete="name"
-              placeholder="请输入姓名"
+              placeholder={t('procedure_enter_your_name')}
               aria-invalid={Boolean(nameError)}
               disabled={isSubmitting}
               required
             />
             {#if nameError}
-              <Field.FieldError>{nameError}</Field.FieldError>
+              <Field.FieldError>{renderProcedureMessage(nameError)}</Field.FieldError>
             {/if}
           </Field.Field>
         {/if}
 
         <Field.Field>
           <Field.FieldLabel for="join-password">
-            {isClaimMode ? '密码' : '入会密码'}
+            {isClaimMode ? t('procedure_password') : t('procedure_joining_password')}
           </Field.FieldLabel>
           <Input
             id="join-password"
@@ -122,12 +124,12 @@
             bind:value={password}
             maxlength={128}
             autocomplete={isClaimMode ? 'new-password' : 'current-password'}
-            placeholder={isClaimMode ? '为席位设置登录密码' : '请输入入会密码'}
+            placeholder={isClaimMode ? t('procedure_set_a_password_for_this_seat') : t('procedure_enter_joining_password')}
             disabled={isSubmitting}
             required={isClaimMode || target.hasPassword}
           />
           {#if isClaimMode}
-            <Field.FieldDescription>密码将用于后续重新登录该席位。</Field.FieldDescription>
+            <Field.FieldDescription>{t('procedure_this_password_is_used_to_sign_in_to_the_seat_again')}</Field.FieldDescription>
           {/if}
         </Field.Field>
       </Field.FieldGroup>
@@ -135,14 +137,14 @@
       {#if requestError}
         <Alert.Root variant="destructive">
           <CircleAlert />
-          <Alert.Title>无法加入大会</Alert.Title>
-          <Alert.Description>{requestError}</Alert.Description>
+          <Alert.Title>{t('procedure_unable_to_join_conference')}</Alert.Title>
+          <Alert.Description>{renderProcedureMessage(requestError)}</Alert.Description>
         </Alert.Root>
       {/if}
 
       <Dialog.Footer>
         <Button type="button" variant="outline" onclick={onBack} disabled={isSubmitting}>
-          返回
+          {t('procedure_back')}
         </Button>
         <Button
           type="submit"
@@ -151,10 +153,10 @@
             ((isClaimMode || target.hasPassword) && !password)}
         >
           {#if isSubmitting}
-            <Spinner data-icon="inline-start" aria-label="正在加入" />
-            正在加入
+            <Spinner data-icon="inline-start" aria-label={t('procedure_joining')} />
+            {t('procedure_joining')}
           {:else}
-            继续
+            {t('procedure_continue_2')}
           {/if}
         </Button>
       </Dialog.Footer>

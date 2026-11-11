@@ -1,3 +1,7 @@
+"use client"
+
+import { message } from "@/i18n/messages"
+import { usePlatformTranslations } from "@/components/i18n-provider"
 import type { JSX } from "react"
 import type { LucideIcon } from "lucide-react"
 
@@ -16,6 +20,8 @@ export function ConferenceWorkspacePlaceholder({
   description,
   items,
 }: ConferenceWorkspacePlaceholderProps): JSX.Element {
+  const { t, locale } = usePlatformTranslations()
+
   return (
     <section
       aria-labelledby={`workspace-${title}`}
@@ -27,7 +33,7 @@ export function ConferenceWorkspacePlaceholder({
             <Icon className="size-5" aria-hidden="true" />
           </span>
           <div className="min-w-0">
-            <Badge variant="outline">待接入</Badge>
+            <Badge variant="outline">{t("platform_coming_soon")}</Badge>
             <h2
               id={`workspace-${title}`}
               className="mt-2 text-xl font-semibold tracking-tight"

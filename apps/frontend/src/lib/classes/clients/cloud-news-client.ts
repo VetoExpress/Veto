@@ -1,4 +1,5 @@
 import type { News } from '../../../../../shared/content-types'
+import { t, getLocale } from '$lib/i18n'
 
 const apiBase = (import.meta.env.VITE_CLOUD_API_URL ?? 'https://api.miaoyww.top/v1').replace(/\/$/, '')
 
@@ -14,15 +15,16 @@ async function request<T>(token: string, path: string, init: RequestInit = {}): 
   try {
     const headers = new Headers(init.headers)
     headers.set('Authorization', `Bearer ${token}`)
+    headers.set('Accept-Language', getLocale())
     if (init.body) headers.set('Content-Type', 'application/json')
     response = await fetch(new URL(path.replace(/^\//, ''), `${apiBase}/`), { ...init, headers })
   } catch {
-    throw new CloudNewsError('无法连接云端服务')
+    throw new CloudNewsError(t('services_cloud_unavailable'))
   }
   const payload = (await response.json().catch(() => null)) as T | { error?: { message?: string } } | null
   if (!response.ok) {
     const message = payload && typeof payload === 'object' && 'error' in payload ? payload.error?.message : undefined
-    throw new CloudNewsError(message ?? '新闻请求失败', response.status)
+    throw new CloudNewsError(message ?? t('services_news_failed'), response.status)
   }
   return payload as T
 }

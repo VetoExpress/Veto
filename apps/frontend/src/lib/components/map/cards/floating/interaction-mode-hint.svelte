@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import { MapPin, Navigation, X, Target, Ruler, Crosshair } from '@lucide/svelte'
   import * as Kbd from '$lib/components/ui/kbd/index.js'
   import { Button } from '$lib/components/ui/button/index.js'
@@ -22,31 +23,30 @@
     <div class="veto-popup flex items-center gap-3 px-4 py-2.5">
       {#if $interactionMode === 'place'}
         <MapPin class="h-4 w-4 text-stone-600 dark:text-stone-400" />
-        <span class="text-sm text-stone-700 dark:text-stone-300">点击地图放置单位</span>
+        <span class="text-sm text-stone-700 dark:text-stone-300">{t('components_place_hint')}</span>
       {:else if $interactionMode === 'route'}
         <Navigation class="h-4 w-4 text-stone-600 dark:text-stone-400" />
         <span class="text-sm text-stone-700 dark:text-stone-300">
           {#if $routeInsertMode}
-            路线插入模式 · 在选中节点后插入 · Esc 完成并应用
+            {t('components_route_insert_hint')}
           {:else if $pendingRoute}
-            {$pendingRoute.type === 'reset' ? '改设路线' : '追加路线'}模式 · 已录入 {$pendingRoute
-              .points.length} 个节点 · Esc 完成并应用
+            {t('components_pending_route_hint', { mode: $pendingRoute.type, count: $pendingRoute.points.length })}
           {:else}
-            路线绘制模式（直接生效）· Esc 完成
+            {t('components_route_direct_hint')}
           {/if}
         </span>
       {:else if $interactionMode === 'strike'}
         <Target class="h-4 w-4 text-stone-600 dark:text-stone-400" />
         <span class="text-sm text-stone-700 dark:text-stone-300">
-          {strikePendingTarget ? '再次点击地图确认打击半径' : '点击地图选择打击目标位置'}
+          {strikePendingTarget ? t('components_confirm_strike_radius') : t('components_select_strike_target')}
         </span>
       {:else if $interactionMode === 'measure'}
         <Ruler class="h-4 w-4 text-amber-500" />
-        <span class="text-sm text-stone-700 dark:text-stone-300">点击添加测量点 · Esc 退出</span>
+        <span class="text-sm text-stone-700 dark:text-stone-300">{t('components_measure_hint')}</span>
       {:else if $interactionMode === 'attack'}
         <Crosshair class="h-4 w-4 text-rose-500" />
         <span class="text-sm text-stone-700 dark:text-stone-300"
-          >点击敌方单位指定攻击目标 · Esc 取消</span
+          >{t('components_attack_hint')}</span
         >
       {/if}
       <div class="mx-1 h-4 w-px bg-stone-200 dark:bg-stone-700"></div>
@@ -60,7 +60,7 @@
         }}
       >
         <X class="h-3 w-3" />
-        取消
+        {t('components_cancel')}
         <Kbd.Root class="ml-0.5 text-[10px]">Esc</Kbd.Root>
       </Button>
     </div>

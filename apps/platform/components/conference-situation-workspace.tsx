@@ -1,4 +1,7 @@
 "use client"
+import { message } from "@/i18n/messages"
+import { usePlatformTranslations } from "@/components/i18n-provider"
+import type { Locale } from "@vetoexpress/i18n"
 
 import { useCallback, useEffect, useState } from "react"
 import { Clock3, Loader2, Play, RefreshCw, RotateCcw } from "lucide-react"
@@ -35,8 +38,8 @@ function fromChinaInput(value: string): number {
   return Date.parse(`${value}:00+08:00`)
 }
 
-function formatTime(value: number): string {
-  return new Intl.DateTimeFormat("zh-CN", {
+function formatTime(value: number, locale: Locale): string {
+  return new Intl.DateTimeFormat(locale, {
     timeZone: "Asia/Shanghai",
     dateStyle: "medium",
     timeStyle: "short",
@@ -51,14 +54,22 @@ export function ConferenceSituationWorkspace({
   onConferenceChange,
   onError,
 }: Props) {
-  const [useTimeline, setUseTimeline] = useState(conference.timelineMode !== "none")
-  const [timelineName, setTimelineName] = useState(conference.timeline?.name ?? "大会时间线")
+  const { t, locale } = usePlatformTranslations()
+
+  const [useTimeline, setUseTimeline] = useState(
+    conference.timelineMode !== "none"
+  )
+  const [timelineName, setTimelineName] = useState(
+    conference.timeline?.name ?? "大会时间线"
+  )
   const [initialTime, setInitialTime] = useState(
     toLocalInput(conference.timeline?.initialSimTime ?? Date.now())
   )
   const [ratio, setRatio] = useState(String(conference.timeline?.ratio ?? 1))
   const [situations, setSituations] = useState<OrganizerSituation[]>([])
-  const [busy, setBusy] = useState<"runtime" | "activate" | "load" | "withdraw">()
+  const [busy, setBusy] = useState<
+    "runtime" | "activate" | "load" | "withdraw"
+  >()
 
   const loadSituations = useCallback(async () => {
     if (settingsOnly || conference.lifecycle === "draft") return
@@ -67,7 +78,7 @@ export function ConferenceSituationWorkspace({
       const result = await listOrganizerSituations(token, conference.id, true)
       setSituations(result.situations)
     } catch (error) {
-      onError(error, "加载局势失败")
+      onError(error, message("platform_load_situations_failed"))
     } finally {
       setBusy(undefined)
     }
@@ -79,11 +90,22 @@ export function ConferenceSituationWorkspace({
 
   async function saveRuntime(): Promise<void> {
     const numericRatio = Number(ratio)
-    const initialSimTime = conference.timeline && initialTime === toLocalInput(conference.timeline.initialSimTime)
-      ? conference.timeline.initialSimTime
-      : fromChinaInput(initialTime)
-    if (useTimeline && (!timelineName.trim() || !Number.isSafeInteger(numericRatio) || numericRatio <= 0 || !Number.isSafeInteger(initialSimTime))) {
-      onError(new Error("时间线名称不能为空，倍率必须是正整数"), "时间线配置无效")
+    const initialSimTime =
+      conference.timeline &&
+      initialTime === toLocalInput(conference.timeline.initialSimTime)
+        ? conference.timeline.initialSimTime
+        : fromChinaInput(initialTime)
+    if (
+      useTimeline &&
+      (!timelineName.trim() ||
+        !Number.isSafeInteger(numericRatio) ||
+        numericRatio <= 0 ||
+        !Number.isSafeInteger(initialSimTime))
+    ) {
+      onError(
+        new Error("platform_timeline_validation"),
+        "platform_invalid_timeline"
+      )
       return
     }
     setBusy("runtime")
@@ -102,7 +124,7 @@ export function ConferenceSituationWorkspace({
       )
       onConferenceChange(next)
     } catch (error) {
-      onError(error, "保存时间配置失败")
+      onError(error, "platform_save_runtime_failed")
     } finally {
       setBusy(undefined)
     }
@@ -111,24 +133,28 @@ export function ConferenceSituationWorkspace({
   async function activate(): Promise<void> {
     setBusy("activate")
     try {
-      const next = await activateConference(token, conference.id, conference.version)
+      const next = await activateConference(
+        token,
+        conference.id,
+        conference.version
+      )
       onConferenceChange(next)
     } catch (error) {
-      onError(error, "激活大会失败")
+      onError(error, "platform_activate_failed")
     } finally {
       setBusy(undefined)
     }
   }
 
   async function withdraw(item: OrganizerSituation): Promise<void> {
-    const reason = window.prompt("请输入撤回原因")?.trim()
+    const reason = window.prompt(t("platform_withdraw_reason_prompt"))?.trim()
     if (!reason) return
     setBusy("withdraw")
     try {
       await withdrawOrganizerSituation(token, conference.id, item.id, reason)
       await loadSituations()
     } catch (error) {
-      onError(error, "撤回局势失败")
+      onError(error, "platform_withdraw_situation_failed")
     } finally {
       setBusy(undefined)
     }
@@ -138,33 +164,105 @@ export function ConferenceSituationWorkspace({
     return (
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
         <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2"><Clock3 />大会时间</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock3 />
+              {t("platform_conference_time")}
+            </CardTitle>
+          </CardHeader>
           <CardContent className="space-y-5">
             <div className="flex gap-2">
-              <Button type="button" variant={useTimeline ? "default" : "outline"} onClick={() => setUseTimeline(true)}>使用 Timeline</Button>
-              <Button type="button" variant={!useTimeline ? "default" : "outline"} onClick={() => setUseTimeline(false)}>手动填写内容时间</Button>
+              <Button
+                type="button"
+                variant={useTimeline ? "default" : "outline"}
+                onClick={() => setUseTimeline(true)}
+              >
+                {t("platform_use_timeline")}
+              </Button>
+              <Button
+                type="button"
+                variant={!useTimeline ? "default" : "outline"}
+                onClick={() => setUseTimeline(false)}
+              >
+                {t("platform_manual_content_time")}
+              </Button>
             </div>
             {useTimeline ? (
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2 sm:col-span-2"><Label htmlFor="timeline-name">名称</Label><Input id="timeline-name" value={timelineName} onChange={(event) => setTimelineName(event.target.value)} /></div>
-                <div className="space-y-2"><Label htmlFor="timeline-start">起始时间（UTC+8）</Label><Input id="timeline-start" type="datetime-local" value={initialTime} onChange={(event) => setInitialTime(event.target.value)} /></div>
-                <div className="space-y-2"><Label htmlFor="timeline-ratio">默认倍率</Label><Input id="timeline-ratio" type="number" min={1} step={1} value={ratio} onChange={(event) => setRatio(event.target.value)} /></div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="timeline-name">
+                    {t("platform_display_name")}
+                  </Label>
+                  <Input
+                    id="timeline-name"
+                    value={timelineName}
+                    onChange={(event) => setTimelineName(event.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="timeline-start">
+                    {t("platform_initial_time")}
+                  </Label>
+                  <Input
+                    id="timeline-start"
+                    type="datetime-local"
+                    value={initialTime}
+                    onChange={(event) => setInitialTime(event.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="timeline-ratio">
+                    {t("platform_default_ratio")}
+                  </Label>
+                  <Input
+                    id="timeline-ratio"
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={ratio}
+                    onChange={(event) => setRatio(event.target.value)}
+                  />
+                </div>
               </div>
             ) : (
-              <p className="rounded-xl bg-muted p-4 text-sm text-muted-foreground">新闻和局势的创建者将手动填写 ContentTime。</p>
+              <p className="rounded-xl bg-muted p-4 text-sm text-muted-foreground">
+                {t("platform_manual_content_time_hint")}
+              </p>
             )}
-            <Button disabled={Boolean(busy)} onClick={() => void saveRuntime()}>{busy === "runtime" && <Loader2 className="animate-spin" />}保存时间配置</Button>
+            <Button disabled={Boolean(busy)} onClick={() => void saveRuntime()}>
+              {busy === "runtime" && <Loader2 className="animate-spin" />}
+              {t("platform_save_runtime")}
+            </Button>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle>激活大会</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>{t("platform_activate")}</CardTitle>
+          </CardHeader>
           <CardContent className="space-y-4 text-sm text-muted-foreground">
-            <p>激活后不能更改是否使用 Timeline；现有 Timeline 的设置仍可修改。</p>
-            <p>默认时区：Asia/Shanghai（UTC+8）</p>
-            {conference.timelineMode === "undecided" ? <p>请先保存时间配置。</p> : null}
-            {hasUnsavedStructure ? <p>请先保存大会结构。</p> : null}
-            <Button className="w-full" disabled={conference.timelineMode === "undecided" || hasUnsavedStructure || Boolean(busy)} onClick={() => void activate()}>
-              {busy === "activate" ? <Loader2 className="animate-spin" /> : <Play />}激活大会
+            <p>{t("platform_timeline_activation_hint")}</p>
+            <p>{t("platform_default_timezone")}</p>
+            {conference.timelineMode === "undecided" ? (
+              <p>{t("platform_save_runtime_first")}</p>
+            ) : null}
+            {hasUnsavedStructure ? (
+              <p>{t("platform_save_structure_first")}</p>
+            ) : null}
+            <Button
+              className="w-full"
+              disabled={
+                conference.timelineMode === "undecided" ||
+                hasUnsavedStructure ||
+                Boolean(busy)
+              }
+              onClick={() => void activate()}
+            >
+              {busy === "activate" ? (
+                <Loader2 className="animate-spin" />
+              ) : (
+                <Play />
+              )}
+              {t("platform_activate")}
             </Button>
           </CardContent>
         </Card>
@@ -174,19 +272,66 @@ export function ConferenceSituationWorkspace({
 
   if (settingsOnly) {
     if (conference.timelineMode !== "configured" || !conference.timeline) {
-      return <Card><CardContent className="py-6 text-sm text-muted-foreground">此大会未使用 Timeline；激活后不能再新增。</CardContent></Card>
+      return (
+        <Card>
+          <CardContent className="py-6 text-sm text-muted-foreground">
+            {t("platform_no_timeline_active")}
+          </CardContent>
+        </Card>
+      )
     }
     return (
       <Card>
-        <CardHeader><CardTitle className="flex items-center gap-2"><Clock3 />修改 Timeline</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock3 />
+            {t("platform_edit_timeline")}
+          </CardTitle>
+        </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2 sm:col-span-2"><Label htmlFor="active-timeline-name">名称</Label><Input id="active-timeline-name" value={timelineName} onChange={(event) => setTimelineName(event.target.value)} /></div>
-            <div className="space-y-2"><Label htmlFor="active-timeline-start">起始时间（UTC+8）</Label><Input id="active-timeline-start" type="datetime-local" value={initialTime} onChange={(event) => setInitialTime(event.target.value)} /></div>
-            <div className="space-y-2"><Label htmlFor="active-timeline-ratio">倍率</Label><Input id="active-timeline-ratio" type="number" min={1} step={1} value={ratio} onChange={(event) => setRatio(event.target.value)} /></div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="active-timeline-name">
+                {t("platform_display_name")}
+              </Label>
+              <Input
+                id="active-timeline-name"
+                value={timelineName}
+                onChange={(event) => setTimelineName(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="active-timeline-start">
+                {t("platform_initial_time")}
+              </Label>
+              <Input
+                id="active-timeline-start"
+                type="datetime-local"
+                value={initialTime}
+                onChange={(event) => setInitialTime(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="active-timeline-ratio">
+                {t("platform_ratio")}
+              </Label>
+              <Input
+                id="active-timeline-ratio"
+                type="number"
+                min={1}
+                step={1}
+                value={ratio}
+                onChange={(event) => setRatio(event.target.value)}
+              />
+            </div>
           </div>
-          <p className="text-sm text-muted-foreground">修改起始时间会将当前模拟时间跳转到新时间；修改倍率立即生效。</p>
-          <Button disabled={Boolean(busy)} onClick={() => void saveRuntime()}>{busy === "runtime" && <Loader2 className="animate-spin" />}保存 Timeline</Button>
+          <p className="text-sm text-muted-foreground">
+            {t("platform_timeline_edit_hint")}
+          </p>
+          <Button disabled={Boolean(busy)} onClick={() => void saveRuntime()}>
+            {busy === "runtime" && <Loader2 className="animate-spin" />}
+            {t("platform_save_timeline")}
+          </Button>
         </CardContent>
       </Card>
     )
@@ -195,22 +340,82 @@ export function ConferenceSituationWorkspace({
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
-        <div><h2 className="font-semibold">局势管理</h2><p className="text-sm text-muted-foreground">组织者只能查看和附原因撤回，不能代发或修改。</p></div>
-        <Button variant="outline" disabled={busy === "load"} onClick={() => void loadSituations()}><RefreshCw className={busy === "load" ? "animate-spin" : ""} />刷新</Button>
+        <div>
+          <h2 className="font-semibold">
+            {t("platform_situation_management")}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {t("platform_situations_intro")}
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          disabled={busy === "load"}
+          onClick={() => void loadSituations()}
+        >
+          <RefreshCw className={busy === "load" ? "animate-spin" : ""} />
+          {t("platform_refresh")}
+        </Button>
       </div>
       {situations.length === 0 ? (
-        <Card><CardContent className="py-12 text-center text-muted-foreground">暂无局势记录</CardContent></Card>
-      ) : situations.map((item) => (
-        <Card key={item.id}>
-          <CardHeader>
-            <div className="flex items-start justify-between gap-4">
-              <div><CardTitle className="font-mono text-base">{formatTime(item.contentTime)}</CardTitle><p className="mt-1 text-sm text-muted-foreground">{item.author.committeeName} · {item.author.seatName}{item.author.role ? ` · ${item.author.role}` : ""}</p></div>
-              <div className="flex items-center gap-2"><Badge variant={item.status === "published" ? "default" : "secondary"}>{item.status === "published" ? "已发布" : "已撤回"}</Badge>{conference.lifecycle === "active" && item.status === "published" && <Button variant="destructive" size="sm" disabled={busy === "withdraw"} onClick={() => void withdraw(item)}><RotateCcw />撤回</Button>}</div>
-            </div>
-          </CardHeader>
-          <CardContent><div className="whitespace-pre-wrap text-sm leading-7">{item.content}</div>{item.withdrawalReason && <p className="mt-4 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">撤回原因：{item.withdrawalReason}</p>}</CardContent>
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            {t("platform_no_situations")}
+          </CardContent>
         </Card>
-      ))}
+      ) : (
+        situations.map((item) => (
+          <Card key={item.id}>
+            <CardHeader>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <CardTitle className="font-mono text-base">
+                    {formatTime(item.contentTime, locale)}
+                  </CardTitle>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {item.author.committeeName} · {item.author.seatName}
+                    {item.author.role ? ` · ${item.author.role}` : ""}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant={
+                      item.status === "published" ? "default" : "secondary"
+                    }
+                  >
+                    {item.status === "published"
+                      ? t("platform_published")
+                      : t("platform_withdrawn")}
+                  </Badge>
+                  {conference.lifecycle === "active" &&
+                    item.status === "published" && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        disabled={busy === "withdraw"}
+                        onClick={() => void withdraw(item)}
+                      >
+                        <RotateCcw />
+                        {t("platform_withdraw")}
+                      </Button>
+                    )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-sm leading-7 whitespace-pre-wrap">
+                {item.content}
+              </div>
+              {item.withdrawalReason && (
+                <p className="mt-4 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                  {t("platform_withdrawal_reason_prefix")}
+                  {item.withdrawalReason}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        ))
+      )}
     </section>
   )
 }

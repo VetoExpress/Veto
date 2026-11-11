@@ -8,21 +8,16 @@
 import { ipcMain, BrowserWindow } from 'electron'
 import { join } from 'path'
 import * as fs from 'fs'
-import {
-  getPluginsDir,
-  type PluginInstance,
-} from '../plugin-discovery'
-import {
-  enablePlugin,
-  disablePlugin,
-} from '../plugin-store'
+import { getPluginsDir, type PluginInstance } from '../plugin-discovery'
+import { enablePlugin, disablePlugin } from '../plugin-store'
 import { createLogger } from '../logger'
+import { t } from '../i18n'
 
 const log = createLogger('IpcPlugins')
 
 export function registerPluginsIpc(
   pluginInstances: PluginInstance[],
-  refreshPlugins: () => void,
+  refreshPlugins: () => void
 ): void {
   // ── 插件列表 ──────────────────────────────────────────────────
   ipcMain.handle('veto:plugins:list', () => {
@@ -44,7 +39,7 @@ export function registerPluginsIpc(
       hasI18n: !!p.path.i18n,
       hasAssets: !!p.path.assets,
       hasSeats: !!p.path.seats,
-      hasService: !!p.path.service,
+      hasService: !!p.path.service
     }))
   })
 
@@ -135,7 +130,7 @@ export function registerPluginsIpc(
       manifest: plugin.manifest,
       campaignFiles,
       seats,
-      hasService: !!plugin.path.service,
+      hasService: !!plugin.path.service
     }
   })
 
@@ -194,7 +189,7 @@ export function registerPluginsIpc(
   ipcMain.handle('veto:plugins:uninstall', async (_event, pluginId: string) => {
     const plugin = pluginInstances.find((p) => p.manifest.id === pluginId)
     if (!plugin) {
-      return { success: false, error: 'Plugin not found' }
+      return { success: false, error: t('electron_plugin_not_found') }
     }
 
     try {
@@ -223,10 +218,10 @@ export function registerPluginsIpc(
         i18n: Record<string, string>
         assets: Array<{ path: string; data: string; mimeType: string }>
         seats?: string | null
-      },
+      }
     ) => {
       const pluginId = payload.manifest.id as string
-      if (!pluginId) return { success: false, error: 'Missing plugin id' }
+      if (!pluginId) return { success: false, error: t('electron_plugin_id_missing') }
 
       try {
         const pluginsDir = getPluginsDir()
@@ -241,7 +236,7 @@ export function registerPluginsIpc(
         fs.writeFileSync(
           join(pluginDir, 'manifest.json'),
           JSON.stringify(payload.manifest, null, 2),
-          'utf-8',
+          'utf-8'
         )
 
         // 写入 definitions.json
@@ -279,7 +274,7 @@ export function registerPluginsIpc(
         for (const win of BrowserWindow.getAllWindows()) {
           win.webContents.send('veto:event', {
             event: 'plugins:changed',
-            data: { pluginId },
+            data: { pluginId }
           })
         }
 
@@ -289,6 +284,6 @@ export function registerPluginsIpc(
         log.error(`Failed to install plugin ${pluginId}:`, err)
         return { success: false, error: String(err) }
       }
-    },
+    }
   )
 }

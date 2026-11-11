@@ -1,3 +1,5 @@
+import { platformTranslate } from "@/i18n/messages"
+import { defaultLocale, type Locale } from "@vetoexpress/i18n"
 export const FILE_RETENTION_MS = 72 * 60 * 60 * 1000
 
 // The editor uses an explicit UTC+8 timezone, independent of the device timezone.
@@ -11,23 +13,33 @@ export function scheduleInstant(value: string): string | null {
   return value ? new Date(`${value}+08:00`).toISOString() : null
 }
 
-export function scheduleError(start: string, end: string): string {
-  if (!start) return "请选择开始时间"
-  if (!end) return "请选择结束时间"
+export function scheduleError(
+  start: string,
+  end: string,
+  locale: Locale = defaultLocale
+): string {
+  const message = (key: string) => platformTranslate(key, {}, locale)
+  if (!start) return message("platform_select_start")
+  if (!end) return message("platform_select_end")
   const a = start ? Date.parse(`${start}+08:00`) : null
   const b = end ? Date.parse(`${end}+08:00`) : null
   if (
     (a !== null && !Number.isFinite(a)) ||
     (b !== null && !Number.isFinite(b))
   )
-    return "请输入有效的会议时间"
-  return a !== null && b !== null && b <= a ? "结束时间必须晚于开始时间" : ""
+    return message("platform_invalid_schedule")
+  return a !== null && b !== null && b <= a
+    ? message("platform_end_after_start")
+    : ""
 }
 
-export function formatSchedule(value?: string | null): string {
-  if (!value) return "未设置"
+export function formatSchedule(
+  value?: string | null,
+  locale: Locale = defaultLocale
+): string {
+  if (!value) return platformTranslate("platform_not_set", {}, locale)
   return (
-    new Intl.DateTimeFormat("zh-CN", {
+    new Intl.DateTimeFormat(locale, {
       timeZone: "Asia/Shanghai",
       year: "numeric",
       month: "2-digit",
@@ -36,7 +48,7 @@ export function formatSchedule(value?: string | null): string {
       minute: "2-digit",
       second: "2-digit",
       hour12: false,
-    }).format(new Date(value)) + "（UTC+8）"
+    }).format(new Date(value)) + (locale === "zh-CN" ? "（UTC+8）" : " (UTC+8)")
   )
 }
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, getLocale } from '$lib/i18n'
   import { currentBattle, selectedPlacedUnitId } from '$lib/classes/stores/battle/battle-store'
   import { mapFlyTo } from '$lib/classes/stores/battle/map-store'
   import type { ActionLogEntry, MessageCategory } from '$lib/classes/types/battle'
@@ -9,13 +10,13 @@
 
   let collapsed = $state(true)
 
-  const CATEGORIES: Array<{ key: MessageCategory | 'all'; label: string }> = [
-    { key: 'all', label: '全部' },
-    { key: 'combat', label: '战斗' },
-    { key: 'movement', label: '移动' },
-    { key: 'system', label: '系统' },
-    { key: 'event', label: '事件' }
-  ]
+  const CATEGORIES: Array<{ key: MessageCategory | 'all'; label: string }> = $derived([
+    { key: 'all', label: t('components_all') },
+    { key: 'combat', label: t('components_combat') },
+    { key: 'movement', label: t('components_movement') },
+    { key: 'system', label: t('components_system') },
+    { key: 'event', label: t('components_event') }
+  ])
 
   let activeFilter = $state<MessageCategory | 'all'>('all')
 
@@ -35,7 +36,7 @@
 
   function formatTime(ts: number): string {
     const d = new Date(ts)
-    return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    return d.toLocaleTimeString(getLocale(), { hour: '2-digit', minute: '2-digit', second: '2-digit' })
   }
 
   let filteredLogs = $derived(
@@ -78,7 +79,7 @@
       class="flex w-full items-center gap-2 rounded-t-lg border border-border bg-card/95 px-3 py-1.5 text-xs font-medium backdrop-blur"
       onclick={() => (collapsed = false)}
     >
-      <span>消息日志</span>
+      <span>{t('components_message_log')}</span>
       {#if combatCount > 0}
         <Badge variant="outline" class="border-rose-500/30 bg-rose-500/10 px-1.5 text-[10px] text-rose-400">
           {combatCount}
@@ -90,7 +91,7 @@
     <div class="flex h-60 flex-col rounded-t-lg border border-border bg-card/95 backdrop-blur">
       <!-- 标题栏 + 过滤栏 合并为一行 -->
       <div class="flex items-center gap-2 px-3 py-1.5">
-        <span class="text-xs font-medium text-foreground">消息日志</span>
+        <span class="text-xs font-medium text-foreground">{t('components_message_log')}</span>
         <div class="flex gap-0.5">
           {#each CATEGORIES as cat (cat.key)}
             <button
@@ -108,6 +109,7 @@
           size="icon"
           class="ml-auto size-5 text-muted-foreground hover:text-foreground"
           onclick={() => (collapsed = true)}
+          aria-label={t('components_collapse_logs')}
         >
           <ChevronDown class="size-3.5" />
         </Button>
@@ -116,7 +118,7 @@
       <!-- 日志列表 -->
       <div class="flex-1 overflow-y-auto border-t border-border">
         {#if filteredLogs.length === 0}
-          <p class="px-3 py-4 text-center text-[11px] text-muted-foreground">暂无日志</p>
+          <p class="px-3 py-4 text-center text-[11px] text-muted-foreground">{t('components_no_logs')}</p>
         {:else}
           {#each filteredLogs as entry (entry.id)}
             <button

@@ -1,5 +1,6 @@
 <!-- Hallmark · component scope · inherited workbench theme · pre-emit critique: P4 H4 E4 S4 R5 V4 -->
 <script lang="ts">
+  import { t, getLocale } from '$lib/i18n'
   import { onMount } from 'svelte'
   import { Clock3, Timer, Plus, Check, Copy, X } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
@@ -36,7 +37,7 @@
   )
 
   function formatCloudTime(ts: number, short = false): string {
-    return new Intl.DateTimeFormat('zh-CN', {
+    return new Intl.DateTimeFormat(getLocale(), {
       timeZone: cloudTimezone,
       ...(!short ? { year: 'numeric' as const } : {}),
       month: '2-digit',
@@ -80,13 +81,7 @@
   })
 
   function formatSimTime(ts: number): string {
-    const d = new Date(ts)
-    const yyyy = d.getFullYear()
-    const mm = String(d.getMonth() + 1).padStart(2, '0')
-    const dd = String(d.getDate()).padStart(2, '0')
-    const hh = String(d.getHours()).padStart(2, '0')
-    const min = String(d.getMinutes()).padStart(2, '0')
-    return `${yyyy}-${mm}-${dd} ${hh}:${min}`
+    return new Intl.DateTimeFormat(getLocale(), { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).format(ts)
   }
 
   let copied = $state(false)
@@ -130,26 +125,26 @@
         {#if cloudTimeline && cloudTime !== null}
           <Clock3 class="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
           <span class="hidden max-w-24 truncate text-muted-foreground lg:inline" title={cloudTimeline.name}>{cloudTimeline.name}</span>
-          <span class="whitespace-nowrap font-mono font-medium tabular-nums" title={`${cloudTimeline.name} · ${cloudTimeline.paused ? '已暂停' : `${cloudTimeline.ratio}x 运行中`}`}>
+          <span class="whitespace-nowrap font-mono font-medium tabular-nums" title={`${cloudTimeline.name} · ${cloudTimeline.paused ? t('components_paused') : t('components_ratio_running', { ratio: cloudTimeline.ratio })}`}>
             <span class="sm:hidden">{formatCloudTime(cloudTime, true)}</span>
             <span class="hidden sm:inline">{formatCloudTime(cloudTime)}</span>
           </span>
           <span class="hidden whitespace-nowrap text-muted-foreground lg:inline">
-            {cloudTimeline.paused ? '暂停' : `${cloudTimeline.ratio}x`}
+            {cloudTimeline.paused ? t('components_pause') : `${cloudTimeline.ratio}x`}
           </span>
           <Button
             variant="ghost"
             size="icon-xs"
             class="size-5 text-muted-foreground hover:bg-accent hover:text-foreground"
-            title="复制模拟时间"
-            aria-label="复制模拟时间"
+            title={t('components_copy_sim_time')}
+            aria-label={t('components_copy_sim_time')}
             onclick={copySimTime}
           >
             {#if copied}<Check size={11} />{:else}<Copy size={11} />{/if}
           </Button>
         {:else}
           <Clock3 class="size-3.5 text-muted-foreground" aria-hidden="true" />
-          <span class="whitespace-nowrap text-muted-foreground">未配置时间线</span>
+          <span class="whitespace-nowrap text-muted-foreground">{t('components_no_timeline')}</span>
         {/if}
       {:else}
       {#if $standaloneTimer}
@@ -165,10 +160,10 @@
               : 'text-muted-foreground'}"
           onclick={() => timerDialogOpen.set(true)}
           title={expired
-            ? '计时器已到期（点击打开）'
+            ? t('components_timer_expired_open')
             : st.isRunning
-              ? '计时器运行中（点击打开）'
-              : '计时器已暂停（点击打开）'}
+              ? t('components_timer_running_open')
+              : t('components_timer_paused_open')}
         >
           <Timer size={12} class={expired ? 'animate-pulse' : ''} />
           <span>{formatTime(st.remainingSec)}</span>
@@ -185,7 +180,7 @@
             variant="ghost"
             size="icon-xs"
             class="size-5 text-muted-foreground hover:bg-accent hover:text-foreground"
-            title="复制模拟时间"
+            title={t('components_copy_sim_time')}
             onclick={copySimTime}
           >
             {#if copied}
@@ -198,7 +193,7 @@
             variant="ghost"
             size="icon-xs"
             class="size-5 text-muted-foreground hover:bg-accent hover:text-destructive"
-            title="解除绑定"
+            title={t('components_unbind')}
             onclick={handleUnbind}
           >
             <X size={11} />
@@ -215,15 +210,15 @@
                 {...props}
               >
                 <Plus size={11} />
-                <span>绑定时间线</span>
+                <span>{t('components_bind_timeline')}</span>
               </Button>
             {/snippet}
           </Popover.Trigger>
           <Popover.Content class="w-[200px] p-0">
             <Command.Root>
-              <Command.Input placeholder="搜索..." />
+              <Command.Input placeholder={t('components_search')} />
               <Command.List>
-                <Command.Empty>无匹配结果</Command.Empty>
+                <Command.Empty>{t('components_no_matches')}</Command.Empty>
                 <Command.Group>
                   {#each timelineItems as item (item.value)}
                     <Command.Item value={item.value} onSelect={() => handleBind(item.value)}>

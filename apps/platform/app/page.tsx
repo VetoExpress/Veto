@@ -1,6 +1,8 @@
 "use client"
+import { message } from "@/i18n/messages"
+import { usePlatformTranslations } from "@/components/i18n-provider"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { ArchiveRestore, Cloud, Loader2, Plus, RotateCw } from "lucide-react"
 import Link from "next/link"
 
@@ -17,13 +19,18 @@ import {
 import { usePlatformAuth } from "@/lib/use-platform-auth"
 import { cn } from "@/lib/utils"
 
-const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
-  year: "numeric",
-  month: "short",
-  day: "numeric",
-})
-
 export default function PlatformHome() {
+  const { t, locale } = usePlatformTranslations()
+  const dateFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat(locale, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      }),
+    [locale]
+  )
+
   const { token, isReady, signOut } = usePlatformAuth()
   const [conferences, setConferences] = useState<ConferenceSummary[]>([])
   const [deletedConferences, setDeletedConferences] = useState<
@@ -41,7 +48,11 @@ export default function PlatformHome() {
         signOut()
         return
       }
-      setError(caught instanceof Error ? caught.message : "加载大会失败")
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : message("platform_load_conference_failed")
+      )
     },
     [signOut]
   )
@@ -115,10 +126,10 @@ export default function PlatformHome() {
               id="conference-list"
               className="text-lg font-semibold tracking-tight"
             >
-              我管理的大会
+              {t("platform_my_conferences")}
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              按最近更新时间排序。
+              {t("platform_recently_updated_order")}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -130,7 +141,7 @@ export default function PlatformHome() {
               )}
             >
               <Plus data-icon="inline-start" aria-hidden="true" />
-              创建云端大会
+              {t("platform_create_cloud_conference")}
             </Link>
             <Button
               type="button"
@@ -160,7 +171,7 @@ export default function PlatformHome() {
             <CardContent className="grid flex-1 place-items-center">
               <Loader2
                 className="animate-spin text-muted-foreground"
-                aria-label="正在加载大会"
+                aria-label={t("platform_loading_conference")}
               />
             </CardContent>
           </Card>
@@ -172,9 +183,11 @@ export default function PlatformHome() {
                   <Cloud className="size-5" aria-hidden="true" />
                 </span>
                 <CardHeader className="w-full justify-items-center text-center">
-                  <CardTitle className="text-lg">还没有云端大会</CardTitle>
+                  <CardTitle className="text-lg">
+                    {t("platform_no_cloud_conferences")}
+                  </CardTitle>
                   <p className="mt-1 max-w-xs text-sm text-muted-foreground">
-                    创建大会后，它会出现在这里。
+                    {t("platform_conference_list_empty_hint")}
                   </p>
                 </CardHeader>
                 <Link
@@ -182,7 +195,7 @@ export default function PlatformHome() {
                   className={cn(buttonVariants(), "mt-5 rounded-full px-4")}
                 >
                   <Plus aria-hidden="true" />
-                  创建第一个大会
+                  {t("platform_create_first_conference")}
                 </Link>
               </div>
             </CardContent>
@@ -207,7 +220,7 @@ export default function PlatformHome() {
               {isLoadingMore ? (
                 <Loader2 className="animate-spin" aria-hidden="true" />
               ) : null}
-              加载更多
+              {t("platform_load_more")}
             </Button>
           </div>
         ) : null}
@@ -220,10 +233,10 @@ export default function PlatformHome() {
               id="deleted-list"
               className="text-lg font-semibold tracking-tight"
             >
-              最近删除
+              {t("platform_recently_deleted")}
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              恢复后，原有席位邀请码会重新启用。
+              {t("platform_restore_invites_hint")}
             </p>
           </div>
           <div className="divide-y rounded-xl border bg-card/70">
@@ -235,7 +248,7 @@ export default function PlatformHome() {
                 <div className="min-w-0">
                   <p className="truncate font-medium">{conference.name}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    删除于{" "}
+                    {t("platform_deleted_at")}{" "}
                     {dateFormatter.format(
                       new Date(conference.deletedAt ?? conference.updatedAt)
                     )}
@@ -252,7 +265,7 @@ export default function PlatformHome() {
                   ) : (
                     <ArchiveRestore aria-hidden="true" />
                   )}
-                  恢复
+                  {t("platform_restore")}
                 </Button>
               </div>
             ))}

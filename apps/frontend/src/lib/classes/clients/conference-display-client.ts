@@ -21,6 +21,8 @@ import {
   type SeatView
 } from '$lib/classes/types/delegate'
 import { DISPLAY_STANDALONE_ID } from '$lib/classes/const'
+import { applyLocale, getLocale } from '$lib/i18n'
+import { isLocale } from '@vetoexpress/i18n'
 
 // ---- 抽象接口 ------------------------------------------------------------
 
@@ -132,7 +134,9 @@ async function connectDisplaySocket(role: DisplaySocketRole, committeeId?: strin
       if (message.type === 'timer_tick') {
         for (const callback of _tickListeners) callback(message.data as TimerTickData)
       } else if (message.type === 'display_data') {
-        for (const callback of _wsListeners) callback(message.data as ConferenceDisplayData)
+        const data = message.data as ConferenceDisplayData
+        if (isLocale(data.locale)) applyLocale(data.locale)
+        for (const callback of _wsListeners) callback(data)
       }
     } catch {
       // Ignore malformed transport payloads.
@@ -363,8 +367,9 @@ export function buildDisplayData(
     })
 
     votingData = {
-      targetDescription: activeVoting.targetType === 'motion' ? '动议' : '决议草案',
-      majorityRule: activeVoting.majorityRule === 'simple_majority' ? '简单多数' : '2/3多数',
+      targetDescription: activeVoting.targetType,
+      targetType: activeVoting.targetType,
+      majorityRule: activeVoting.majorityRule,
       tally: { ...tally, present: thresholds.presentCount },
       result: activeVoting.result,
       round: activeVoting.round ?? 1,
@@ -451,6 +456,7 @@ export function buildDisplayData(
     : conf.phase
 
   return {
+    locale: getLocale(),
     conferenceId: conf.id,
     phase: effectivePhase,
     venue: conf.name,
@@ -587,7 +593,9 @@ export function buildDisplayData(
     recentMinutes: conf.minutes.slice(-10).map((m) => ({
       timestamp: m.timestamp,
       eventType: m.actionType,
-      description: m.description
+      description: m.description,
+      messageKey: m.messageKey,
+      messageValues: m.messageValues ? { ...m.messageValues } : undefined
     })),
     yieldPending: conf.yieldPending
       ? (() => {

@@ -1,3 +1,7 @@
+"use client"
+
+import { usePlatformTranslations } from "@/components/i18n-provider"
+import { useMemo } from "react"
 import { ArrowRight, CalendarDays } from "lucide-react"
 import Link from "next/link"
 import type { JSX } from "react"
@@ -18,12 +22,6 @@ import {
 
 import { formatSchedule } from "@/lib/conference-schedule"
 
-const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
-  year: "numeric",
-  month: "short",
-  day: "numeric",
-})
-
 interface ConferenceCardProps {
   conference: ConferenceSummary
 }
@@ -31,6 +29,17 @@ interface ConferenceCardProps {
 export function ConferenceCard({
   conference,
 }: ConferenceCardProps): JSX.Element {
+  const { t, locale } = usePlatformTranslations()
+  const dateFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat(locale, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      }),
+    [locale]
+  )
+
   return (
     <Link
       href={`/conferences/${conference.id}`}
@@ -43,7 +52,7 @@ export function ConferenceCard({
               {conference.name}
             </CardTitle>
             <CardDescription className="mt-2 line-clamp-2 leading-6">
-              {conference.description || "暂无大会说明"}
+              {conference.description || t("platform_no_description")}
             </CardDescription>
           </div>
           <CardAction>
@@ -59,20 +68,23 @@ export function ConferenceCard({
               conference.lifecycle === "active" ? "default" : "secondary"
             }
           >
-            {CONFERENCE_LIFECYCLE_LABELS[conference.lifecycle]}
+            {t(CONFERENCE_LIFECYCLE_LABELS[conference.lifecycle])}
           </Badge>
           {conference.organizer ? (
             <Badge variant="secondary">{conference.organizer}</Badge>
           ) : null}
           <span className="flex items-center gap-1.5">
             <CalendarDays className="size-3.5" aria-hidden="true" />
-            更新于 {dateFormatter.format(new Date(conference.updatedAt))}
+            {t("platform_updated_at")}
+            {dateFormatter.format(new Date(conference.updatedAt))}
           </span>
           <span>v{conference.version}</span>
           <span className="w-full">
-            开始：{formatSchedule(conference.startsAt)}
+            {t("platform_starts_prefix")}
+            {formatSchedule(conference.startsAt, locale)}
             <br />
-            结束：{formatSchedule(conference.endsAt)}
+            {t("platform_ends_prefix")}
+            {formatSchedule(conference.endsAt, locale)}
           </span>
         </CardContent>
       </Card>

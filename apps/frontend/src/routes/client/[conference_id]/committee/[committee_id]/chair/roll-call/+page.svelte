@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import { onDestroy } from 'svelte'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
@@ -163,14 +164,14 @@
 </script>
 
 <svelte:head>
-  <title>{VETO_NAME} - 点名</title>
+  <title>{t('procedure_roll_call_page_title', { value1: VETO_NAME })}</title>
 </svelte:head>
 
 <svelte:window onkeydown={handleKeydown} />
 
 <div class="flex h-full w-full flex-col bg-background">
   <PageTopBar
-    title="点名"
+    title={t('procedure_roll_call_2')}
     subtitle={conf?.name}
     backHref={resolve(`/client/${conferenceId}/committee/${committeeId}/chair`)}
   />
@@ -185,7 +186,7 @@
           <div class="flex w-full flex-col items-center gap-2">
             <div class="flex items-center gap-3 text-sm text-muted-foreground">
               <Users size={14} />
-              <span>第 {currentIndex + 1} / {totalCount} 位</span>
+              <span>{t('procedure_roll_call_position', { value1: currentIndex + 1, value2: totalCount })}</span>
             </div>
             <div class="h-1.5 w-full overflow-hidden rounded-full bg-muted">
               <div
@@ -195,15 +196,15 @@
             </div>
             <div class="flex gap-4 text-xs text-muted-foreground">
               <span>
-                已出席 <span class="font-semibold text-foreground">{presentCount}</span>
+                {t('procedure_present')} <span class="font-semibold text-foreground">{presentCount}</span>
               </span>
               <span>
-                简单多数 <span class="font-semibold text-foreground">
+                {t('procedure_simple_majority')} <span class="font-semibold text-foreground">
                   {thresholds.simpleMajorityThreshold}
                 </span>
               </span>
               <span>
-                2/3多数 <span class="font-semibold text-foreground">
+                {t('procedure_two_thirds_majority_2')} <span class="font-semibold text-foreground">
                   {thresholds.twoThirdsThreshold}
                 </span>
               </span>
@@ -238,7 +239,7 @@
                     disabled={isTransitioning}
                   >
                     <Check size={20} />
-                    出席
+                    {t('procedure_present_2')}
                     <span class="text-xs opacity-60">P</span>
                   </Button>
                   <Button
@@ -249,7 +250,7 @@
                     disabled={isTransitioning}
                   >
                     <X size={20} />
-                    缺席
+                    {t('procedure_absent')}
                     <span class="text-xs opacity-40">A</span>
                   </Button>
                 </div>
@@ -257,7 +258,7 @@
                 <!-- 点名结果 -->
                 <div class="mt-2 flex flex-col items-center gap-2">
                   <span class="text-lg font-bold text-foreground">
-                    {lastRollCallMarked.status === 'present' ? '出席' : '缺席'}
+                    {lastRollCallMarked.status === 'present' ? t('procedure_present_2') : t('procedure_absent')}
                   </span>
                 </div>
               {/if}
@@ -268,7 +269,7 @@
                   onclick={goBack}
                   disabled={isTransitioning}
                 >
-                  ← Backspace 返回上一位
+                  {t('procedure_backspace_previous_seat')}
                 </button>
               {/if}
             </div>
@@ -284,7 +285,7 @@
               disabled={isTransitioning || currentIndex >= sortedSeats.length}
             >
               <Check size={12} />
-              全部出席
+              {t('procedure_mark_all_present')}
             </Button>
             <Button
               size="sm"
@@ -294,7 +295,7 @@
               disabled={isTransitioning || currentIndex >= sortedSeats.length}
             >
               <X size={12} />
-              全部缺席
+              {t('procedure_mark_all_absent')}
             </Button>
           </div>
         </div>
@@ -302,23 +303,23 @@
         <!-- ===== 点名完成 ===== -->
         <div class="flex w-full max-w-lg flex-col items-center gap-8">
           <div class="flex items-center gap-2">
-            <h2 class="text-2xl font-bold text-foreground">点名完成</h2>
+            <h2 class="text-2xl font-bold text-foreground">{t('procedure_roll_call_complete')}</h2>
           </div>
 
           <div class="grid w-full grid-cols-3 gap-4">
             <div class="rounded-lg border bg-card p-6 text-center">
               <div class="text-3xl font-bold text-foreground">{presentCount}</div>
-              <div class="mt-1 text-sm text-muted-foreground">出席 / {totalCount}</div>
+              <div class="mt-1 text-sm text-muted-foreground">{t('procedure_roll_call_present_total', { value1: totalCount })}</div>
             </div>
             <div class="rounded-lg border bg-card p-6 text-center">
               <div class="text-3xl font-bold text-foreground">
                 {thresholds.simpleMajorityThreshold}
               </div>
-              <div class="mt-1 text-sm text-muted-foreground">简单多数</div>
+              <div class="mt-1 text-sm text-muted-foreground">{t('procedure_simple_majority')}</div>
             </div>
             <div class="rounded-lg border bg-card p-6 text-center">
               <div class="text-3xl font-bold text-foreground">{thresholds.twoThirdsThreshold}</div>
-              <div class="mt-1 text-sm text-muted-foreground">2/3 多数</div>
+              <div class="mt-1 text-sm text-muted-foreground">{t('procedure_two_thirds_majority')}</div>
             </div>
           </div>
 
@@ -326,7 +327,7 @@
           {#if absentSeats.length > 0}
             <div class="w-full rounded-xl border bg-card">
               <div class="px-6 py-3 text-xs font-medium text-muted-foreground">
-                未出席 ({absentSeats.length})
+                {t('procedure_roll_call_absent_count', { value1: absentSeats.length })}
               </div>
               <div class="divide-y px-6">
                 {#each absentSeats as seat (seat.id)}
@@ -334,19 +335,19 @@
                     <span class="flex-1 text-sm text-muted-foreground/70">
                       {seat.shortName ?? seat.name}
                     </span>
-                    <span class="text-xs text-muted-foreground">缺席</span>
+                    <span class="text-xs text-muted-foreground">{t('procedure_absent')}</span>
                   </div>
                 {/each}
               </div>
             </div>
           {:else}
-            <p class="text-sm font-medium">全部出席</p>
+            <p class="text-sm font-medium">{t('procedure_mark_all_present')}</p>
           {/if}
 
           <div class="flex gap-4">
-            <Button variant="outline" size="lg" onclick={goBack}>← 返回修改</Button>
+            <Button variant="outline" size="lg" onclick={goBack}>{t('procedure_back_to_edit')}</Button>
             <Button size="lg" class="min-w-[160px] gap-2 text-base" onclick={handleComplete}>
-              完成点名
+              {t('procedure_complete_roll_call')}
             </Button>
           </div>
         </div>
@@ -354,8 +355,8 @@
     {:else}
       <div class="flex flex-col items-center gap-3 text-muted-foreground">
         <Users size={40} class="opacity-30" />
-        <p class="text-lg font-medium">未找到参会席位</p>
-        <p class="text-sm opacity-70">请先在席位管理中配置参会席位</p>
+        <p class="text-lg font-medium">{t('procedure_no_participants_found')}</p>
+        <p class="text-sm opacity-70">{t('procedure_configure_participants_in_seat_management_first')}</p>
       </div>
     {/if}
   </div>

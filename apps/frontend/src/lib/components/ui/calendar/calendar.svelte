@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { getLocale } from '$lib/i18n'
 	import { Calendar as CalendarPrimitive } from "bits-ui";
 	import * as Calendar from "./index.js";
 	import { cn, type WithoutChildrenOrChild } from "$lib/classes/utils.js";
@@ -14,7 +15,7 @@
 		weekdayFormat = "short",
 		buttonVariant = "ghost",
 		captionLayout = "label",
-		locale = "en-US",
+		locale,
 		months: monthsProp,
 		years,
 		monthFormat: monthFormatProp,
@@ -53,7 +54,7 @@ get along, so we shut typescript up by casting `value` to `never`.
 		"p-2 [--cell-radius:var(--radius-md)] [--cell-size:--spacing(7)] bg-background group/calendar in-data-[slot=card-content]:bg-transparent in-data-[slot=popover-content]:bg-transparent",
 		className
 	)}
-	{locale}
+	locale={locale ?? getLocale()}
 	{monthFormat}
 	{yearFormat}
 	{...restProps}
@@ -75,14 +76,14 @@ get along, so we shut typescript up by casting `value` to `never`.
 							{yearFormat}
 							month={month.value}
 							bind:placeholder
-							{locale}
+							locale={locale ?? getLocale()}
 							{monthIndex}
 						/>
 					</Calendar.Header>
 					<Calendar.Grid>
 						<Calendar.GridHead>
 							<Calendar.GridRow class="select-none">
-								{#each weekdays as weekday (weekday)}
+								{#each weekdays as weekday, weekdayIndex (weekdayIndex)}
 									<Calendar.HeadCell>
 										{weekday.slice(0, 2)}
 									</Calendar.HeadCell>

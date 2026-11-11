@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, formatNumber } from '$lib/i18n'
   import {
     currentBattle,
     selectedPlacedUnitId,
@@ -129,20 +130,20 @@
   let combatRows = $derived(((): Array<ReturnType<typeof statRow>> => {
     const stats = unitInfo?.placed.stats ?? {}
     return [
-      statRow(Swords, '软攻击', stats.softAttack ?? 0, 'text-orange-400'),
-      statRow(Wrench, '硬攻击', stats.hardAttack ?? 0, 'text-zinc-400'),
-      statRow(PlaneTakeoff, '空攻击', stats.airAttack ?? 0, 'text-sky-400'),
-      statRow(ShieldHalf, '防御', stats.defense ?? 0, 'text-blue-400'),
-      statRow(Gauge, '速度', (stats.speed ?? 0) + ' km/h', 'text-green-400'),
+      statRow(Swords, t('components_soft_attack'), stats.softAttack ?? 0, 'text-orange-400'),
+      statRow(Wrench, t('components_hard_attack'), stats.hardAttack ?? 0, 'text-zinc-400'),
+      statRow(PlaneTakeoff, t('components_air_attack'), stats.airAttack ?? 0, 'text-sky-400'),
+      statRow(ShieldHalf, t('components_defense'), stats.defense ?? 0, 'text-blue-400'),
+      statRow(Gauge, t('components_speed'), (stats.speed ?? 0) + ' km/h', 'text-green-400'),
     ]
   })())
 
-  const BEHAVIOR_LABELS: Record<string, string> = {
-    aggressive: '进攻',
-    defensive: '防守',
-    cautious: '谨慎',
-    hold: '死守'
-  }
+  const BEHAVIOR_LABELS = $derived<Record<string, string>>({
+    aggressive: t('components_aggressive'),
+    defensive: t('components_defensive'),
+    cautious: t('components_cautious'),
+    hold: t('components_hold')
+  })
 </script>
 
 <div
@@ -173,7 +174,7 @@
           ></span>
         </div>
       {:else}
-        <span class="text-xs font-medium text-foreground">单位状态</span>
+        <span class="text-xs font-medium text-foreground">{t('components_unit_status')}</span>
       {/if}
     </div>
 
@@ -184,35 +185,35 @@
           <Accordion.Item value="basic">
             <Accordion.Trigger class="px-3 py-2 text-xs">
               <Target class="size-3.5" />
-              <span class="ml-2">基本信息</span>
+              <span class="ml-2">{t('components_basic_info')}</span>
             </Accordion.Trigger>
             <Accordion.Content class="px-3 pb-2">
               <div class="flex flex-col gap-1">
                 <div class="flex items-center justify-between text-[11px]">
-                  <span class="text-muted-foreground">番号</span>
+                  <span class="text-muted-foreground">{t('components_designation')}</span>
                   <span class="font-mono text-foreground">{unitInfo.unit.id}</span>
                 </div>
                 <div class="flex items-center justify-between text-[11px]">
-                  <span class="text-muted-foreground">阵营</span>
+                  <span class="text-muted-foreground">{t('components_faction')}</span>
                   <span class="text-foreground">{unitInfo.faction.name}</span>
                 </div>
                 <div class="flex items-center justify-between text-[11px]">
-                  <span class="text-muted-foreground">军种</span>
+                  <span class="text-muted-foreground">{t('components_branch')}</span>
                   <span class="text-foreground">{mods.getLabel('branch.' + unitInfo.unit.branchId, unitInfo.unit.branchId)}</span>
                 </div>
                 {#if heading !== null}
                   <div class="flex items-center justify-between text-[11px]">
-                    <span class="text-muted-foreground">航向</span>
+                    <span class="text-muted-foreground">{t('components_heading')}</span>
                     <span class="font-mono text-foreground">{heading}°</span>
                   </div>
                 {/if}
                 <div class="flex items-center justify-between text-[11px]">
-                  <span class="text-muted-foreground">速度</span>
-                  <span class="font-mono text-foreground">{effectiveSpeed} km/h</span>
+                  <span class="text-muted-foreground">{t('components_speed')}</span>
+                  <span class="font-mono text-foreground">{formatNumber(effectiveSpeed)} km/h</span>
                 </div>
                 <div class="flex items-center justify-between text-[11px]">
-                  <span class="text-muted-foreground">坐标</span>
-                  <span class="font-mono text-muted-foreground">{(liveRt ?? unitInfo.placed).lat.toFixed(4)}°, {(liveRt ?? unitInfo.placed).lng.toFixed(4)}°</span>
+                  <span class="text-muted-foreground">{t('components_coordinates')}</span>
+                  <span class="font-mono text-muted-foreground">{formatNumber((liveRt ?? unitInfo.placed).lat, { minimumFractionDigits: 4, maximumFractionDigits: 4, useGrouping: false })}°, {formatNumber((liveRt ?? unitInfo.placed).lng, { minimumFractionDigits: 4, maximumFractionDigits: 4, useGrouping: false })}°</span>
                 </div>
               </div>
             </Accordion.Content>
@@ -222,20 +223,20 @@
           <Accordion.Item value="status">
             <Accordion.Trigger class="px-3 py-2 text-xs">
               <Heart class="size-3.5" />
-              <span class="ml-2">状态</span>
+              <span class="ml-2">{t('components_status')}</span>
             </Accordion.Trigger>
             <Accordion.Content class="px-3 pb-3">
               <div class="flex flex-col gap-2">
                 <div class="flex items-center gap-2 text-[11px]">
-                  <span class="text-muted-foreground">姿态</span>
+                  <span class="text-muted-foreground">{t('components_stance')}</span>
                   <Badge variant="secondary" class="text-[10px]">{mods.getLabel('status.' + liveStatus, liveStatus)}</Badge>
-                  <span class="text-muted-foreground">· 行为</span>
+                  <span class="text-muted-foreground">{t('components_behavior')}</span>
                   <Badge variant="outline" class="border-amber-500/20 bg-amber-500/10 text-[10px] text-amber-400">{BEHAVIOR_LABELS[liveBehavior] ?? liveBehavior}</Badge>
                 </div>
 
                 <div class="flex flex-col gap-0.5">
                   <div class="flex items-center justify-between">
-                    <span class="text-[10px] text-muted-foreground">生命值</span>
+                    <span class="text-[10px] text-muted-foreground">{t('components_health')}</span>
                     <span class="font-mono text-[10px] text-foreground">{Math.round(liveHp)}/{maxHp}</span>
                   </div>
                   <div class="h-2 w-full overflow-hidden rounded-full bg-muted">
@@ -248,7 +249,7 @@
 
                 <div class="flex flex-col gap-0.5">
                   <div class="flex items-center justify-between">
-                    <span class="text-[10px] text-muted-foreground">组织度</span>
+                    <span class="text-[10px] text-muted-foreground">{t('components_organization')}</span>
                     <span class="font-mono text-[10px] text-foreground">{Math.round(liveOrg)}/{maxOrg}</span>
                   </div>
                   <div class="h-2 w-full overflow-hidden rounded-full bg-muted">
@@ -272,7 +273,7 @@
             <Accordion.Item value="sensors">
               <Accordion.Trigger class="px-3 py-2 text-xs">
                 <Radio class="size-3.5" />
-                <span class="ml-2">传感器 ({sensorList.length})</span>
+                <span class="ml-2">{t('components_sensor_count', { count: sensorList.length })}</span>
               </Accordion.Trigger>
               <Accordion.Content class="px-3 pb-2">
                 <div class="flex flex-col gap-1">
@@ -292,7 +293,7 @@
             <Accordion.Item value="weapons">
               <Accordion.Trigger class="px-3 py-2 text-xs">
                 <Package class="size-3.5" />
-                <span class="ml-2">组件 ({weaponList.length})</span>
+                <span class="ml-2">{t('components_equipment_count', { count: weaponList.length })}</span>
               </Accordion.Trigger>
               <Accordion.Content class="px-3 pb-2">
                 <div class="flex flex-col gap-1">
@@ -308,8 +309,8 @@
     {:else}
       <Empty class="flex-1">
         <EmptyContent>
-          <EmptyTitle class="text-sm">未选中单位</EmptyTitle>
-          <EmptyDescription class="text-xs">点击地图上的单位以查看详情</EmptyDescription>
+          <EmptyTitle class="text-sm">{t('components_no_unit_selected')}</EmptyTitle>
+          <EmptyDescription class="text-xs">{t('components_select_unit_details')}</EmptyDescription>
         </EmptyContent>
       </Empty>
     {/if}

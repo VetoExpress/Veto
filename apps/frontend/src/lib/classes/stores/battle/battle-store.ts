@@ -1,4 +1,5 @@
 import { writable, derived, get } from 'svelte/store'
+import { t } from '$lib/i18n'
 import type {
   Battle,
   EventSetting,
@@ -62,7 +63,7 @@ export async function saveBattleWithToast() {
   const { toast } = await import('svelte-sonner')
   flushRuntimePositions()
   await saveBattlesNow()
-  toast.success('已保存', { description: '当前推演状态已保存。' })
+  toast.success(t('services_saved'), { description: t('services_saved_description') })
 }
 
 /** 立即将当前 battles 状态写入 localStorage 和文件（绕过防抖），用于手动保存。 */
@@ -160,7 +161,7 @@ export function undo() {
         ...entry.snapshot,
         actionLog: [
           ...currentLog,
-          { id: generateId(), timestamp: Date.now(), message: `↩ 撤销：${entry.description}` }
+          { id: generateId(), timestamp: Date.now(), message: t('components_battle_undo', { description: entry.description }) }
         ],
         updatedAt: Date.now()
       }
@@ -208,7 +209,7 @@ export function createBattle(
     campaignId?: string
   }
 ): string {
-  if (!options.conferenceId.trim()) throw new Error('战局必须属于一个大会')
+  if (!options.conferenceId.trim()) throw new Error(t('services_battle_conference_required'))
   const existing = getConferenceBattle(options.conferenceId)
   if (existing) {
     loadBattle(existing.id)
@@ -427,7 +428,7 @@ function initializeBattleFromCampaign(battleId: string, campaignId: string): voi
   if (battle) {
     const factionCount = battle.factions.length
     const unitCount = battle.placedUnits.length
-    addLog('战役初始化完成：' + factionCount + ' 个阵营，' + unitCount + ' 个部署单位')
+    addLog(t('components_battle_initialized', { factions: factionCount, units: unitCount }))
   }
 }
 
@@ -468,7 +469,7 @@ export function getConferenceBattle(conferenceId: string): Battle | null {
 // ============ 阵营 CRUD ============
 
 export function addFaction(name: string, color: string, side: UnitSide = 'blue'): string {
-  pushUndoSnapshot(`添加阵营: ${name}`)
+  pushUndoSnapshot(t('components_battle_add_faction', { name: name }))
   const id = generateId()
   const faction: Faction = { id, name, color, side, units: [] }
   updateCurrentBattle((b) => ({
@@ -478,20 +479,20 @@ export function addFaction(name: string, color: string, side: UnitSide = 'blue')
   if (!get(currentFactionId)) {
     currentFactionId.set(id)
   }
-  addLog(`添加阵营: ${name}`)
+  addLog(t('components_battle_add_faction', { name: name }))
   return id
 }
 
 export function removeFaction(factionId: string) {
   const battle = get(currentBattle)
   const faction = battle?.factions.find((f) => f.id === factionId)
-  pushUndoSnapshot(`删除阵营: ${faction?.name ?? ''}`)
+  pushUndoSnapshot(t('components_battle_remove_faction', { name: faction?.name ?? '' }))
   updateCurrentBattle((b) => ({
     ...b,
     factions: b.factions.filter((f) => f.id !== factionId),
     placedUnits: b.placedUnits.filter((u) => u.factionId !== factionId)
   }))
-  addLog(`删除阵营: ${faction?.name ?? ''}`)
+  addLog(t('components_battle_remove_faction', { name: faction?.name ?? '' }))
   if (get(currentFactionId) === factionId) {
     const updated = get(currentBattle)
     currentFactionId.set(updated?.factions[0]?.id ?? null)
@@ -505,15 +506,15 @@ export function updateFaction(
   const battle = get(currentBattle)
   const faction = battle?.factions.find((f) => f.id === factionId)
   const oldName = faction?.name ?? ''
-  pushUndoSnapshot(`修改阵营信息: ${oldName}`)
+  pushUndoSnapshot(t('components_battle_update_faction', { name: oldName }))
   updateCurrentBattle((b) => ({
     ...b,
     factions: b.factions.map((f) => (f.id === factionId ? { ...f, ...updates } : f))
   }))
   if (updates.name && updates.name !== oldName) {
-    addLog(`阵营改名: ${oldName} → ${updates.name}`)
+    addLog(t('components_battle_rename_faction', { oldName, name: updates.name }))
   } else {
-    addLog(`修改阵营信息: ${oldName}`)
+    addLog(t('components_battle_update_faction', { name: oldName }))
   }
 }
 
@@ -524,13 +525,13 @@ export function selectFaction(factionId: string) {
 // ============ 单位 CRUD ============
 
 export function addUnit(factionId: string, unit: UnitTemplate) {
-  pushUndoSnapshot(`创建单位: ${unit.name}`)
+  pushUndoSnapshot(t('components_battle_create_unit', { name: unit.name }))
   updateCurrentBattle((b) => ({
     ...b,
     factions: b.factions.map((f) => (f.id === factionId ? { ...f, units: [...f.units, unit] } : f))
   }))
   addLog(
-    `${get(currentBattle)?.factions.find((f) => f.id === factionId)?.name ?? ''} 创建单位: ${unit.name}`
+    t('components_battle_faction_create_unit', { faction: get(currentBattle)?.factions.find((f) => f.id === factionId)?.name ?? '', unit: unit.name })
   )
 }
 
@@ -553,13 +554,13 @@ export function moveToFallen(placedId: string) {
     return next
   })
   selectedPlacedUnitId.update((id) => (id === placedId ? null : id))
-  addLog(`${unitName} 已阵亡`, { category: 'combat', location: { lat: placed.lat, lng: placed.lng }, sourceUnitId: placedId })
+  addLog(t('components_battle_unit_destroyed', { unit: unitName }), { category: 'combat', location: { lat: placed.lat, lng: placed.lng }, sourceUnitId: placedId })
 }
 
 export function removeUnit(factionId: string, unitId: string) {
   const battle = get(currentBattle)
   const unit = battle?.factions.find((f) => f.id === factionId)?.units.find((u) => u.id === unitId)
-  pushUndoSnapshot(`删除单位: ${unit?.name ?? ''}`)
+  pushUndoSnapshot(t('components_battle_remove_unit', { name: unit?.name ?? '' }))
   updateCurrentBattle((b) => ({
     ...b,
     factions: b.factions.map((f) =>
@@ -567,7 +568,7 @@ export function removeUnit(factionId: string, unitId: string) {
     ),
     placedUnits: b.placedUnits.filter((p) => p.unitId !== unitId)
   }))
-  addLog(`删除单位: ${unit?.name ?? ''}`)
+  addLog(t('components_battle_remove_unit', { name: unit?.name ?? '' }))
 }
 
 export function updateUnit(
@@ -578,8 +579,8 @@ export function updateUnit(
 ) {
   const battle = get(currentBattle)
   const unit = battle?.factions.find((f) => f.id === factionId)?.units.find((u) => u.id === unitId)
-  const unitName = unit?.name ?? '未知单位'
-  pushUndoSnapshot(`单位组成变更: ${unitName}`)
+  const unitName = unit?.name ?? t('components_battle_unknown_unit')
+  pushUndoSnapshot(t('components_battle_update_unit', { name: unitName }))
   updateCurrentBattle((b) => ({
     ...b,
     factions: b.factions.map((f) =>
@@ -588,7 +589,7 @@ export function updateUnit(
         : f
     )
   }))
-  addLog(logMessage ?? `单位组成变更: ${unitName}`)
+  addLog(logMessage ?? t('components_battle_update_unit', { name: unitName }))
 }
 
 // ============ 放置单位 ============
@@ -596,7 +597,7 @@ export function updateUnit(
 export function placeUnit(unitId: string, factionId: string, lat: number, lng: number): string {
   const battle = get(currentBattle)
   const unit = battle?.factions.find((f) => f.id === factionId)?.units.find((u) => u.id === unitId)
-  pushUndoSnapshot(`放置单位: ${unit?.name ?? ''}`)
+  pushUndoSnapshot(t('components_battle_place_unit', { name: unit?.name ?? '' }))
   const id = generateId()
 
   // 根据单位组成派生攻击射程（km）
@@ -648,7 +649,7 @@ export function placeUnit(unitId: string, factionId: string, lat: number, lng: n
       behavior: 'aggressive'
     }
   }))
-  addLog(`在 (${lat.toFixed(3)}, ${lng.toFixed(3)}) 放置单位`)
+  addLog(t('components_battle_placed_coordinates', { lat: lat.toFixed(3), lng: lng.toFixed(3) }))
   return id
 }
 
@@ -658,7 +659,7 @@ export function removePlacedUnit(placedId: string) {
   const unitName = placed
     ? (battle?.factions.flatMap((f) => f.units).find((u) => u.id === placed.unitId)?.name ?? '')
     : ''
-  pushUndoSnapshot(`撒除单位: ${unitName}`)
+  pushUndoSnapshot(t('components_battle_unplace_unit', { name: unitName }))
   updateCurrentBattle((b) => ({
     ...b,
     placedUnits: b.placedUnits.filter((u) => u.id !== placedId)
@@ -668,7 +669,7 @@ export function removePlacedUnit(placedId: string) {
     delete next[placedId]
     return next
   })
-  addLog(`从地图撒除单位: ${unitName}`)
+  addLog(t('components_battle_unplaced_unit', { name: unitName }))
   if (get(selectedPlacedUnitId) === placedId) {
     selectedPlacedUnitId.set(null)
   }
@@ -687,7 +688,7 @@ export function updatePlacedUnit(
 }
 
 export function addRoutePoint(placedId: string, lat: number, lng: number) {
-  pushUndoSnapshot('添加路线节点')
+  pushUndoSnapshot(t('components_battle_add_waypoint'))
   const battle = get(currentBattle)
   const unit = battle?.placedUnits.find((u) => u.id === placedId)
   if (!unit) return
@@ -701,7 +702,7 @@ export function addRoutePoint(placedId: string, lat: number, lng: number) {
 }
 
 export function updateRoutePoint(placedId: string, index: number, lat: number, lng: number) {
-	pushUndoSnapshot('移动路线节点')
+	pushUndoSnapshot(t('components_battle_move_waypoint'))
 	const battle = get(currentBattle)
 	const unit = battle?.placedUnits.find((u) => u.id === placedId)
 	if (!unit || index < 0 || index >= unit.route.length) return
@@ -716,7 +717,7 @@ export function updateRoutePoint(placedId: string, index: number, lat: number, l
 }
 
 export function insertRoutePoint(placedId: string, index: number, lat: number, lng: number) {
-	pushUndoSnapshot('插入路线节点')
+	pushUndoSnapshot(t('components_battle_insert_waypoint'))
 	const battle = get(currentBattle)
 	const unit = battle?.placedUnits.find((u) => u.id === placedId)
 	if (!unit || index < 0 || index > unit.route.length) return
@@ -733,7 +734,7 @@ export function insertRoutePoint(placedId: string, index: number, lat: number, l
 }
 
 export function removeRoutePoint(placedId: string, index: number) {
-	pushUndoSnapshot('删除路线节点')
+	pushUndoSnapshot(t('components_battle_remove_waypoint'))
 	const battle = get(currentBattle)
 	const unit = battle?.placedUnits.find((u) => u.id === placedId)
 	if (!unit || index < 0 || index >= unit.route.length) return
@@ -751,14 +752,14 @@ export function clearRoute(placedId: string) {
   const unitName = placed
     ? (battle?.factions.flatMap((f) => f.units).find((u) => u.id === placed.unitId)?.name ?? '')
     : ''
-  pushUndoSnapshot(`清除路线: ${unitName}`)
+  pushUndoSnapshot(t('components_battle_clear_route', { name: unitName }))
   updatePlacedUnit(placedId, { route: [] })
   // 将清除同步到 runtimePositions
   runtimePositions.update((pos) => {
     if (!pos[placedId]) return pos
     return { ...pos, [placedId]: { ...pos[placedId], route: [] } }
   })
-  addLog(`清除路线: ${unitName}`)
+  addLog(t('components_battle_clear_route', { name: unitName }))
 }
 
 // ============ 行动日志 ============
@@ -856,29 +857,29 @@ export function importBattles(data: unknown): [number, number] {
 // ============ 设施 CRUD ============
 
 export function addFacility(facility: import('$lib/classes/types/battle').Facility): void {
-  pushUndoSnapshot(`添加设施: ${facility.name}`)
+  pushUndoSnapshot(t('components_battle_add_facility', { name: facility.name }))
   updateCurrentBattle((b) => ({
     ...b,
     facilities: [...(b.facilities ?? []), facility]
   }))
-  addLog(`添加设施: ${facility.name}`)
+  addLog(t('components_battle_add_facility', { name: facility.name }))
 }
 
 export function removeFacility(facilityId: string): void {
   const battle = get(currentBattle)
   const facility = battle?.facilities?.find((f) => f.id === facilityId)
-  pushUndoSnapshot(`删除设施: ${facility?.name ?? ''}`)
+  pushUndoSnapshot(t('components_battle_remove_facility', { name: facility?.name ?? '' }))
   updateCurrentBattle((b) => ({
     ...b,
     facilities: (b.facilities ?? []).filter((f) => f.id !== facilityId)
   }))
-  addLog(`删除设施: ${facility?.name ?? ''}`)
+  addLog(t('components_battle_remove_facility', { name: facility?.name ?? '' }))
 }
 
 export function updateFacility(facilityId: string, updates: Partial<import('$lib/classes/types/battle').Facility>): void {
   const battle = get(currentBattle)
   const facility = battle?.facilities?.find((f) => f.id === facilityId)
-  pushUndoSnapshot(`更新设施: ${facility?.name ?? ''}`)
+  pushUndoSnapshot(t('components_battle_update_facility', { name: facility?.name ?? '' }))
   updateCurrentBattle((b) => ({
     ...b,
     facilities: (b.facilities ?? []).map((f) =>
@@ -905,7 +906,7 @@ export function applyStatusEffectToUnit(
   source?: string
 ): void {
   const simTimeMs = getSimTimeMs()
-  pushUndoSnapshot(`施加状态: ${statusId}`)
+  pushUndoSnapshot(t('components_battle_apply_status', { name: statusId }))
 
   updateCurrentBattle((b) => ({
     ...b,
@@ -931,14 +932,14 @@ export function applyStatusEffectToUnit(
     }
   })
 
-  addLog(`施加状态效果: ${statusId} → 单位 ${placedUnitId}`)
+  addLog(t('components_battle_status_applied', { status: statusId, unit: placedUnitId }))
 }
 
 /**
  * 从指定单位移除状态效果。
  */
 export function removeStatusEffectFromUnit(placedUnitId: string, statusId: string): void {
-  pushUndoSnapshot(`移除状态: ${statusId}`)
+  pushUndoSnapshot(t('components_battle_remove_status', { name: statusId }))
 
   updateCurrentBattle((b) => ({
     ...b,
@@ -963,7 +964,7 @@ export function removeStatusEffectFromUnit(placedUnitId: string, statusId: strin
     }
   })
 
-  addLog(`移除状态效果: ${statusId} ← 单位 ${placedUnitId}`)
+  addLog(t('components_battle_status_removed', { status: statusId, unit: placedUnitId }))
 }
 
 /**

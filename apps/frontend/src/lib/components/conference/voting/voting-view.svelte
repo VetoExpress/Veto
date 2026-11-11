@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import { Vote, Check, X, Minus, SkipForward, ArrowRight } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import { Badge } from '$lib/components/ui/badge/index.js'
@@ -89,13 +90,13 @@
     if (!ballot) return ''
     switch (ballot.vote) {
       case 'yes':
-        return '赞成'
+        return t('procedure_for')
       case 'no':
-        return '反对'
+        return t('procedure_against')
       case 'abstain':
-        return '弃权'
+        return t('procedure_abstain')
       case 'skip':
-        return '跳过'
+        return t('procedure_skip')
       default:
         return ''
     }
@@ -129,7 +130,7 @@
         <p class="mt-1 text-base font-semibold text-foreground">「{documentName}」</p>
       {/if}
       <p class="mt-1 text-sm text-muted-foreground">
-        {activeSession.majorityRule === 'simple_majority' ? '简单多数' : '2/3多数'}表决
+        {t('procedure_vote_majority_heading', { value1: activeSession.majorityRule === 'simple_majority' ? t('procedure_simple_majority') : t('procedure_two_thirds_majority_2') })}
       </p>
     </div>
 
@@ -141,19 +142,19 @@
         >
           <CardContent class="p-3 text-center">
             <div class="text-2xl font-bold text-emerald-700 dark:text-emerald-400">{tally.yes}</div>
-            <div class="text-[10px] text-muted-foreground">赞成</div>
+            <div class="text-[10px] text-muted-foreground">{t('procedure_for')}</div>
           </CardContent>
         </Card>
         <Card class="border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-950/30">
           <CardContent class="p-3 text-center">
             <div class="text-2xl font-bold text-red-700 dark:text-red-400">{tally.no}</div>
-            <div class="text-[10px] text-muted-foreground">反对</div>
+            <div class="text-[10px] text-muted-foreground">{t('procedure_against')}</div>
           </CardContent>
         </Card>
         <Card class="border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30">
           <CardContent class="p-3 text-center">
             <div class="text-2xl font-bold text-amber-700 dark:text-amber-400">{tally.abstain}</div>
-            <div class="text-[10px] text-muted-foreground">弃权</div>
+            <div class="text-[10px] text-muted-foreground">{t('procedure_abstain')}</div>
           </CardContent>
         </Card>
         <Card>
@@ -161,7 +162,7 @@
             <div class="text-2xl font-bold text-muted-foreground">
               {totalVoted}/{thresholds.presentCount}
             </div>
-            <div class="text-[10px] text-muted-foreground">已投/实到</div>
+            <div class="text-[10px] text-muted-foreground">{t('procedure_voted_present')}</div>
           </CardContent>
         </Card>
       </div>
@@ -183,15 +184,14 @@
           >
             {#if activeSession.result === 'passed'}
               <Check size={28} class="mx-auto mb-2" />
-              表决通过
+              {t('procedure_vote_passed')}
             {:else}
               <X size={28} class="mx-auto mb-2" />
-              表决未通过
+              {t('procedure_vote_failed')}
             {/if}
           </CardTitle>
           <CardDescription>
-            {activeSession.majorityRule === 'simple_majority' ? '简单多数' : '2/3多数'}表决 · {totalVoted}
-            票已投
+            {t('procedure_vote_cast_count', { value1: activeSession.majorityRule === 'simple_majority' ? t('procedure_simple_majority') : t('procedure_two_thirds_majority_2'), value2: totalVoted })}
           </CardDescription>
         </CardHeader>
       </Card>
@@ -201,7 +201,7 @@
         <CardHeader class="pb-3 text-center">
           <div class="flex items-center justify-center gap-2">
             <span class="text-xs text-muted-foreground">
-              共 {presentSeats.length} 个席位，当前第 {currentPosition} 位
+              {t('procedure_vote_position', { value1: presentSeats.length, value2: currentPosition })}
             </span>
           </div>
           <CardTitle class="text-2xl">{currentSeat.name}</CardTitle>
@@ -218,7 +218,7 @@
               onclick={() => castVote(activeSession.id, currentSeat.id, 'yes')}
             >
               <Check size={18} />
-              赞成
+              {t('procedure_for')}
             </Button>
             <Button
               size="lg"
@@ -227,7 +227,7 @@
               onclick={() => castVote(activeSession.id, currentSeat.id, 'no')}
             >
               <X size={18} />
-              反对
+              {t('procedure_against')}
             </Button>
             {#if !isRound2}
               <Button
@@ -237,7 +237,7 @@
                 onclick={() => castVote(activeSession.id, currentSeat.id, 'abstain')}
               >
                 <Minus size={18} />
-                弃权
+                {t('procedure_abstain')}
               </Button>
               <Button
                 size="lg"
@@ -246,7 +246,7 @@
                 onclick={() => castVote(activeSession.id, currentSeat.id, 'skip')}
               >
                 <SkipForward size={18} />
-                跳过
+                {t('procedure_skip')}
               </Button>
             {/if}
           </div>
@@ -260,15 +260,15 @@
         <CardHeader class="text-center">
           <CardTitle class="text-emerald-700 dark:text-emerald-400">
             <Check size={24} class="mx-auto mb-2" />
-            全部席位已完成投票
+            {t('procedure_all_seats_have_voted')}
           </CardTitle>
-          <CardDescription>所有席位均已投票，可公布结果</CardDescription>
+          <CardDescription>{t('procedure_all_seats_have_voted_you_can_announce_the_result')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div class="flex justify-center">
             <Button variant="outline" size="lg" class="gap-2" onclick={handleCloseVoting}>
               <Vote size={16} />
-              结束投票并公布结果
+              {t('procedure_end_vote_and_announce_result')}
             </Button>
           </div>
         </CardContent>
@@ -278,7 +278,7 @@
     <!-- ====== 席位投票列表 ====== -->
     <Card>
       <CardHeader class="pb-2">
-        <CardTitle class="text-sm font-medium text-muted-foreground">投票记录</CardTitle>
+        <CardTitle class="text-sm font-medium text-muted-foreground">{t('procedure_voting_record')}</CardTitle>
       </CardHeader>
       <CardContent class="p-0">
         <div class="divide-y">
@@ -304,7 +304,7 @@
               {:else if isCurrent && !activeSession.result}
                 <Badge variant="outline" class="animate-pulse text-xs">
                   <ArrowRight size={10} class="mr-1" />
-                  投票中
+                  {t('procedure_voting_in_progress')}
                 </Badge>
               {:else}
                 <span class="text-xs text-muted-foreground">—</span>
@@ -319,8 +319,8 @@
     <Card>
       <CardContent class="p-12 text-center">
         <Vote size={40} class="mx-auto mb-3 opacity-30" />
-        <p class="text-muted-foreground">没有进行中的投票</p>
-        <p class="mt-1 text-xs text-muted-foreground/70">对动议提出表决即可在此界面进行投票</p>
+        <p class="text-muted-foreground">{t('procedure_no_vote_in_progress')}</p>
+        <p class="mt-1 text-xs text-muted-foreground/70">{t('procedure_put_a_motion_to_a_vote_to_begin_voting_here')}</p>
       </CardContent>
     </Card>
   {/if}

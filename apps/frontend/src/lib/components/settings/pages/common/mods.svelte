@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import { ExternalLink } from '@lucide/svelte'
   import * as Tabs from '$lib/components/ui/tabs/index.js'
   import { registry } from '$lib/classes/services/plugin/mod-registry.svelte'
@@ -17,26 +18,22 @@
 </script>
 
 <div class="flex flex-col" in:fly={{ y: 8, duration: 320, opacity: 0 }}>
-  <div class="mb-1 text-xl font-bold text-stone-800 dark:text-stone-100">Mod 管理</div>
+  <div class="mb-1 text-xl font-bold text-stone-800 dark:text-stone-100">{t('settings_mod_management')}</div>
   <p class="mb-4 text-sm text-muted-foreground">
-    管理已安装的扩展包, Mod 以 <code class="rounded bg-muted px-1 py-0.5 font-mono text-xs">
-      .csmod
-    </code>
-    格式导入。可在
+    {t('settings_mod_description')}
     <a
       href="https://github.com/VetoExpress/veto-plugins"
       target="_blank"
       rel="noreferrer"
       class="inline-flex items-center gap-1 text-stone-600 underline underline-offset-2 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-200"
     >
-      veto-plugins <ExternalLink size={11} />
+      {t('settings_mod_community')} <ExternalLink size={11} />
     </a>
-    浏览社区 Mod。
   </p>
 
   <!-- 统计栏 -->
   <div class="mb-4 grid grid-cols-3 gap-2">
-    {#each [{ label: '军种', value: stats.branches }, { label: '单位大类', value: stats.categories }, { label: '单位模板', value: stats.templates }] as stat}
+    {#each [{ key: 'branches', label: t('settings_branches'), value: stats.branches }, { key: 'categories', label: t('settings_categories'), value: stats.categories }, { key: 'templates', label: t('settings_templates'), value: stats.templates }] as stat (stat.key)}
       <div class="rounded-lg border border-border bg-muted/40 px-3 py-2.5 text-center">
         <div class="text-lg font-bold text-foreground">{stat.value}</div>
         <div class="text-xs text-muted-foreground">{stat.label}</div>
@@ -46,9 +43,9 @@
 
   <Tabs.Root value="all">
     <Tabs.List>
-      <Tabs.Trigger value="all">全部</Tabs.Trigger>
-      <Tabs.Trigger value="installed">已安装</Tabs.Trigger>
-      <Tabs.Trigger value="install">安装</Tabs.Trigger>
+      <Tabs.Trigger value="all">{t('settings_all')}</Tabs.Trigger>
+      <Tabs.Trigger value="installed">{t('settings_installed')}</Tabs.Trigger>
+      <Tabs.Trigger value="install">{t('settings_install')}</Tabs.Trigger>
     </Tabs.List>
 
     <Tabs.Content value="all">

@@ -1,4 +1,6 @@
 "use client"
+import { message } from "@/i18n/messages"
+import { usePlatformTranslations } from "@/components/i18n-provider"
 
 import { useEffect, useState } from "react"
 import type { JSX, MouseEvent } from "react"
@@ -17,6 +19,8 @@ export function ConfirmDeleteButton({
   disabledLabel,
   onConfirm,
 }: ConfirmDeleteButtonProps): JSX.Element {
+  const { t, locale } = usePlatformTranslations()
+
   const [confirming, setConfirming] = useState(false)
 
   useEffect(() => {
@@ -43,13 +47,21 @@ export function ConfirmDeleteButton({
       size="sm"
       disabled={disabled}
       title={
-        disabled ? disabledLabel : confirming ? "再次点击确认删除" : "删除"
+        disabled
+          ? disabledLabel
+          : confirming
+            ? t("platform_click_confirm_delete")
+            : t("platform_delete")
       }
-      aria-label={confirming ? "再次点击确认删除" : disabledLabel || "删除"}
+      aria-label={
+        confirming
+          ? t("platform_click_confirm_delete")
+          : disabledLabel || t("platform_delete")
+      }
       onClick={handleClick}
     >
       <Trash2 aria-hidden="true" />
-      删除
+      {t("platform_delete")}
     </Button>
   )
 }

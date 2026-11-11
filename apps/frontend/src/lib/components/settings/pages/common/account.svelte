@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, formatDate } from '$lib/i18n'
   import { ExternalLink, UserRound, ArrowRight, Cloud } from '@lucide/svelte'
   import { accountStore } from '$lib/classes/stores/app/account-store'
   import { Button } from '$lib/components/ui/button'
@@ -28,55 +29,55 @@
 
 <div class="@container/account flex w-full min-w-0 flex-col gap-6">
   <div>
-    <h2 class="text-2xl font-semibold">账号</h2>
-    <p class="mt-2 text-sm text-muted-foreground">在这里管理个人资料、账号安全与登录状态。</p>
+    <h2 class="text-2xl font-semibold">{t('settings_account')}</h2>
+    <p class="mt-2 text-sm text-muted-foreground">{t('settings_account_description')}</p>
   </div>
 
   {#if $accountStore.available}
     <Card.Root>
       <Card.Header>
         <div class="flex items-center justify-between gap-4">
-          <Card.Title>大会云同步</Card.Title>
-          <Switch aria-label="大会云同步" checked={$conferenceSync.enabled} onCheckedChange={(enabled) => conferenceSync.setEnabled(enabled)} />
+          <Card.Title>{t('settings_cloud_sync')}</Card.Title>
+          <Switch aria-label={t('settings_cloud_sync')} checked={$conferenceSync.enabled} onCheckedChange={(enabled) => conferenceSync.setEnabled(enabled)} />
         </div>
-        <Card.Description>默认开启。登录后每 24 小时自动同步一次本机大会，也可点击“立即同步”；关闭后继续保存到本机。</Card.Description>
+        <Card.Description>{t('settings_cloud_sync_description')}</Card.Description>
       </Card.Header>
       <Card.Content class="space-y-3 text-sm">
         <p role="status" class="text-muted-foreground">
-          {!$conferenceSync.enabled ? '云同步已关闭' : !$accountStore.user ? '登录后自动同步，当前大会保存在本机' : $conferenceSync.syncing ? '正在同步…' : $conferenceSync.syncedAt ? `上次同步：${new Date($conferenceSync.syncedAt).toLocaleString('zh-CN')}` : '等待同步'}
+          {!$conferenceSync.enabled ? t('settings_cloud_sync_disabled') : !$accountStore.user ? t('settings_cloud_sync_signed_out') : $conferenceSync.syncing ? t('settings_syncing') : $conferenceSync.syncedAt ? t('settings_last_synced', { date: formatDate($conferenceSync.syncedAt, { dateStyle: 'short', timeStyle: 'short' }) }) : t('settings_sync_waiting')}
         </p>
         {#if $conferenceSync.error}<p role="alert" class="text-destructive">{$conferenceSync.error}</p>{/if}
         {#each $conferenceSync.conflicts as conflict (conflict.id)}
           <div class="space-y-2 rounded-lg border p-3">
-            <p>「{conflict.name}」存在存档冲突。请退出该大会后选择要保留的内容。</p>
+            <p>{t('settings_sync_conflict', { name: conflict.name })}</p>
             <div class="flex gap-2">
-              <Button size="sm" variant="outline" onclick={() => conferenceSync.resolve(conflict.id, 'local')}>保留本机</Button>
-              <Button size="sm" variant="outline" onclick={() => conferenceSync.resolve(conflict.id, 'cloud')}>使用云端</Button>
+              <Button size="sm" variant="outline" onclick={() => conferenceSync.resolve(conflict.id, 'local')}>{t('settings_keep_local')}</Button>
+              <Button size="sm" variant="outline" onclick={() => conferenceSync.resolve(conflict.id, 'cloud')}>{t('settings_use_cloud')}</Button>
             </div>
           </div>
         {/each}
       </Card.Content>
       <Card.Footer>
-        <Button variant="outline" disabled={!$accountStore.user || !$conferenceSync.enabled || $conferenceSync.syncing} onclick={() => void conferenceSync.sync()}>立即同步</Button>
+        <Button variant="outline" disabled={!$accountStore.user || !$conferenceSync.enabled || $conferenceSync.syncing} onclick={() => void conferenceSync.sync()}>{t('settings_sync_now')}</Button>
       </Card.Footer>
     </Card.Root>
   {/if}
 
   {#if $accountStore.error}
     <Alert.Root variant="destructive">
-      <Alert.Title>账号操作失败</Alert.Title>
+      <Alert.Title>{t('settings_account_failed')}</Alert.Title>
       <Alert.Description>{$accountStore.error}</Alert.Description>
     </Alert.Root>
   {/if}
   {#if $accountStore.warning}
     <Alert.Root>
-      <Alert.Title>登录状态提示</Alert.Title>
+      <Alert.Title>{t('settings_sign_in_notice')}</Alert.Title>
       <Alert.Description>{$accountStore.warning}</Alert.Description>
     </Alert.Root>
   {/if}
 
   {#if !$accountStore.ready}
-    <p role="status" class="flex items-center gap-2"><Spinner />正在恢复登录状态…</p>
+    <p role="status" class="flex items-center gap-2"><Spinner />{t('settings_restoring_sign_in')}</p>
   {:else if !$accountStore.available}
     <Card.Root class="mx-auto w-full max-w-md">
       <Card.Header>
@@ -85,11 +86,11 @@
         >
           <Cloud class="size-6" />
         </div>
-        <Card.Title role="heading" aria-level={3}>前往云平台</Card.Title>
-        <Card.Description>网页版账号管理请使用云平台。</Card.Description>
+        <Card.Title role="heading" aria-level={3}>{t('settings_go_platform')}</Card.Title>
+        <Card.Description>{t('settings_web_account_description')}</Card.Description>
       </Card.Header>
       <Card.Footer>
-        <Button onclick={openPlatform}>打开云平台<ExternalLink data-icon="inline-end" /></Button>
+        <Button onclick={openPlatform}>{t('settings_open_platform')}<ExternalLink data-icon="inline-end" /></Button>
       </Card.Footer>
     </Card.Root>
   {:else if $accountStore.user}
@@ -110,18 +111,18 @@
         >
           <UserRound class="size-6" />
         </div>
-        <Card.Title role="heading" aria-level={3}>登录 Veto</Card.Title>
-        <Card.Description>使用与云平台相同的邮箱和密码登录。</Card.Description>
+        <Card.Title role="heading" aria-level={3}>{t('settings_sign_in_veto')}</Card.Title>
+        <Card.Description>{t('settings_sign_in_description')}</Card.Description>
       </Card.Header>
       <Card.Content>
         <form id="account-login" onsubmit={login}>
           <Field.FieldGroup>
             <Field.Field data-disabled={$accountStore.pending}>
-              <Field.FieldLabel for="account-email">邮箱</Field.FieldLabel>
+              <Field.FieldLabel for="account-email">{t('settings_email')}</Field.FieldLabel>
               <Input
                 id="account-email"
                 type="email"
-                placeholder="输入注册邮箱"
+                placeholder={t('settings_email_placeholder')}
                 autocomplete="username"
                 bind:value={email}
                 required
@@ -129,11 +130,11 @@
               />
             </Field.Field>
             <Field.Field data-disabled={$accountStore.pending}>
-              <Field.FieldLabel for="account-password">密码</Field.FieldLabel>
+              <Field.FieldLabel for="account-password">{t('settings_password')}</Field.FieldLabel>
               <Input
                 id="account-password"
                 type="password"
-                placeholder="输入密码"
+                placeholder={t('settings_password_placeholder')}
                 autocomplete="current-password"
                 bind:value={password}
                 required
@@ -146,11 +147,11 @@
       <Card.Footer class="flex-col gap-3">
         <Button class="w-full" type="submit" form="account-login" disabled={$accountStore.pending}>
           {#if $accountStore.pending}<Spinner data-icon="inline-start" />{/if}
-          {$accountStore.pending ? '正在登录…' : '登录'}
+          {$accountStore.pending ? t('settings_signing_in') : t('settings_sign_in')}
           {#if !$accountStore.pending}<ArrowRight data-icon="inline-end" />{/if}
         </Button>
         <Button variant="link" onclick={openPlatform}>
-          注册 / 找回密码<ExternalLink data-icon="inline-end" />
+          {t('settings_register_recover')}<ExternalLink data-icon="inline-end" />
         </Button>
       </Card.Footer>
     </Card.Root>

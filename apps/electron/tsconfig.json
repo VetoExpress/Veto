@@ -9,11 +9,7 @@
     }
   ],
   "compilerOptions": {
-    "$lib": [
-      "./apps/frontend/lib"
-    ],
-    "$lib/*": [
-      "./apps/frontend/lib/*"
-    ]
+    "$lib": ["./apps/frontend/lib"],
+    "$lib/*": ["./apps/frontend/lib/*"]
   }
 }

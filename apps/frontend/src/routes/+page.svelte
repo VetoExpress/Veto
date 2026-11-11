@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
   import { onMount } from 'svelte'
@@ -15,11 +16,11 @@
     class="flex flex-1 flex-col items-center justify-center gap-3 text-center"
     aria-live="polite"
   >
-    <Spinner class="size-8 text-foreground" aria-label="正在加载" />
-    <p class="text-sm text-muted-foreground">正在加载，请稍候…</p>
+    <Spinner class="size-8 text-foreground" aria-label={t('procedure_loading')} />
+    <p class="text-sm text-muted-foreground">{t('procedure_loading_please_wait')}</p>
   </main>
 
   <footer class="flex justify-center">
-    <Button variant="outline" href={resolve('/conference')}>前往大会页面</Button>
+    <Button variant="outline" href={resolve('/conference')}>{t('procedure_go_to_conferences')}</Button>
   </footer>
 </div>

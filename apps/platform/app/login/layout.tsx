@@ -1,8 +1,8 @@
 import type { Metadata } from "next"
+import { localizedMetadata } from "@/i18n/metadata"
 
-export const metadata: Metadata = {
-  title: "登录",
-  description: "登录云Veto 组织者平台，创建和管理你的云端大会。",
+export async function generateMetadata(): Promise<Metadata> {
+  return localizedMetadata("platform_login", "platform_login_description")
 }
 
 export default function LoginLayout({

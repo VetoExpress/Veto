@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
 	import * as Avatar from '$lib/components/ui/avatar';
 	import type { ImageCropperPreviewProps } from './types';
 	import { useImageCropperPreview } from './image-cropper.svelte.js';
@@ -19,7 +20,7 @@
 		<Avatar.Image src={previewState.rootState.src} />
 		<Avatar.Fallback>
 			<UploadIcon class="size-4" />
-			<span class="sr-only">Upload image</span>
+			<span class="sr-only">{t('settings_upload_image')}</span>
 		</Avatar.Fallback>
 	</Avatar.Root>
 {/if}

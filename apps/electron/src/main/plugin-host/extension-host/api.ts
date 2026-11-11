@@ -15,7 +15,7 @@ import {
   updateConference,
   listTimelines,
   getTimeline,
-  updateTimeline,
+  updateTimeline
 } from '../../data'
 import { createLogger as createMainLogger, type Logger as MainLogger } from '../../logger'
 
@@ -58,7 +58,7 @@ export function createPluginLogger(pluginId: string): VetoLogger {
     debug(message: string): void {
       console.debug(`[VetoExpress][${pluginId}][DEBUG] ${message}`)
       mainLogger.debug(message)
-    },
+    }
   }
 }
 
@@ -91,7 +91,7 @@ function createPluginEventBus(): VetoEventBus {
     },
     emit(type: string, data?: Record<string, unknown>): void {
       eventBus.emit(type, data ?? {})
-    },
+    }
   }
 }
 
@@ -105,13 +105,13 @@ const _sharedNotifications = createNotifications()
 const _sharedConference = {
   list: listConferences,
   get: getConference,
-  update: updateConference,
+  update: updateConference
 }
 
 const _sharedTimeline = {
   list: listTimelines,
   get: getTimeline,
-  update: updateTimeline,
+  update: updateTimeline
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -148,7 +148,7 @@ export function createPluginContext(options: CreateContextOptions): VetoPluginCo
     storage: createPluginStorage(options.extensionPath),
     conference: _sharedConference,
     timeline: _sharedTimeline,
-    notifications: _sharedNotifications,
+    notifications: _sharedNotifications
   }
 }
 
@@ -177,6 +177,6 @@ export function createVetoApi(pluginId: string, pluginDir: string): VetoApi {
     storage: createPluginStorage(pluginDir),
     conference: _sharedConference,
     timeline: _sharedTimeline,
-    notifications: _sharedNotifications,
+    notifications: _sharedNotifications
   }
 }

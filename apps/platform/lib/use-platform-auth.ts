@@ -1,4 +1,6 @@
 "use client"
+import { message } from "@/i18n/messages"
+import { usePlatformTranslations } from "@/components/i18n-provider"
 
 import { useCallback, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
@@ -10,6 +12,8 @@ import {
 import { clearApiCache } from "./api-cache"
 
 export function usePlatformAuth(requireLogin = true) {
+  const { t, locale } = usePlatformTranslations()
+
   const router = useRouter()
   const [token, setToken] = useState<string>()
   const [isReady, setIsReady] = useState(false)
@@ -40,7 +44,11 @@ export function usePlatformAuth(requireLogin = true) {
       } catch (caught) {
         if (cancelled || request !== revision) return
         setToken(undefined)
-        setError(caught instanceof Error ? caught.message : "无法读取登录状态")
+        setError(
+          caught instanceof Error
+            ? caught.message
+            : message("platform_read_session_failed")
+        )
         setIsReady(true)
         if (requireLogin) router.replace("/login")
       }
@@ -63,7 +71,11 @@ export function usePlatformAuth(requireLogin = true) {
         if (!current.token) router.replace("/login")
       })
       .catch((caught) =>
-        setError(caught instanceof Error ? caught.message : "退出失败")
+        setError(
+          caught instanceof Error
+            ? caught.message
+            : message("platform_logout_failed")
+        )
       )
   }, [router, token])
 

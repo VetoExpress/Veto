@@ -1,21 +1,19 @@
 <script lang="ts">
+  import { t, getLocale } from '$lib/i18n'
 	import CalendarIcon from '@lucide/svelte/icons/calendar';
 	import {
 		type DateValue,
-		DateFormatter,
-		parseDate,
-		getLocalTimeZone
+		parseDate
 	} from '@internationalized/date';
 	import { cn } from '$lib/classes/utils.js';
 	import { Calendar } from '$lib/components/ui/calendar/index.js';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
-	const df = new DateFormatter('zh-CN', { dateStyle: 'long' });
 
 	let {
 		value = $bindable<DateValue | undefined>(undefined),
-		placeholder = '选择日期',
+		placeholder,
 		class: className = ''
 	}: {
 		value?: DateValue;
@@ -55,7 +53,7 @@
 		type="date"
 		value={inputText}
 		oninput={handleInput}
-		placeholder="YYYY-MM-DD"
+		placeholder={placeholder ?? t('settings_choose_date')}
 		inputmode="numeric"
 		maxlength={10}
 		class="h-9 min-w-0 flex-1 rounded-lg border border-input bg-transparent px-3
@@ -71,14 +69,14 @@
 					type="button"
 					class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-input
 						   bg-transparent text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-					aria-label="打开日期选择器"
+					aria-label={t('settings_open_calendar')}
 				>
 					<CalendarIcon class="size-4" />
 				</Button>
 			{/snippet}
 		</Popover.Trigger>
 		<Popover.Content class="w-auto p-0" align="end">
-			<Calendar bind:value type="single" initialFocus captionLayout="dropdown" />
+			<Calendar bind:value type="single" initialFocus captionLayout="dropdown" locale={getLocale()} />
 		</Popover.Content>
 	</Popover.Root>
 </div>

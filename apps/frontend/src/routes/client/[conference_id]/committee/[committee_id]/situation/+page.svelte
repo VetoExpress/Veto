@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { procedureMessage, renderProcedureMessage, type ProcedureMessage } from '$lib/components/conference/common/message'
+  import { t, getLocale } from '$lib/i18n'
   import { onMount } from 'svelte'
   import { fileNotifications } from '$lib/classes/stores/cloud/file-notification-store.svelte'
   import { Activity, Clock3, Pause, Play, RefreshCw, Send, SkipForward } from '@lucide/svelte'
@@ -39,9 +41,9 @@
   let withdrawing = $state(false)
   let withdrawalReason = $state('')
   let draftReady = $state(false)
-  let draftError = $state('')
+  let draftError = $state<ProcedureMessage>('')
   let otherSeatDraft = $state<{ seatId: string; content: string; manualTime: string } | null>(null)
-  let error = $state('')
+  let error = $state<ProcedureMessage>('')
   let clockNow = $state(Date.now())
   let timelineReceivedAt = $state(Date.now())
   let loadSequence = 0
@@ -75,7 +77,7 @@
   )
 
   function formatTime(value: number): string {
-    return new Intl.DateTimeFormat('zh-CN', {
+    return new Intl.DateTimeFormat(getLocale(), {
       timeZone: timezone,
       year: 'numeric',
       month: '2-digit',
@@ -124,7 +126,7 @@
       error = ''
     } catch (caught) {
       if (sequence !== loadSequence) return
-      error = caught instanceof CloudSituationError ? caught.message : '加载局势失败'
+      error = caught instanceof CloudSituationError ? caught.message : procedureMessage('procedure_failed_to_load_situation_updates')
     } finally {
       if (sequence === loadSequence) loading = false
     }
@@ -133,7 +135,7 @@
   async function publish(): Promise<void> {
     if (!token || !canPublish || !content.trim() || submitting) return
     if (!timeline && !validChinaTime(manualTime)) {
-      error = '请填写有效的内容时间（UTC+8）'
+      error = procedureMessage('procedure_enter_a_valid_content_time_utc_8')
       return
     }
     submitting = true
@@ -147,7 +149,7 @@
       if (draftKey) localStorage.removeItem(draftKey)
       await load(true)
     } catch (caught) {
-      error = caught instanceof CloudSituationError ? caught.message : '发布局势失败'
+      error = caught instanceof CloudSituationError ? caught.message : procedureMessage('procedure_failed_to_publish_situation_update')
     } finally {
       submitting = false
     }
@@ -171,7 +173,7 @@
       withdrawalReason = ''
       await load(true)
     } catch (caught) {
-      error = caught instanceof CloudSituationError ? caught.message : '撤回局势失败'
+      error = caught instanceof CloudSituationError ? caught.message : procedureMessage('procedure_failed_to_withdraw_situation_update')
     } finally {
       withdrawing = false
     }
@@ -198,7 +200,7 @@
     } catch (caught) {
       if (caught instanceof CloudSituationError && caught.status === 409)
         conflictMessage = caught.message
-      error = caught instanceof CloudSituationError ? caught.message : '控制时间线失败'
+      error = caught instanceof CloudSituationError ? caught.message : procedureMessage('procedure_failed_to_control_timeline')
     } finally {
       controlling = false
     }
@@ -244,7 +246,7 @@
           }
         }
       } catch {
-        draftError = '无法读取本地草稿'
+        draftError = procedureMessage('procedure_unable_to_read_local_draft')
       }
     }
     draftReady = true
@@ -267,48 +269,48 @@
       }
       draftError = ''
     } catch {
-      draftError = '本地草稿保存失败，请先复制正文备份'
+      draftError = procedureMessage('procedure_failed_to_save_local_draft_copy_the_body_as_a_backup_2')
     }
   })
 </script>
 
-<svelte:head><title>局势 · Veto</title></svelte:head>
+<svelte:head><title>{t('procedure_situation_updates_veto')}</title></svelte:head>
 
 <div class="mx-auto flex w-full max-w-5xl flex-col gap-6 p-6">
   <header class="flex items-start justify-between gap-4">
     <div>
-      <h1 class="flex items-center gap-2 text-xl font-semibold"><Activity />局势</h1>
-      <p class="mt-1 text-sm text-muted-foreground">大会统一局势时间线</p>
+      <h1 class="flex items-center gap-2 text-xl font-semibold"><Activity />{t('procedure_situation_updates')}</h1>
+      <p class="mt-1 text-sm text-muted-foreground">{t('procedure_conference_situation_timeline')}</p>
     </div>
     <Button variant="outline" size="sm" onclick={() => void load()} disabled={loading}>
-      <RefreshCw class={loading ? 'animate-spin' : ''} />刷新
+      <RefreshCw class={loading ? 'animate-spin' : ''} />{t('procedure_refresh')}
     </Button>
   </header>
 
   {#if !token}
     <Card.Root>
       <Card.Content class="py-10 text-center text-muted-foreground">
-        局势仅在 Cloud Conference 中提供。
+        {t('procedure_situation_updates_are_available_in_cloud_conferences')}
       </Card.Content>
     </Card.Root>
   {:else}
     {#if error}<p class="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
-        {error}
+        {renderProcedureMessage(error)}
       </p>{/if}
     {#if draftError}<p class="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
-        {draftError}
+        {renderProcedureMessage(draftError)}
       </p>{/if}
     {#if otherSeatDraft}
       <Card.Root>
         <Card.Header>
-          <Card.Title>其他席位的本地草稿</Card.Title>
+          <Card.Title>{t('procedure_local_drafts_from_another_seat')}</Card.Title>
           <Card.Description>
-            此草稿属于席位 {otherSeatDraft.seatId}，仅供查看和复制。请用原席位重新认证后提交。
+            {t('procedure_other_seat_situation_draft_notice', { value1: otherSeatDraft.seatId })}
           </Card.Description>
         </Card.Header>
         <Card.Content class="space-y-3">
           {#if otherSeatDraft.manualTime}<p class="text-sm text-muted-foreground">
-              内容时间：{otherSeatDraft.manualTime}（UTC+8）
+              {t('procedure_draft_content_time', { value1: otherSeatDraft.manualTime })}
             </p>{/if}
           <Textarea readonly rows={6} value={otherSeatDraft.content} />
         </Card.Content>
@@ -322,11 +324,11 @@
             <div>
               <Card.Title class="flex items-center gap-2"><Clock3 />{timeline.name}</Card.Title>
               <Card.Description>
-                {timeline.paused ? '已暂停' : `${timeline.ratio}x 运行中`}
+                {timeline.paused ? t('procedure_paused') : t('procedure_running_at_valuex', { value1: timeline.ratio })}
               </Card.Description>
             </div>
             <Badge variant={timeline.paused ? 'secondary' : 'default'}>
-              {timeline.paused ? '暂停' : '运行'}
+              {timeline.paused ? t('procedure_pause') : t('procedure_run')}
             </Badge>
           </div>
         </Card.Header>
@@ -340,10 +342,10 @@
                 disabled={controlling}
                 onclick={() => void control({ action: timeline?.paused ? 'resume' : 'pause' })}
               >
-                {#if timeline.paused}<Play />启动{:else}<Pause />暂停{/if}
+                {#if timeline.paused}<Play />{t('procedure_start')}{:else}<Pause />{t('procedure_pause')}{/if}
               </Button>
               <div class="space-y-1">
-                <Label for="timeline-ratio">正整数倍率</Label>
+                <Label for="timeline-ratio">{t('procedure_positive_integer_speed_multiplier')}</Label>
                 <div class="flex gap-2">
                   <Input
                     id="timeline-ratio"
@@ -360,12 +362,12 @@
                       controlling}
                     onclick={() => void control({ action: 'set_ratio', ratio: Number(ratioInput) })}
                   >
-                    应用
+                    {t('procedure_apply')}
                   </Button>
                 </div>
               </div>
               <div class="space-y-1">
-                <Label for="timeline-jump">跳转时间（UTC+8）</Label>
+                <Label for="timeline-jump">{t('procedure_jump_to_time_utc_8')}</Label>
                 <div class="flex gap-2">
                   <Input id="timeline-jump" type="datetime-local" bind:value={jumpTime} />
                   <Button
@@ -374,7 +376,7 @@
                     onclick={() =>
                       void control({ action: 'jump', contentTime: parseChinaTime(jumpTime) })}
                   >
-                    <SkipForward />跳转
+                    <SkipForward />{t('procedure_jump')}
                   </Button>
                 </div>
               </div>
@@ -387,29 +389,29 @@
     {#if canPublish}
       <Card.Root>
         <Card.Header>
-          <Card.Title>发布局势更新</Card.Title><Card.Description>
-            正文支持 Markdown，草稿保存在本机；发布后不可修改。
+          <Card.Title>{t('procedure_publish_situation_update')}</Card.Title><Card.Description>
+            {t('procedure_the_body_supports_markdown_drafts_are_saved_on_this_device_published_updates_cannot_be')}
           </Card.Description>
         </Card.Header>
         <Card.Content class="space-y-4">
           {#if !timeline}
             <div class="space-y-1.5">
-              <Label for="content-time">内容时间（UTC+8）</Label><Input
+              <Label for="content-time">{t('procedure_content_time_utc_8')}</Label><Input
                 id="content-time"
                 type="datetime-local"
                 bind:value={manualTime}
               />
             </div>
           {:else}
-            <p class="text-sm text-muted-foreground">内容时间将取发布瞬间的大会时间线时间。</p>
+            <p class="text-sm text-muted-foreground">{t('procedure_content_time_is_captured_from_the_conference_timeline_at_publication')}</p>
           {/if}
           <div class="space-y-1.5">
-            <Label for="situation-content">正文</Label><Textarea
+            <Label for="situation-content">{t('procedure_body')}</Label><Textarea
               id="situation-content"
               rows={8}
               maxlength={20000}
               bind:value={content}
-              placeholder="输入 Markdown 正文…"
+              placeholder={t('procedure_enter_markdown_content')}
             />
           </div>
           <div class="flex justify-end">
@@ -421,7 +423,7 @@
                 loading}
               onclick={() => void publish()}
             >
-              <Send />{submitting ? '发布中…' : '立即发布'}
+              <Send />{submitting ? t('procedure_publishing') : t('procedure_publish_now')}
             </Button>
           </div>
         </Card.Content>
@@ -430,15 +432,15 @@
 
     {#if canView}<section class="space-y-3">
         <div class="flex items-center justify-between">
-          <h2 class="font-semibold">已发布局势</h2>
-          <span class="text-xs text-muted-foreground">{situations.length} 条</span>
+          <h2 class="font-semibold">{t('procedure_published_situation_updates')}</h2>
+          <span class="text-xs text-muted-foreground">{t('procedure_situation_count', { value1: situations.length })}</span>
         </div>
         {#if loading}
-          <p class="py-10 text-center text-sm text-muted-foreground">正在加载…</p>
+          <p class="py-10 text-center text-sm text-muted-foreground">{t('procedure_loading_2')}</p>
         {:else if situations.length === 0}
           <Card.Root>
             <Card.Content class="py-10 text-center text-muted-foreground">
-              暂无局势更新
+              {t('procedure_no_situation_updates')}
             </Card.Content>
           </Card.Root>
         {:else}
@@ -464,7 +466,7 @@
                         withdrawalReason = ''
                       }}
                     >
-                      撤回
+                      {t('procedure_withdraw')}
                     </Button>{/if}
                 </div>
               </Card.Header>
@@ -474,7 +476,7 @@
                 </article>
                 {#if withdrawingId === item.id}
                   <div class="space-y-2 border-t pt-4">
-                    <Label for={`withdraw-${item.id}`}>撤回原因（必填，最多 500 字）</Label>
+                    <Label for={`withdraw-${item.id}`}>{t('procedure_withdrawal_reason_required_up_to_500_characters')}</Label>
                     <Textarea
                       id={`withdraw-${item.id}`}
                       rows={3}
@@ -491,7 +493,7 @@
                           withdrawalReason = ''
                         }}
                       >
-                        取消
+                        {t('procedure_cancel')}
                       </Button>
                       <Button
                         variant="destructive"
@@ -501,7 +503,7 @@
                           withdrawing}
                         onclick={() => void withdraw(item)}
                       >
-                        {withdrawing ? '撤回中…' : '确认撤回'}
+                        {withdrawing ? t('procedure_withdrawing') : t('procedure_confirm_withdrawal')}
                       </Button>
                     </div>
                   </div>

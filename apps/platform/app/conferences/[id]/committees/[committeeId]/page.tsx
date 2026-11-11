@@ -1,4 +1,6 @@
 "use client"
+import { message } from "@/i18n/messages"
+import { usePlatformTranslations } from "@/components/i18n-provider"
 
 import { useCallback, useEffect, useState } from "react"
 import type { JSX } from "react"
@@ -23,6 +25,8 @@ import { usePlatformAuth } from "@/lib/use-platform-auth"
 import { cn } from "@/lib/utils"
 
 export default function CommitteeDetailPage(): JSX.Element {
+  const { t, locale } = usePlatformTranslations()
+
   const params = useParams<{ id: string; committeeId: string }>()
   const router = useRouter()
   const { token, isReady, signOut } = usePlatformAuth()
@@ -43,7 +47,7 @@ export default function CommitteeDetailPage(): JSX.Element {
         caught instanceof ConferenceApiError &&
         caught.code === "CONFERENCE_VERSION_CONFLICT"
       ) {
-        setError("大会已在其他位置更新，请返回大会页面重新加载后再编辑。")
+        setError("platform_committee_version_conflict")
         return
       }
       setError(caught instanceof Error ? caught.message : fallback)
@@ -65,9 +69,9 @@ export default function CommitteeDetailPage(): JSX.Element {
           )
       setConference(next)
       setCommittee(nextCommittee)
-      if (!nextCommittee) setError("委员会不存在或已被删除。")
+      if (!nextCommittee) setError("platform_committee_deleted")
     } catch (caught) {
-      handleError(caught, "加载委员会失败")
+      handleError(caught, message("platform_load_committee_failed"))
     } finally {
       setIsLoading(false)
     }
@@ -78,13 +82,20 @@ export default function CommitteeDetailPage(): JSX.Element {
   }, [load])
 
   async function save(): Promise<void> {
-    if (!token || !conference || conference.lifecycle === "closed" || !committee || isSaving) return
+    if (
+      !token ||
+      !conference ||
+      conference.lifecycle === "closed" ||
+      !committee ||
+      isSaving
+    )
+      return
     if (!committee.name.trim()) {
-      setError("委员会名称不能为空。")
+      setError("platform_committee_name_empty")
       return
     }
     if (committee.seats.length === 0) {
-      setError("每个委员会至少需要一个席位。")
+      setError("platform_committee_needs_seat")
       return
     }
 
@@ -109,41 +120,44 @@ export default function CommitteeDetailPage(): JSX.Element {
       )
       router.replace(`/conferences/${conference.id}`)
     } catch (caught) {
-      handleError(caught, "保存委员会失败")
+      handleError(caught, message("platform_save_committee_failed"))
       setIsSaving(false)
     }
   }
 
   if (!isReady || isLoading) {
-    return <PlatformLoading label="正在加载委员会" />
+    return <PlatformLoading label={t("platform_loading_committee")} />
   }
 
   const backHref = `/conferences/${params.id}`
 
   return (
-    <PlatformShell backHref={backHref} backLabel="返回大会">
+    <PlatformShell
+      backHref={backHref}
+      backLabel={t("platform_back_conference")}
+    >
       {!conference || !committee ? (
         <div className="mx-auto max-w-xl rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-center">
           <p className="text-sm text-destructive">
-            {error || "委员会不存在或无法访问"}
+            {error || t("platform_committee_inaccessible")}
           </p>
           <Link
             href={backHref}
             className={cn(buttonVariants({ variant: "outline" }), "mt-5")}
           >
-            返回大会
+            {t("platform_back_conference")}
           </Link>
         </div>
       ) : conference.lifecycle === "closed" ? (
         <div className="mx-auto max-w-xl rounded-xl border bg-muted/30 p-6 text-center">
           <p className="text-sm text-muted-foreground">
-            已结束的大会不能修改委员会结构。
+            {t("platform_closed_committee_readonly")}
           </p>
           <Link
             href={backHref}
             className={cn(buttonVariants({ variant: "outline" }), "mt-5")}
           >
-            返回大会
+            {t("platform_back_conference")}
           </Link>
         </div>
       ) : (
@@ -151,10 +165,14 @@ export default function CommitteeDetailPage(): JSX.Element {
           <header className="flex flex-col gap-4 border-b pb-8 sm:flex-row sm:items-end sm:justify-between">
             <div className="min-w-0">
               <Badge variant="secondary">
-                {isNew ? "新委员会" : `${committee.seats.length} 个席位`}
+                {isNew
+                  ? t("platform_new_committee")
+                  : t("platform_seat_count", {
+                      value1: committee.seats.length,
+                    })}
               </Badge>
               <h1 className="mt-3 min-w-0 text-3xl font-bold tracking-[-0.035em] break-words sm:text-4xl">
-                {committee.name.trim() || "新建委员会"}
+                {committee.name.trim() || t("platform_create_committee")}
               </h1>
               <p className="mt-3 text-sm text-muted-foreground">
                 {conference.name}
@@ -173,9 +191,11 @@ export default function CommitteeDetailPage(): JSX.Element {
 
           <Card className="shadow-none ring-0">
             <CardHeader>
-              <CardTitle className="text-xl">委员会设置</CardTitle>
+              <CardTitle className="text-xl">
+                {t("platform_committee_settings")}
+              </CardTitle>
               <p className="text-sm leading-6 text-muted-foreground">
-                配置委员会类型、席位、角色与投票权。
+                {t("platform_committee_settings_intro")}
               </p>
             </CardHeader>
             <CardContent>
@@ -194,7 +214,7 @@ export default function CommitteeDetailPage(): JSX.Element {
               href={backHref}
               className={buttonVariants({ variant: "outline", size: "lg" })}
             >
-              取消
+              {t("platform_cancel")}
             </Link>
             <Button
               type="button"
@@ -207,7 +227,7 @@ export default function CommitteeDetailPage(): JSX.Element {
               ) : (
                 <Save aria-hidden="true" />
               )}
-              保存委员会
+              {t("platform_save_committee")}
             </Button>
           </div>
         </div>

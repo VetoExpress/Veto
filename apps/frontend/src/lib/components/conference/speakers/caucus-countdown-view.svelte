@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   /**
    * caucus-countdown-view.svelte
    * ────────────────────────
@@ -35,12 +36,12 @@
   const conf = $derived($currentCommittee)
   const title = $derived(
     mode === 'individual'
-      ? '个人演讲'
+      ? t('procedure_individual_speech')
       : mode === 'moderated_debate'
-        ? '有主持的辩论'
+        ? t('procedure_moderated_debate')
         : mode === 'unmoderated_debate'
-          ? '自由辩论'
-          : '自由磋商'
+          ? t('procedure_unmoderated_debate')
+          : t('procedure_unmoderated_caucus')
   )
   const HeaderIcon = $derived(
     mode === 'individual'
@@ -122,7 +123,7 @@
       <div class="text-center">
         {#if caucusCountdown.isCaucusPaused}
           <div class="mb-2 text-sm font-medium text-amber-500 uppercase tracking-wider">
-            计时已暂停
+            {t('procedure_timer_paused')}
           </div>
         {/if}
         <div
@@ -136,7 +137,7 @@
           {formatTime(caucusCountdown.totalRemainingSec)}
         </div>
         <div class="mt-2 text-sm text-muted-foreground">
-          剩余时间 · 已过 {formatTime(caucusCountdown.totalElapsedSec)}
+          {t('procedure_caucus_elapsed', { value1: formatTime(caucusCountdown.totalElapsedSec) })}
         </div>
       </div>
 
@@ -157,23 +158,23 @@
         {#if caucusCountdown.isCaucusPaused}
           <Button variant="default" onclick={resumeCaucusHandler} class="min-w-[140px] gap-2">
             <Timer size={14} />
-            恢复计时
+            {t('procedure_resume_timer')}
           </Button>
         {:else}
           <Button variant="outline" onclick={pauseCaucusHandler} class="min-w-[140px] gap-2">
-            暂停计时
+            {t('procedure_pause_timer')}
           </Button>
         {/if}
         <Button variant="destructive" onclick={endCaucus} class="min-w-[140px] gap-2">
           <Timer size={14} />
-          提前结束{title}
+          {t('procedure_finish_early')}{title}
         </Button>
       </div>
     </div>
   {:else}
     <div class="flex flex-col items-center gap-4 text-muted-foreground">
       <Timer size={48} class="opacity-30" />
-      <p class="text-lg font-medium">没有进行中的会议</p>
+      <p class="text-lg font-medium">{t('procedure_no_meeting_in_progress')}</p>
     </div>
   {/if}
 </div>

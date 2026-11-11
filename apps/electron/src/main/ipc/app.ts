@@ -3,6 +3,7 @@
  */
 
 import { ipcMain, BrowserWindow, shell } from 'electron'
+import { t } from '../i18n'
 
 export function registerAppIpc(): void {
   ipcMain.handle('veto:app:open-devtools', () => {
@@ -11,7 +12,7 @@ export function registerAppIpc(): void {
       win.webContents.openDevTools({ mode: 'detach' })
       return { success: true }
     }
-    return { success: false, error: 'No window found' }
+    return { success: false, error: t('electron_app_window_not_found') }
   })
 }
 

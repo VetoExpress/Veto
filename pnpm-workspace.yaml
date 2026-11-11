@@ -13,3 +13,8 @@ minimumReleaseAgeExclude:
   - '@cloudflare/workers-types@5.20260918.1'
   - miniflare@5.20260917.0-alpha
   - wrangler@4.134.0
+  - '@inlang/paraglide-js@3.2.2'
+  - icu-minify@4.14.10
+  - next-intl-swc-plugin-extractor@4.14.10
+  - next-intl@4.14.10
+  - use-intl@4.14.10

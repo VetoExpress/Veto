@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { messageText, type LocalizedMessage } from '$lib/components/ui/localized-message'
+  import { t } from '$lib/i18n'
   import { Download, CheckCircle2, Loader, Tag, User, Package, Star } from '@lucide/svelte'
   import type { PluginManifest } from '$lib/classes/services/plugin/plugin-db'
   import { installPlugin } from '$lib/classes/services/plugin/plugin-registry'
@@ -16,8 +18,8 @@
   } = $props()
 
   let installing = $state(false)
-  let error = $state<string | null>(null)
-  let done = $state(installed)
+  let error = $state<LocalizedMessage | null>(null)
+  let done = $state(false)
   let localStars = $state<number | undefined>(undefined)
 
   onMount(() => {
@@ -29,14 +31,14 @@
     return () => window.removeEventListener('veto:stars-loaded', onStarsLoaded)
   })
 
-  const TYPE_LABEL: Record<string, string> = {
-    faction: '阵营包',
-    scenario: '剧情包',
-    ruleset: '规则包',
-    campaign: '战役包',
-    utility: '工具包',
-    dependency: '依赖库'
-  }
+  const TYPE_LABEL: Record<string, string> = $derived({
+    faction: t('settings_type_faction'),
+    scenario: t('settings_type_scenario'),
+    ruleset: t('settings_type_ruleset'),
+    campaign: t('settings_type_campaign'),
+    utility: t('settings_type_utility'),
+    dependency: t('settings_type_dependency')
+  })
 
   async function handleInstall() {
     installing = true
@@ -46,7 +48,7 @@
       done = true
       oninstalled?.(manifest.id)
     } catch (err) {
-      error = err instanceof Error ? err.message : '安装失败'
+      error = err instanceof Error ? err.message : () => t('settings_install_failed')
     } finally {
       installing = false
     }
@@ -87,12 +89,12 @@
     </div>
 
     <!-- 安装按钮 -->
-    {#if done}
+    {#if installed || done}
       <div
         class="flex shrink-0 items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400"
       >
         <CheckCircle2 class="size-4" />
-        已安装
+        {t('settings_installed')}
       </div>
     {:else}
       <Button
@@ -104,10 +106,10 @@
       >
         {#if installing}
           <Loader class="size-3.5 animate-spin" />
-          安装中…
+          {t('settings_installing')}
         {:else}
           <Download class="size-3.5" />
-          安装
+          {t('settings_install')}
         {/if}
       </Button>
     {/if}
@@ -121,7 +123,7 @@
   <!-- 标签 -->
   {#if manifest.tags && manifest.tags.length > 0}
     <div class="flex flex-wrap gap-1">
-      {#each manifest.tags as tag}
+      {#each manifest.tags as tag, tagIndex (tagIndex)}
         <span
           class="flex items-center gap-0.5 rounded bg-muted/70 px-1.5 py-0.5 text-[10px] text-muted-foreground"
         >
@@ -133,6 +135,6 @@
 
   <!-- 安装错误 -->
   {#if error}
-    <p class="text-xs text-destructive">{error}</p>
+    <p class="text-xs text-destructive">{messageText(error)}</p>
   {/if}
 </div>

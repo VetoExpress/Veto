@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n'
   /**
    * seat-roster.svelte
    * ──────────────────────────
@@ -26,7 +27,7 @@
     currentId = null,
     max = Infinity,
     gridCols = 5,
-    emptyText = '暂无席位'
+    emptyText
   }: {
     entries: RosterEntry[]
     /** 显示模式：voting = 表决状态, list = 顺序名单 */
@@ -70,7 +71,7 @@
 </script>
 
 {#if entries.length === 0}
-  <div class="text-lg tracking-wider text-white/10">{emptyText}</div>
+  <div class="text-lg tracking-wider text-white/10">{emptyText ?? t('components_no_seats')}</div>
 {:else}
   <div
     class="grid gap-x-6 gap-y-2"
@@ -100,7 +101,7 @@
     {#if hasMore}
       <div class="col-span-full flex items-center justify-center gap-4 py-1.5">
         <span class="text-sm text-white/15">...</span>
-        <span class="text-lg text-white/20">还有 {remaining} 位代表</span>
+        <span class="text-lg text-white/20">{t('components_remaining_seats', { count: remaining })}</span>
       </div>
     {/if}
   </div>

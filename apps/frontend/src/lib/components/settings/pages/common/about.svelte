@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { messageText, type LocalizedMessage } from '$lib/components/ui/localized-message'
+  import { t } from '$lib/i18n'
   import {
     ExternalLink,
     FileText,
@@ -34,7 +36,7 @@
   let updateStatus = $state<UpdateStatus>('idle')
   let updateVersion = $state<string | null>(null)
   let downloadPercent = $state(0)
-  let errorMessage = $state<string | null>(null)
+  let errorMessage = $state<LocalizedMessage | null>(null)
   let updateInfo = $state<unknown>(null)
 
   let unsubscribers: Array<() => void> = []
@@ -82,7 +84,7 @@
       unsubscribers.push(
         window.veto.events.on('updater:error', (data: any) => {
           updateStatus = 'error'
-          errorMessage = data?.message ?? '未知错误'
+          errorMessage = data?.message ?? (() => t('settings_unknown_error'))
         })
       )
     }
@@ -106,20 +108,20 @@
       const result = await window.veto.updater.check()
       if (!result.success) {
         updateStatus = 'error'
-        errorMessage = result.error ?? '检查更新失败'
+        errorMessage = result.error ?? (() => t('settings_check_failed'))
       }
       // 如果 checkForUpdates 返回了 null（updater 被禁用），且没有事件被触发
       if (result.result === null) {
         setTimeout(() => {
           if (updateStatus === 'checking') {
             updateStatus = 'error'
-            errorMessage = '更新服务未启用'
+            errorMessage = () => t('settings_update_disabled')
           }
         }, 3000)
       }
     } catch (err: any) {
       updateStatus = 'error'
-      errorMessage = err?.message ?? '检查更新失败'
+      errorMessage = err?.message ?? (() => t('settings_check_failed'))
     }
   }
 
@@ -130,11 +132,11 @@
       const result = await window.veto.updater.download()
       if (!result.success) {
         updateStatus = 'error'
-        errorMessage = result.error ?? '下载更新失败'
+        errorMessage = result.error ?? (() => t('settings_download_failed'))
       }
     } catch (err: any) {
       updateStatus = 'error'
-      errorMessage = err?.message ?? '下载更新失败'
+      errorMessage = err?.message ?? (() => t('settings_download_failed'))
     }
   }
 
@@ -149,90 +151,90 @@
 
 <div class="space-y-8" in:fly={{ y: 8, duration: 320, opacity: 0 }}>
   <div class="mb-1 flex justify-center">
-    <img src={favicon} alt="App Logo" class="h-64 w-64 rounded-md" />
+    <img src={favicon} alt={t('settings_app_logo')} class="h-64 w-64 rounded-md" />
   </div>
   <div class="mb-6 flex flex-col items-center gap-2 text-center">
     <h2 class="text-3xl font-extrabold tracking-wide text-stone-800 dark:text-stone-100">
       {VETO_NAME}
     </h2>
-    <p class="text-sm text-muted-foreground">否决权</p>
-    <p class="text-sm text-muted-foreground">模拟联合国会议系统</p>
+    <p class="text-sm text-muted-foreground">{t('settings_veto_meaning')}</p>
+    <p class="text-sm text-muted-foreground">{t('settings_app_description')}</p>
   </div>
   <div class="space-y-3">
-    <SettingCard title="版本号" description="当前应用版本。">
+    <SettingCard title={t('settings_version')} description={t('settings_current_version')}>
       <Label>v{version}</Label>
     </SettingCard>
 
     {#if isElectron()}
       <!-- 开发者工具 -->
-      <SettingCard title="开发者工具" description="打开 Chromium DevTools 进行调试。">
+      <SettingCard title={t('settings_devtools')} description={t('settings_devtools_description')}>
         <Button variant="outline" size="sm" onclick={openDevTools}>
           <Terminal size={13} class="mr-1.5" />
-          打开开发者工具
+          {t('settings_open_devtools')}
         </Button>
       </SettingCard>
 
       <!-- 检查更新 -->
       <SettingCard
-        title="版本更新"
+        title={t('settings_updates')}
         description={updateStatus === 'not-available'
-          ? '当前已是最新版本。'
+          ? t('settings_update_latest')
           : updateStatus === 'available'
-            ? `发现新版本 v${updateVersion ?? ''}，点击下载更新。`
+            ? t('settings_update_available', { version: updateVersion ?? '' })
             : updateStatus === 'downloading'
-              ? '正在下载更新...'
+              ? t('settings_update_downloading')
               : updateStatus === 'downloaded'
-                ? '更新已就绪，重启应用以完成安装。'
+                ? t('settings_update_ready')
                 : updateStatus === 'error'
-                  ? (errorMessage ?? '检查更新时发生错误。')
-                  : '检查是否有新版本可用。'}
+                  ? (messageText(errorMessage) || t('settings_update_error'))
+                  : t('settings_update_description')}
       >
         <div class="flex items-center gap-2">
           {#if updateStatus === 'checking'}
             <Button variant="outline" size="sm" disabled>
               <Loader size={13} class="mr-1.5 animate-spin" />
-              检查中...
+              {t('settings_checking')}
             </Button>
           {:else if updateStatus === 'downloading'}
             <Button variant="outline" size="sm" disabled>
               <Loader size={13} class="mr-1.5 animate-spin" />
-              下载中 {downloadPercent}%
+              {t('settings_download_progress', { percent: downloadPercent })}
             </Button>
           {:else if updateStatus === 'available'}
             <Button variant="default" size="sm" onclick={downloadUpdate}>
               <Download size={13} class="mr-1.5" />
-              下载更新
+              {t('settings_download_update')}
             </Button>
             <Button variant="ghost" size="sm" onclick={checkForUpdates}>
               <RefreshCw size={13} class="mr-1.5" />
-              重新检查
+              {t('settings_check_again')}
             </Button>
           {:else if updateStatus === 'downloaded'}
             <div class="flex items-center gap-2">
               <CheckCircle2 size={14} class="text-green-500" />
               <span class="text-xs text-green-600 dark:text-green-400">
-                v{updateVersion ?? ''} 已就绪
+                {t('settings_version_ready', { version: updateVersion ?? '' })}
               </span>
             </div>
-            <Button variant="default" size="sm" onclick={quitAndInstall}>立即重启安装</Button>
+            <Button variant="default" size="sm" onclick={quitAndInstall}>{t('settings_restart_install')}</Button>
           {:else if updateStatus === 'not-available'}
             <div class="flex items-center gap-2">
               <CheckCircle2 size={14} class="text-muted-foreground" />
-              <span class="text-xs text-muted-foreground">已是最新</span>
+              <span class="text-xs text-muted-foreground">{t('settings_up_to_date')}</span>
             </div>
             <Button variant="outline" size="sm" onclick={checkForUpdates}>
               <RefreshCw size={13} class="mr-1.5" />
-              重新检查
+              {t('settings_check_again')}
             </Button>
           {:else if updateStatus === 'error'}
             <Button variant="outline" size="sm" onclick={checkForUpdates}>
               <RefreshCw size={13} class="mr-1.5" />
-              重试
+              {t('settings_retry')}
             </Button>
           {:else}
             <Button variant="outline" size="sm" onclick={checkForUpdates}>
               <RefreshCw size={13} class="mr-1.5" />
-              检查更新
+              {t('settings_check_updates')}
             </Button>
           {/if}
         </div>
@@ -251,18 +253,18 @@
       {/if}
     {/if}
     <!-- 联系我们 -->
-    <SettingCard title="联系我们" description="加入我们的社区交流或反馈问题。">
+    <SettingCard title={t('settings_contact')} description={t('settings_contact_description')}>
       <Dialog.Root>
         <Dialog.Trigger>
           <Button variant="outline" size="sm">
             <MessageCircle size={13} class="mr-1.5" />
-            联系我们
+            {t('settings_contact')}
           </Button>
         </Dialog.Trigger>
         <Dialog.Content class="sm:max-w-[425px]">
           <Dialog.Header>
-            <Dialog.Title>联系我们</Dialog.Title>
-            <Dialog.Description>请选择你要加入的平台进行交流或反馈问题。</Dialog.Description>
+            <Dialog.Title>{t('settings_contact')}</Dialog.Title>
+            <Dialog.Description>{t('settings_contact_platform')}</Dialog.Description>
           </Dialog.Header>
           <div class="grid gap-3 py-4">
             <Button
@@ -272,7 +274,7 @@
               class="w-full justify-start"
             >
               <MessageCircle size={16} class="mr-2" />
-              加入 QQ 群
+              {t('settings_join_qq')}
             </Button>
 
             <Button
@@ -283,14 +285,14 @@
               disabled
             >
               <ExternalLink size={16} class="mr-2" />
-              加入 Discord 服务器
+              {t('settings_join_discord')}
             </Button>
           </div>
         </Dialog.Content>
       </Dialog.Root>
     </SettingCard>
 
-    <SettingCard title="开源许可" description="本项目基于 GPL-3.0 协议开源。">
+    <SettingCard title={t('settings_license')} description={t('settings_license_description')}>
       <Button
         variant="outline"
         size="sm"
@@ -302,7 +304,7 @@
       </Button>
     </SettingCard>
 
-    <SettingCard title="GitHub 仓库" description="查看源代码或提交 Issue。">
+    <SettingCard title={t('settings_repository')} description={t('settings_repository_description')}>
       <Button variant="outline" size="sm" href="https://github.com/Miaoyww/Veto" target="_blank">
         <ExternalLink size={13} class="mr-1.5" />
         Miaoyww/Veto
