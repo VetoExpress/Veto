@@ -97,6 +97,16 @@ try {
     emitTsDeclarations: true,
     strategy: ['baseLocale']
   })
+  const declarationsPath = resolve(generated, 'messages', '_index.d.ts')
+  const declarations = await readFile(declarationsPath, 'utf8').catch(() => '')
+  const missing = sourceMessageKeys(catalogs['zh-CN']).filter(
+    (key) => !new RegExp(`\\bexport const ${key}\\b`).test(declarations)
+  )
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing generated translations after Paraglide compilation: ${missing.join(', ')}`
+    )
+  }
   await writeFile(
     resolve(generated, 'messages.d.ts'),
     'export * from "./messages/_index.js";\nexport * as m from "./messages/_index.js";\n'
@@ -107,4 +117,8 @@ try {
 } finally {
   await lock.close()
   await unlink(lockPath)
+}
+
+function sourceMessageKeys(catalog) {
+  return Object.keys(catalog)
 }

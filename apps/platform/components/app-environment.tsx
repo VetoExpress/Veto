@@ -81,6 +81,13 @@ function subscribe() {
       // Native detection still works when browser storage is unavailable.
     }
   }
+  if (new URLSearchParams(window.location.search).get("embedded") === "1") {
+    try {
+      sessionStorage.setItem("veto_platform_embedded", "1")
+    } catch {
+      // The query parameter remains available for the current page.
+    }
+  }
   return () => {}
 }
 
