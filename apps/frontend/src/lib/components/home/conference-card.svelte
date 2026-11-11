@@ -145,7 +145,7 @@
         </div>
       {:else}
         <div class="flex min-w-0 items-center gap-2">
-          <h3 class="truncate text-[13px] font-semibold text-foreground">
+          <h3 class="truncate text-[15px] font-semibold text-foreground">
             {conference.name}
           </h3>
           {#if conference.source === 'cloud'}<Badge class="source-badge source-badge-cloud">
@@ -154,7 +154,7 @@
               {t('settings_local')}
             </Badge>{/if}
         </div>
-        <p class="mt-1 truncate text-[10px] text-muted-foreground">
+        <p class="mt-1 truncate text-xs text-muted-foreground">
           {conference.source === 'cloud'
             ? t('procedure_cloud_workspace')
             : `${t('procedure_local_workspace')} · ${formatDate(conference.updatedAt)}`}
@@ -205,7 +205,7 @@
     </div>
     <MoreHorizontal class="size-4 shrink-0 text-muted-foreground group-hover:hidden" />
   </div>
-  <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-muted-foreground">
+  <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
     <span>{t('settings_committee_count', { count: conference.committees.length })}</span>
     <span>
       {t('settings_seat_count', {
@@ -217,7 +217,7 @@
           memberships[0]
         )}
       </span>{/if}
-    <span class="ml-auto font-semibold text-foreground">
+      <span class="ml-auto text-xs font-semibold text-foreground">
       {conference.source === 'cloud' ? t('settings_rejoin') : t('settings_enter')}
       <span class="ml-1">→</span>
     </span>
@@ -261,7 +261,7 @@
   :global(.source-badge) {
     border: 0;
     padding: 0.2rem 0.4rem;
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 600;
     background: var(--muted);
     color: var(--muted-foreground);

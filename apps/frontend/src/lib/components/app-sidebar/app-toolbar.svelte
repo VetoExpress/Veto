@@ -131,7 +131,7 @@
     color: var(--muted-foreground);
     cursor: pointer;
     font: inherit;
-    font-size: 0.75rem;
+    font-size: 0.8125rem;
     font-weight: 500;
     transition:
       background-color 150ms ease,
