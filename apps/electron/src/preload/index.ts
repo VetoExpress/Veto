@@ -43,6 +43,22 @@ const veto = {
       return () => ipcRenderer.removeListener('veto:account:changed', listener)
     }
   } satisfies DesktopAccountAPI,
+  cloudPlatform: {
+    open: () => ipcRenderer.send('cloud-platform:open'),
+    close: () => ipcRenderer.send('cloud-platform:close'),
+    goBack: () => ipcRenderer.send('cloud-platform:back'),
+    goForward: () => ipcRenderer.send('cloud-platform:forward'),
+    onChanged: (
+      callback: (state: { open: boolean; canGoBack: boolean; canGoForward: boolean }) => void
+    ) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        next: { open: boolean; canGoBack: boolean; canGoForward: boolean }
+      ) => callback(next)
+      ipcRenderer.on('veto:cloud-platform:changed', listener)
+      return () => ipcRenderer.removeListener('veto:cloud-platform:changed', listener)
+    }
+  },
   openExternal: (url: string) => {
     return ipcRenderer.invoke('veto:open-external', url)
   },

@@ -307,6 +307,8 @@
   "settings_committee_count": "{count} committees",
   "settings_seat_count": "{count} seats",
   "settings_cloud_platform": "Cloud platform",
+  "settings_platform_back": "Back",
+  "settings_platform_forward": "Forward",
   "settings_draft": "Draft",
   "settings_active": "Active",
   "settings_closed": "Closed",

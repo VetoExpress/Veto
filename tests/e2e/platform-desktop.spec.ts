@@ -52,6 +52,15 @@ test('App 窗口：登录页显示控件，主题按钮不重叠且可以切换'
   expect(await page.evaluate(() => (window as typeof window & { windowCommands: string[] }).windowCommands)).toEqual(['window:minimize', 'window:maximize', 'window:close', 'window:return-to-app'])
 })
 
+test('App 内嵌平台：隐藏平台自带标题栏', async ({ page }) => {
+  await desktop(page)
+  await login(page)
+  await page.goto(`${base}/?from=app&embedded=1`)
+  await expect(page.getByRole('button', { name: '退出登录' })).toHaveCount(0)
+  await expect(page.locator('.platform-titlebar')).toHaveCount(0)
+  await expect(page.locator('header')).toHaveCount(0)
+})
+
 test('App 窗口：隐藏页脚，导航与刷新后仍保留窗口控件', async ({ page }) => {
   await desktop(page)
   await login(page)

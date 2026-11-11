@@ -103,7 +103,8 @@ export function PlatformShell({
   const { user } = usePlatformUser(token, signOut)
   const subtitle = usePlatformSubtitle(token, signOut)
   const onAccountPage = pathname === "/account"
-  const { isAppEntry, isDesktop, titlebarActions } = useAppEnvironment()
+  const { isAppEntry, isDesktop, isEmbedded, titlebarActions } =
+    useAppEnvironment()
   const brand = (
     <div className="flex min-w-0 items-center gap-3">
       {backHref ? (
@@ -192,7 +193,7 @@ export function PlatformShell({
 
   return (
     <div className="platform-shell relative flex min-h-svh flex-col overflow-clip bg-background">
-      {isDesktop ? (
+      {isEmbedded ? null : isDesktop ? (
         titlebarActions && createPortal(accountActions, titlebarActions)
       ) : (
         <header className="relative z-10 flex h-20 shrink-0 items-center justify-between border-b bg-background/85 px-4 backdrop-blur-md sm:px-8 lg:px-12">

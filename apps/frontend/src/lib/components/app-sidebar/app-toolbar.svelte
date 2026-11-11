@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { Cloud, LayoutDashboard, Monitor, Puzzle, User, Workflow, Settings } from '@lucide/svelte'
+  import { ArrowLeft, ArrowRight, Cloud, LayoutDashboard, Monitor, Puzzle, User, Workflow, Settings } from '@lucide/svelte'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
   import { page } from '$app/stores'
@@ -11,6 +11,7 @@
   import { settingsDialogOpen } from '$lib/classes/stores/app/global-ui-store'
   import { isElectron } from '$lib/classes/utils/runtime'
   import favicon from '$lib/assets/favicon.png'
+  import { cloudPlatformView } from '$lib/classes/stores/app/cloud-platform-view.svelte'
 
   let { onOpenDisplay }: { onOpenDisplay: () => void } = $props()
 
@@ -34,25 +35,65 @@
     <nav class="hidden items-center gap-1 md:flex" aria-label={t('procedure_workspace_navigation')}>
       <button
         type="button"
-        class={`nav-tab${$page.url.pathname === '/conference' ? ' nav-tab-active' : ''}`}
-        aria-current={$page.url.pathname === '/conference' ? 'page' : undefined}
-        onclick={() => goto(resolve('/conference'))}
+        class={`nav-tab${!$cloudPlatformView.open && $page.url.pathname === '/conference' ? ' nav-tab-active' : ''}`}
+        aria-current={!$cloudPlatformView.open && $page.url.pathname === '/conference' ? 'page' : undefined}
+        onclick={() => {
+          cloudPlatformView.close()
+          goto(resolve('/conference'))
+        }}
       >
         <LayoutDashboard class="size-4" />{t('procedure_workspace')}
       </button>
       <button
         type="button"
-        class={`nav-tab${$page.url.pathname === '/conference/tools' ? ' nav-tab-active' : ''}`}
-        aria-current={$page.url.pathname === '/conference/tools' ? 'page' : undefined}
-        onclick={() => goto(resolve('/conference/tools'))}
+        class={`nav-tab${$cloudPlatformView.open ? ' nav-tab-active' : ''}`}
+        aria-current={$cloudPlatformView.open ? 'page' : undefined}
+        onclick={() => cloudPlatformView.open()}
+      >
+        <Cloud class="size-4" />{t('settings_cloud_platform')}
+      </button>
+      {#if $cloudPlatformView.open}
+        <span class="mx-1 h-5 w-px bg-border" aria-hidden="true"></span>
+        <button
+          type="button"
+          class="nav-icon"
+          aria-label={t('settings_platform_back')}
+          title={t('settings_platform_back')}
+          disabled={!$cloudPlatformView.canGoBack}
+          onclick={() => cloudPlatformView.goBack()}
+        >
+          <ArrowLeft class="size-4" />
+        </button>
+        <button
+          type="button"
+          class="nav-icon"
+          aria-label={t('settings_platform_forward')}
+          title={t('settings_platform_forward')}
+          disabled={!$cloudPlatformView.canGoForward}
+          onclick={() => cloudPlatformView.goForward()}
+        >
+          <ArrowRight class="size-4" />
+        </button>
+      {/if}
+      <button
+        type="button"
+        class={`nav-tab${!$cloudPlatformView.open && $page.url.pathname === '/conference/tools' ? ' nav-tab-active' : ''}`}
+        aria-current={!$cloudPlatformView.open && $page.url.pathname === '/conference/tools' ? 'page' : undefined}
+        onclick={() => {
+          cloudPlatformView.close()
+          goto(resolve('/conference/tools'))
+        }}
       >
         <Workflow class="size-4" />{t('procedure_tools')}
       </button>
       <button
         type="button"
-        class={`nav-tab${$page.url.pathname === '/conference/plugins' ? ' nav-tab-active' : ''}`}
-        aria-current={$page.url.pathname === '/conference/plugins' ? 'page' : undefined}
-        onclick={() => goto(resolve('/conference/plugins'))}
+        class={`nav-tab${!$cloudPlatformView.open && $page.url.pathname === '/conference/plugins' ? ' nav-tab-active' : ''}`}
+        aria-current={!$cloudPlatformView.open && $page.url.pathname === '/conference/plugins' ? 'page' : undefined}
+        onclick={() => {
+          cloudPlatformView.close()
+          goto(resolve('/conference/plugins'))
+        }}
       >
         <Puzzle class="size-4" />{t('procedure_plugins')}
       </button>
@@ -148,5 +189,25 @@
   .nav-tab-active {
     background: var(--muted);
     color: var(--foreground);
+  }
+  .nav-icon {
+    display: inline-flex;
+    width: 2rem;
+    height: 2rem;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 0.5rem;
+    background: transparent;
+    color: var(--muted-foreground);
+    cursor: pointer;
+  }
+  .nav-icon:hover:not(:disabled) {
+    background: var(--muted);
+    color: var(--foreground);
+  }
+  .nav-icon:disabled {
+    cursor: default;
+    opacity: 0.4;
   }
 </style>

@@ -27,10 +27,12 @@ const APP_ENTRY_KEY = "veto_platform_app_entry"
 const AppEnvironmentContext = createContext<{
   isAppEntry: boolean
   isDesktop: boolean
+  isEmbedded: boolean
   titlebarActions: HTMLDivElement | null
 }>({
   isAppEntry: false,
   isDesktop: false,
+  isEmbedded: false,
   titlebarActions: null,
 })
 
@@ -49,6 +51,22 @@ function isAppEntry() {
   }
   try {
     return sessionStorage.getItem(APP_ENTRY_KEY) === "1"
+  } catch {
+    return false
+  }
+}
+
+function isEmbedded() {
+  if (new URLSearchParams(window.location.search).get("embedded") === "1") {
+    try {
+      sessionStorage.setItem("veto_platform_embedded", "1")
+    } catch {
+      // The query parameter is enough for the first render.
+    }
+    return true
+  }
+  try {
+    return sessionStorage.getItem("veto_platform_embedded") === "1"
   } catch {
     return false
   }
@@ -87,6 +105,7 @@ export function AppEnvironment({ children }: { children: ReactNode }) {
 
   const desktop = useSyncExternalStore(subscribe, isDesktop, serverSnapshot)
   const appEntry = useSyncExternalStore(subscribe, isAppEntry, serverSnapshot)
+  const embedded = useSyncExternalStore(subscribe, isEmbedded, serverSnapshot)
   const [titlebarActions, setTitlebarActions] = useState<HTMLDivElement | null>(
     null
   )
@@ -100,17 +119,18 @@ export function AppEnvironment({ children }: { children: ReactNode }) {
       value={{
         isAppEntry: appEntry,
         isDesktop: desktop,
+        isEmbedded: embedded,
         titlebarActions,
       }}
     >
       <div
         className={
-          desktop
+          desktop && !embedded
             ? "platform-desktop m-2 flex h-[calc(100svh-1rem)] flex-col overflow-hidden rounded-xl bg-background shadow-sm"
             : undefined
         }
       >
-        {desktop && (
+        {desktop && !embedded && (
           <header
             className="platform-titlebar relative z-50 flex h-9 shrink-0 items-center gap-2 bg-background select-none"
             aria-label={t("platform_window_titlebar")}

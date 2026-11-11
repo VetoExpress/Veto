@@ -20,6 +20,15 @@ export interface VetoAPI {
     onLocaleChanged: (callback: (locale: Locale) => void) => () => void
   }
   account: DesktopAccountAPI
+  cloudPlatform: {
+    open: () => void
+    close: () => void
+    goBack: () => void
+    goForward: () => void
+    onChanged: (
+      callback: (state: { open: boolean; canGoBack: boolean; canGoForward: boolean }) => void
+    ) => () => void
+  }
   openExternal: (url: string) => Promise<void>
   plugins: {
     list: () => Promise<
