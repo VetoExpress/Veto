@@ -5,6 +5,7 @@
   "author": "Miaoyww",
   "homepage": "https://veto.miaoyww.top",
   "repository": "https://github.com/Miaoyww/Veto",
+  "packageManager": "pnpm@11.20.0",
   "scripts": {
     "dev": "pnpm i18n:compile && node scripts/dev.mjs",
     "i18n:compile": "pnpm --filter @vetoexpress/i18n compile",
