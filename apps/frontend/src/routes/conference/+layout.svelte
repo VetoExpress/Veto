@@ -71,6 +71,7 @@
   const recentConferences = $derived([...$conferences].reverse().slice(0, 5))
   const conferenceId = $derived($page.params.conference_id ?? '')
   const committeeId = $derived($page.params.committee_id ?? '')
+  const isConferenceHome = $derived($page.url.pathname === '/conference')
   const inCommittee = $derived($page.url.pathname.includes('/committee/'))
   const activeConference = $derived(
     $conferences.find((conference) => conference.id === conferenceId) ?? null
@@ -94,7 +95,7 @@
 <JoinConferenceDialog bind:open={$joinConferenceDialogOpen} />
 
 <div>
-  <GlobalSidebar>
+  <GlobalSidebar showSidebar={!isConferenceHome}>
     {#snippet sidebar()}
       <Sidebar.Header>
         <BrandSwitcher />
@@ -208,7 +209,9 @@
     {/snippet}
 
     {#snippet toolbar()}
-      <Sidebar.Trigger class="-ms-1" />
+      {#if !isConferenceHome}
+        <Sidebar.Trigger class="-ms-1" />
+      {/if}
       <div class="drag-region h-full flex-1"></div>
 
       <Button

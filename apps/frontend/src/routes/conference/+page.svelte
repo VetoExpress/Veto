@@ -200,9 +200,9 @@
   ></div>
 
   <header
-    class="relative z-10 shrink-0 border-b bg-background/75 px-6 py-6 backdrop-blur-xl sm:px-8 lg:px-10"
+    class="relative z-10 shrink-0 border-b bg-background/75 px-6 py-6 backdrop-blur-xl sm:px-8 lg:pl-10 lg:pr-2"
   >
-    <div class="mx-auto flex max-w-6xl flex-col gap-6">
+    <div class="flex w-full flex-col gap-6">
       <div class="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
         <div class="min-w-0">
           <h1 class="text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -253,7 +253,7 @@
   </header>
 
   <ScrollArea class="relative z-10 min-h-0 flex-1">
-    <main class="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-8 sm:px-8 lg:px-10 lg:py-10">
+    <main class="flex w-full flex-col gap-8 px-6 py-8 sm:px-8 lg:py-10 lg:pl-10 lg:pr-2">
       {#if lastOpened && !query.trim()}
         <section aria-labelledby="continue-heading">
           <div class="mb-3 flex items-end justify-between gap-4">

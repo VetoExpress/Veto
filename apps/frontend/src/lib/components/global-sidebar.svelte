@@ -7,6 +7,7 @@
   let {
     class: className = '',
     collapsible = 'icon',
+    showSidebar = true,
     sidebar,
     toolbar,
     children,
@@ -14,6 +15,7 @@
   }: {
     class?: string
     collapsible?: 'offcanvas' | 'icon' | 'none'
+    showSidebar?: boolean
     sidebar?: Snippet
     toolbar?: Snippet
     children: Snippet
@@ -21,12 +23,18 @@
 </script>
 
 <Sidebar.Provider class="h-svh overflow-hidden">
-  <Sidebar.Root variant="inset" class={className} {collapsible} {...restProps}>
-    {@render sidebar?.()}
-    <Sidebar.Rail />
-  </Sidebar.Root>
+  {#if showSidebar}
+    <Sidebar.Root variant="inset" class={className} {collapsible} {...restProps}>
+      {@render sidebar?.()}
+      <Sidebar.Rail />
+    </Sidebar.Root>
+  {/if}
 
-  <Sidebar.Inset class="min-h-0 overflow-hidden">
+  <Sidebar.Inset
+    class={showSidebar
+      ? 'min-h-0 overflow-hidden'
+      : 'm-2 min-h-0 overflow-hidden rounded-xl shadow-sm'}
+  >
     <header class="relative flex h-9 shrink-0 items-center gap-2 pl-4">
       {@render toolbar?.()}
 
