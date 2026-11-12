@@ -36,11 +36,11 @@ window.veto.i18n.onLocaleChanged(callback: (locale: Locale) => void): () => void
 
 ## 集成验证
 
-Electron 文案位于 `packages/i18n/catalogs/electron/{zh-CN,en-US}.json`，使用平铺
-`electron_` key。增加或修改 catalog 后，集成方需要先编译共享包，生成 messages 和 key 类型：
+Electron 主进程文案位于 `apps/electron/src/main/i18n/catalogs/electron/{zh-CN,en-US}.json`，使用平铺
+`electron_` key。增加或修改 catalog 后，运行 Electron 类型检查即可验证本地文案：
 
 ```sh
-pnpm --filter @vetoexpress/i18n compile
+pnpm --filter @vetoexpress/electron typecheck
 ```
 
 定向回归覆盖 `i18n.test.ts`、`preload-i18n.test.ts`、`account-session.test.ts`、

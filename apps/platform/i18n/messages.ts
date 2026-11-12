@@ -1,5 +1,17 @@
 import { createTranslator } from "next-intl"
-import { defaultLocale, messages, type Locale } from "@vetoexpress/i18n"
+import commonEn from "./catalogs/common/en-US.json"
+import commonZh from "./catalogs/common/zh-CN.json"
+import platformEn from "./catalogs/platform/en-US.json"
+import platformZh from "./catalogs/platform/zh-CN.json"
+import { defaultLocale, type Locale } from "./locale"
+
+export { defaultLocale, LOCALE_COOKIE, resolveLocale } from "./locale"
+export type { Locale } from "./locale"
+
+export const messages = {
+  "zh-CN": { ...commonZh, ...platformZh },
+  "en-US": { ...commonEn, ...platformEn },
+} as const
 
 export type MessageValues = Record<string, string | number | Date>
 export type TranslationKey =

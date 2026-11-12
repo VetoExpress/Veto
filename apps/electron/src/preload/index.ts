@@ -2,7 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import type { AccountSnapshot, DesktopAccountAPI } from '@vetoexpress/auth/desktop'
 import type { AccountUpdate } from '@vetoexpress/auth'
-import type { Locale } from '@vetoexpress/i18n'
+import type { Locale } from '../shared/i18n'
 
 // Custom APIs for renderer
 const api = {}

@@ -1,5 +1,4 @@
 packages:
-  - "../../packages/i18n"
   - "../../packages/auth"
   - "../../packages/utils"
 

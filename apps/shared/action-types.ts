@@ -7,11 +7,11 @@
  * 新增操作只需在此处添加，对应 EventType 会自动包含。
  */
 
-import { translate, type Locale, type MessageKey } from '../../packages/i18n/src/index.js'
+export type MessageKey = string
 
 export function getLocalizedLabels<Key extends string>(
   keys: Record<Key, MessageKey>,
-  render: (key: MessageKey) => string = translate
+  render: (key: MessageKey) => string = (key) => key
 ): Record<Key, string> {
   return Object.defineProperties({}, Object.fromEntries(
     Object.entries(keys).map(([value, key]) => [value, {
@@ -109,12 +109,6 @@ export const ACTION_MESSAGE_KEYS: Record<ActionType, MessageKey> = {
   time_milestone: 'domain_action_time_milestone',
   created: 'domain_action_created',
   deleted: 'domain_action_deleted'
-}
-
-export const ACTION_LABELS = getLocalizedLabels(ACTION_MESSAGE_KEYS)
-
-export function getActionLabels(locale: Locale): Record<ActionType, string> {
-  return getLocalizedLabels(ACTION_MESSAGE_KEYS, (key) => translate(key, {}, locale))
 }
 
 export type EntryMessageValues = Record<string, string | number>

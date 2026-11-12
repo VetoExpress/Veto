@@ -1,19 +1,39 @@
-import {
-  defaultLocale,
-  isLocale,
-  LOCALE_STORAGE_KEY,
-  resolveLocale,
-  translate,
-  type Locale,
-  type MessageKey,
-  type MessageValues
-} from '@vetoexpress/i18n'
+import * as m from './generated/messages/_index.js'
+import { messages } from './catalogs'
+
+export const locales = ['zh-CN', 'en-US'] as const
+export type Locale = (typeof locales)[number]
+export const defaultLocale: Locale = 'zh-CN'
+export const LOCALE_STORAGE_KEY = 'veto-locale'
+export type MessageKey = string
+export type MessageValues = Record<string, string | number | Date>
+
+export function isLocale(value: unknown): value is Locale {
+  return value === 'zh-CN' || value === 'en-US'
+}
+
+export function resolveLocale(value?: string | null): Locale {
+  const language = value?.trim().replaceAll('_', '-').toLowerCase()
+  return language === 'en' || language?.startsWith('en-') ? 'en-US' : defaultLocale
+}
 
 let currentLocale = $state<Locale>(defaultLocale)
 let localeRevision = 0
 
 export function getLocale(): Locale {
   return currentLocale
+}
+
+export function translate(
+  key: MessageKey,
+  values: MessageValues = {},
+  locale: Locale = defaultLocale
+): string {
+  const message = m[key as keyof typeof m] as
+    | ((inputs: MessageValues, options: { locale: Locale }) => string)
+    | undefined
+  if (!message) return key
+  return message(values, { locale })
 }
 
 export function t(key: MessageKey, values: MessageValues = {}): string {

@@ -1,10 +1,17 @@
 export {
   t,
+  translate,
   getLocale,
   setLocale,
   initializeLocale,
   applyLocale,
   formatDate,
-  formatNumber
+  formatNumber,
+  locales,
+  defaultLocale,
+  isLocale,
+  resolveLocale,
+  LOCALE_STORAGE_KEY
 } from './locale.svelte'
-export type { Locale, MessageKey, MessageValues } from '@vetoexpress/i18n'
+export { messages } from './catalogs'
+export type { Locale, MessageKey, MessageValues } from './locale.svelte'

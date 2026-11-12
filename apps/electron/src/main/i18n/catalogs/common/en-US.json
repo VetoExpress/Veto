@@ -1,0 +1,10 @@
+{
+  "common_language": "Interface language",
+  "common_language_description": "Change the interface language instantly.",
+  "common_settings": "Settings",
+  "common_cancel": "Cancel",
+  "common_save": "Save",
+  "common_confirm": "Confirm",
+  "common_close": "Close",
+  "common_language_save_failed": "The language changed in this window, but the preference could not be saved."
+}

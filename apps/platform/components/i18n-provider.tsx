@@ -12,12 +12,8 @@ import {
 } from "react"
 import { NextIntlClientProvider, useLocale } from "next-intl"
 import { usePathname } from "next/navigation"
-import {
-  LOCALE_COOKIE,
-  messages,
-  resolveLocale,
-  type Locale,
-} from "@vetoexpress/i18n"
+import { LOCALE_COOKIE, messages, resolveLocale } from "@/i18n/messages"
+import type { Locale } from "@/i18n/locale"
 import { platformTranslate, type MessageValues } from "@/i18n/messages"
 
 const LocaleContext = createContext<{

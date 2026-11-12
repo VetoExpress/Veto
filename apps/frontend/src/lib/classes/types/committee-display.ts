@@ -15,7 +15,7 @@ import type {
 } from './committee'
 import type { MajorityRule, VoteTargetType, ConferenceEntry } from './committee'
 import type { TimerStatus } from './timer'
-import type { Locale } from '@vetoexpress/i18n'
+import type { Locale } from '$lib/i18n'
 
 export type DisplayPhase = ConferencePhase | 'motion'
 

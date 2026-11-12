@@ -1,7 +1,7 @@
 import { writable } from 'svelte/store';
 import { bootstrapStore, saveToStore, deleteFromStore } from '../../helpers/store-bridge';
 import { syncAcrossWindows } from '../../helpers/cross-window-sync';
-import { resolveLocale, type Locale } from '@vetoexpress/i18n';
+import { resolveLocale, type Locale } from '$lib/i18n';
 
 export interface GlobalSettings {
 	/** 新建战局时的默认图标风格 */

@@ -320,5 +320,20 @@
   "components_battle_status_removed": "Remove status effect: {status} ← unit {unit}",
   "components_battle_route_command_confirmed": "Command confirmed: add waypoint ({lat}°N, {lng}°E) for {unit}",
   "components_battle_route_command_cancelled": "Command cancelled: waypoint ({lat}°N, {lng}°E) for {unit} withdrawn",
-  "components_battle_unit_routed": "{unit} routed"
+  "components_battle_unit_routed": "{unit} routed",
+  "components_quorum_met": "Quorum met",
+  "components_quorum_unmet": "Quorum not met",
+  "components_quorum_present": "Present seats counted for quorum",
+  "components_quorum_denominator": "Quorum denominator",
+  "components_quorum_required": "Required present seats",
+  "components_quorum_summary": "Present {present} / denominator {denominator} · required {required}",
+  "components_threshold_fixed": "Fixed threshold: {count} yes votes",
+  "components_vote_threshold_summary": "Denominator {denominator} · required yes votes {required}",
+  "components_basis_present_participants": "Based on present participant seats",
+  "components_basis_present_voting_eligible": "Based on present seats with voting rights",
+  "components_basis_yes_no": "Based on yes and no votes",
+  "components_legacy_vote_rules_unavailable": "This historical vote has no saved rules evaluation; the recorded result is shown.",
+  "components_vote_veto_rejection": "Rejected due to veto: {seats}",
+  "components_votes_recorded": "Recorded votes / voting seats",
+  "components_manual_motion_decision": "The chair decides after observing placards"
 }

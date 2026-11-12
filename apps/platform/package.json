@@ -4,9 +4,6 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "predev": "node ../../packages/i18n/scripts/compile.mjs",
-    "prebuild": "node ../../packages/i18n/scripts/compile.mjs",
-    "pretypecheck": "node ../../packages/i18n/scripts/compile.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -15,7 +12,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@vetoexpress/i18n": "workspace:*",
     "next-intl": "4.14.10",
     "@base-ui/react": "^1.8.0",
     "@vetoexpress/auth": "workspace:*",

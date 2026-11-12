@@ -1,5 +1,8 @@
-import { defaultLocale, locales, translate, type Locale } from '@vetoexpress/i18n'
+import { defaultLocale, type Locale } from '../shared/i18n'
+import { translate, type MessageKey, type MessageValues } from './i18n-messages'
 import { createLogger } from './logger'
+
+export { isLocale } from '../shared/i18n'
 
 const log = createLogger('I18n')
 let locale: Locale = defaultLocale
@@ -9,14 +12,7 @@ export function getLocale(): Locale {
   return locale
 }
 
-export function isLocale(value: unknown): value is Locale {
-  return typeof value === 'string' && locales.some((locale) => locale === value)
-}
-
-export function t(
-  key: Parameters<typeof translate>[0],
-  values: Parameters<typeof translate>[1] = {}
-) {
+export function t(key: MessageKey, values: MessageValues = {}) {
   return translate(key, values, locale)
 }
 

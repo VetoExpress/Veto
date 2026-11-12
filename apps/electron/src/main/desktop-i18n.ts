@@ -1,6 +1,6 @@
 import { app, BrowserWindow } from 'electron'
 import { is } from '@electron-toolkit/utils'
-import { defaultLocale, resolveLocale, type Locale } from '@vetoexpress/i18n'
+import { defaultLocale, resolveLocale, type Locale } from '../shared/i18n'
 import { loadStore, saveStore } from './data/store'
 import { getLocale, isLocale, onLocaleChanged, t, updateLocale } from './i18n'
 import { isAccountOrigin } from './ipc/trusted-origin'

@@ -22,7 +22,7 @@ import {
 } from '$lib/classes/types/delegate'
 import { DISPLAY_STANDALONE_ID } from '$lib/classes/const'
 import { applyLocale, getLocale } from '$lib/i18n'
-import { isLocale } from '@vetoexpress/i18n'
+import { isLocale } from '$lib/i18n'
 
 // ---- 抽象接口 ------------------------------------------------------------
 

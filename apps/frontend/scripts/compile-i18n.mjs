@@ -1,10 +1,12 @@
 import { readFile, readdir, mkdir, writeFile, open, unlink } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
-import { resolve, relative } from 'node:path'
+import { resolve, relative, dirname } from 'node:path'
 import { compile } from '@inlang/paraglide-js'
 import { parse } from '@formatjs/icu-messageformat-parser'
 
 const packageRoot = fileURLToPath(new URL('..', import.meta.url))
+const catalogRoot = resolve(packageRoot, 'i18n', 'catalogs')
+const catalogsModule = resolve(packageRoot, 'src/lib/i18n/catalogs.ts')
 const lockPath = resolve(packageRoot, '.compile-lock')
 let lock
 for (let attempt = 0; !lock; attempt += 1) {
@@ -28,7 +30,7 @@ for (let attempt = 0; !lock; attempt += 1) {
 try {
   const languages = ['zh-CN', 'en-US']
   const catalogs = Object.fromEntries(languages.map((locale) => [locale, {}]))
-  const scopes = (await readdir(resolve(packageRoot, 'catalogs'), { withFileTypes: true }))
+  const scopes = (await readdir(catalogRoot, { withFileTypes: true }))
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
     .sort()
@@ -49,11 +51,11 @@ try {
   for (const scope of scopes) {
     const pair = {}
     for (const locale of languages) {
-      const path = resolve(packageRoot, 'catalogs', scope, `${locale}.json`)
+      const path = resolve(catalogRoot, scope, `${locale}.json`)
       pair[locale] = JSON.parse(await readFile(path, 'utf8'))
       const binding = `${scope.replaceAll('-', '_')}_${locale.replaceAll('-', '_')}`
       imports.push(
-        `import ${binding} from '../${relative(packageRoot, path).replaceAll('\\', '/')}'`
+        `import ${binding} from '${relative(dirname(catalogsModule), path).replaceAll('\\', '/')}'`
       )
       bindings[locale].push(binding)
     }
@@ -78,19 +80,19 @@ try {
     }
   }
 
-  await mkdir(resolve(packageRoot, 'messages'), { recursive: true })
+  await mkdir(resolve(packageRoot, 'i18n', 'messages'), { recursive: true })
   for (const locale of languages) {
     await writeFile(
-      resolve(packageRoot, 'messages', `${locale}.json`),
+      resolve(packageRoot, 'i18n', 'messages', `${locale}.json`),
       JSON.stringify(catalogs[locale], null, 2) + '\n'
     )
   }
   await mkdir(resolve(packageRoot, 'src'), { recursive: true })
   await writeFile(
-    resolve(packageRoot, 'src/catalogs.ts'),
+    catalogsModule,
     `${imports.join('\n')}\n\nexport const messages = {\n${languages.map((locale) => `  '${locale}': { ${bindings[locale].map((binding) => `...${binding}`).join(', ')} }`).join(',\n')}\n} as const\n`
   )
-  const generated = resolve(packageRoot, 'src/generated')
+  const generated = resolve(packageRoot, 'src/lib/i18n/generated')
   await compile({
     project: resolve(packageRoot, 'project.inlang'),
     outdir: generated,

@@ -1,4 +1,4 @@
-import type { MessageKey } from '@vetoexpress/i18n'
+import type { MessageKey } from '$lib/i18n'
 import { t } from '$lib/i18n'
 
 export type ProcedureMessage = string | {

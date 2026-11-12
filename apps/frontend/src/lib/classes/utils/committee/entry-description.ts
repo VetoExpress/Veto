@@ -1,4 +1,4 @@
-import { messages, translate, type Locale } from '@vetoexpress/i18n'
+import { messages, translate, type Locale } from '$lib/i18n'
 import { t } from '$lib/i18n'
 import type { ConferenceEntry } from '$lib/classes/types/committee'
 

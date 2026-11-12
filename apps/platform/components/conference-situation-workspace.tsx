@@ -1,7 +1,7 @@
 "use client"
 import { message } from "@/i18n/messages"
 import { usePlatformTranslations } from "@/components/i18n-provider"
-import type { Locale } from "@vetoexpress/i18n"
+import type { Locale } from "@/i18n/locale"
 
 import { useCallback, useEffect, useState } from "react"
 import { Clock3, Loader2, Play, RefreshCw, RotateCcw } from "lucide-react"

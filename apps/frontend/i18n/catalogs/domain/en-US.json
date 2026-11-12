@@ -81,7 +81,7 @@
   "domain_missing_caucus": "The meeting is in the caucus phase, but no active caucus data is available",
   "domain_motion_disabled_speaker": "A motion cannot be proposed while a speech timer is active",
   "domain_motion_disabled_caucus": "A new motion cannot be proposed while a caucus is in progress",
-  "domain_log_roll_call": "Roll call completed: {present}/{total} present{observers, plural, =0 {} other { ({observers} observers), {voters} eligible voters}}; simple majority: {simpleMajority}; two-thirds majority: {twoThirds}{absentCount, plural, =0 {} other {; absent: {absentNames}}}",
+  "domain_log_roll_call": "Roll call completed: {present}/{total} present{observers, plural, =0 {} other { ({observers} observers), {voters} eligible voters}}; quorum basis: {denominator}, {countedPresent} counted, {required} required{absentCount, plural, =0 {} other {; absent: {absentNames}}}",
   "domain_log_roll_call_reset": "Roll call reset: all participant attendance has been reset",
   "domain_log_phase": "Phase entered: {phase, select, preamble {Meeting preparation} roll_call {Roll call} pending_speakers_list {Awaiting a motion to open the speakers list} general_debate {General debate} caucus_setup {Caucus preparation} caucus {Caucus} voting {Voting} suspended {Suspended} closed {Closed} unmoderated {Unmoderated caucus} moderated_debate {Moderated debate} unmoderated_debate {Unmoderated debate} other {{phase}}}",
   "domain_log_roll_call_to_voting": "Phase entered: Voting (roll call after closure of debate completed)",
@@ -118,5 +118,9 @@
   "domain_log_suspended": "Meeting suspended",
   "domain_log_resumed": "Meeting resumed",
   "domain_log_closed": "Meeting closed",
-  "domain_log_seat_created": "Seat created: {name}"
+  "domain_log_seat_created": "Seat created: {name}",
+  "domain_rules_saved": "Procedure rules saved; active votes retain their original rules snapshot.",
+  "domain_rules_invalid": "Invalid procedure rules; the committee cannot be restored.",
+  "domain_quorum_unmet": "Quorum not met: {denominator} counted seats, {present} present, {required} required.",
+  "domain_log_voting_ended_with_basis": "Voting ended: Yes {yes} / No {no} / Abstain {abstain}; denominator {denominator}, {required} yes votes required; veto seats: {vetoNames} → {result, select, passed {Passed} other {Failed}}"
 }

@@ -21,3 +21,11 @@ Thumbs.db
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Local i18n build output
+/i18n/messages/
+/.compile-lock
+/project.inlang/cache/
+/project.inlang/*.db
+/src/lib/i18n/catalogs.ts
+/src/lib/i18n/generated/

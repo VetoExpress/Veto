@@ -37,7 +37,7 @@ import {
   type Capability
 } from '$lib/classes/types/delegate'
 import type { Attendance } from '$lib/classes/types/committee'
-import { translate, type MessageKey } from '@vetoexpress/i18n'
+import { translate, type MessageKey } from '$lib/i18n'
 import type { EntryMessageValues } from '../../../../../shared/action-types'
 import { getDisplayBridge, buildDisplayData } from '$lib/classes/clients/conference-display-client'
 import { emitServiceEvent } from '$lib/classes/services/event-bus-bridge'

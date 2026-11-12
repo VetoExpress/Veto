@@ -1,6 +1,6 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
 import type { DesktopAccountAPI } from '@vetoexpress/auth/desktop'
-import type { Locale } from '@vetoexpress/i18n'
+import type { Locale } from '../shared/i18n'
 
 // global.d.ts
 export {}

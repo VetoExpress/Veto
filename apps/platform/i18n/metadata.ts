@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { getLocale } from "next-intl/server"
-import type { Locale } from "@vetoexpress/i18n"
+import type { Locale } from "./locale"
 import { platformTranslate } from "./messages"
 
 export async function localizedMetadata(

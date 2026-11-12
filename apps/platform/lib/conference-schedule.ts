@@ -1,5 +1,5 @@
 import { platformTranslate } from "@/i18n/messages"
-import { defaultLocale, type Locale } from "@vetoexpress/i18n"
+import { defaultLocale, type Locale } from "@/i18n/locale"
 export const FILE_RETENTION_MS = 72 * 60 * 60 * 1000
 
 // The editor uses an explicit UTC+8 timezone, independent of the device timezone.

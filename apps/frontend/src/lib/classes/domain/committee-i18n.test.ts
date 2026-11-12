@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { translate } from '@vetoexpress/i18n'
+import { translate } from '$lib/i18n'
 import { applyLocale } from '$lib/i18n'
 import { Committee } from './committee.svelte'
 import { MOTION_LABELS, POINT_LABELS, ACTION_LABELS } from '$lib/classes/types/committee'

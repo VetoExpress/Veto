@@ -860,5 +860,7 @@
   "procedure_caucus_capacity_calculation": "{total} 秒 ÷ 每人 {seconds} 秒 = 最多 {speakers} 人发言",
   "procedure_caucus_remaining_capacity": "剩余时间尚可容纳 {speakers} 人（{remaining} ÷ {seconds} 秒/人）",
   "procedure_yield_time_description": "{name} 将剩余 {remaining} {type}",
-  "procedure_committee_count": "{count} 个会场"
+  "procedure_committee_count": "{count} 个会场",
+  "procedure_document_vote_rule": "文件表决",
+  "procedure_document_vote_rule_summary": "{ratio} · {basis}"
 }

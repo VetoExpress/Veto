@@ -1,5 +1,5 @@
 import { platformTranslate, type MessageValues } from "@/i18n/messages"
-import { defaultLocale, type Locale } from "@vetoexpress/i18n"
+import { defaultLocale, type Locale } from "@/i18n/locale"
 import type { Conference, ConferenceStructure } from "./conference-client"
 import { CAPABILITY_LABELS } from "./conference-client"
 import { scheduleInput } from "./conference-schedule"

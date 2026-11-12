@@ -10,7 +10,7 @@ import type { PluginManifest } from '$lib/classes/services/plugin/plugin-db';
 import { registerStatusDefinitions } from '../engine/registry/status-registry';
 import { registerSensorDefinitions } from '../engine/registry/sensor-registry';
 import { createLogger } from '$lib/classes/logger';
-import { defaultLocale, resolveLocale } from '@vetoexpress/i18n';
+import { defaultLocale, resolveLocale } from '$lib/i18n';
 
 const log = createLogger('ModRegistry')
 const modLog = createLogger('Mods')

@@ -1,7 +1,7 @@
 import type { ConferencePhase } from '$lib/classes/types/committee'
 import { getLocalizedLabels } from '../../../../../../shared/action-types'
 import { t } from '$lib/i18n'
-import type { MessageKey } from '@vetoexpress/i18n'
+import type { MessageKey } from '$lib/i18n'
 
 /** Allowed phase transitions for the Chair-owned committee procedure state. */
 export const VALID_TRANSITIONS: Record<ConferencePhase, ConferencePhase[]> = {

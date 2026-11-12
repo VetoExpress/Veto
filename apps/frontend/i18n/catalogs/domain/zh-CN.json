@@ -81,7 +81,7 @@
   "domain_missing_caucus": "会议处于磋商阶段，但缺少进行中的磋商数据",
   "domain_motion_disabled_speaker": "发言计时进行中，无法提出动议",
   "domain_motion_disabled_caucus": "磋商进行中，无法提出新动议",
-  "domain_log_roll_call": "点名完成: 实到 {present}/{total}{observers, plural, =0 {} other {（含观察员 {observers}），可投票 {voters}}}，简单多数 {simpleMajority} 票，2/3多数 {twoThirds} 票{absentCount, plural, =0 {} other {；缺席: {absentNames}}}",
+  "domain_log_roll_call": "点名完成: 实到 {present}/{total}{observers, plural, =0 {} other {（含观察员 {observers}），可投票 {voters}}}；法定人数按 {denominator} 席计，实际计入 {countedPresent} 席，需要 {required} 席{absentCount, plural, =0 {} other {；缺席: {absentNames}}}",
   "domain_log_roll_call_reset": "重新点名: 所有参会席位出席状态已重置",
   "domain_log_phase": "进入阶段: {phase, select, preamble {会前准备} roll_call {点名} pending_speakers_list {等待开启主发言名单} general_debate {一般性辩论} caucus_setup {磋商准备} caucus {磋商} voting {投票表决} suspended {休会} closed {闭幕} unmoderated {自由磋商} moderated_debate {有主持的辩论} unmoderated_debate {自由辩论} other {{phase}}}",
   "domain_log_roll_call_to_voting": "进入阶段: 投票表决（辩论结束后点名完成）",
@@ -118,5 +118,9 @@
   "domain_log_suspended": "暂时休会",
   "domain_log_resumed": "会议恢复",
   "domain_log_closed": "会议闭幕",
-  "domain_log_seat_created": "席位已创建: {name}"
+  "domain_log_seat_created": "席位已创建: {name}",
+  "domain_rules_saved": "议事规则配置已保存；进行中的表决继续使用原规则快照。",
+  "domain_rules_invalid": "议事规则配置无效，无法恢复会议。",
+  "domain_quorum_unmet": "法定人数不足：计入 {denominator} 席，实际出席 {present} 席，需要 {required} 席。",
+  "domain_log_voting_ended_with_basis": "投票结束: Yes {yes} / No {no} / Abstain {abstain}；分母 {denominator}，所需赞成票 {required}；否决席位: {vetoNames} → {result, select, passed {通过} other {未通过}}"
 }

@@ -320,5 +320,20 @@
   "components_battle_status_removed": "移除状态效果: {status} ← 单位 {unit}",
   "components_battle_route_command_confirmed": "指令确认：{unit} 添加路线节点 ({lat}°N, {lng}°E)",
   "components_battle_route_command_cancelled": "指令取消：{unit} 路线节点 ({lat}°N, {lng}°E) 已撤销",
-  "components_battle_unit_routed": "{unit} 溃退"
+  "components_battle_unit_routed": "{unit} 溃退",
+  "components_quorum_met": "已达到法定人数",
+  "components_quorum_unmet": "未达到法定人数",
+  "components_quorum_present": "计入法定人数的出席席位",
+  "components_quorum_denominator": "法定人数计算基数",
+  "components_quorum_required": "所需出席席位",
+  "components_quorum_summary": "出席 {present} / 基数 {denominator} · 所需 {required}",
+  "components_threshold_fixed": "固定 {count} 票赞成",
+  "components_vote_threshold_summary": "计算基数 {denominator} · 所需赞成票 {required}",
+  "components_basis_present_participants": "按出席参会席位计算",
+  "components_basis_present_voting_eligible": "按出席且有投票权的席位计算",
+  "components_basis_yes_no": "按赞成票与反对票计算",
+  "components_legacy_vote_rules_unavailable": "此历史表决未保存规则评估，显示已记录的结果。",
+  "components_vote_veto_rejection": "因否决票未通过：{seats}",
+  "components_votes_recorded": "已记录票数 / 投票席位",
+  "components_manual_motion_decision": "主席观察举牌后手动裁决"
 }

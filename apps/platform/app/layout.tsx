@@ -7,7 +7,7 @@ import { AppEnvironment } from "@/components/app-environment"
 import { siteUrl } from "@/lib/site"
 import { cn } from "@/lib/utils"
 import { getLocale } from "next-intl/server"
-import type { Locale } from "@vetoexpress/i18n"
+import type { Locale } from "@/i18n/locale"
 import { platformTranslate } from "@/i18n/messages"
 import { I18nProvider } from "@/components/i18n-provider"
 

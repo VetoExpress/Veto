@@ -6,7 +6,7 @@
  * Cloud Service and a UserClient renderer.
  */
 
-import { translate, type Locale, type MessageKey } from '../../packages/i18n/src/index.js'
+import type { MessageKey } from './action-types'
 import { getLocalizedLabels } from './action-types'
 
 // ---------------------------------------------------------------------------
@@ -71,12 +71,6 @@ export const CAPABILITY_MESSAGE_KEYS: Record<Capability, MessageKey> = {
   control_conference: 'domain_capability_control_conference',
   control_timeline: 'domain_capability_control_timeline',
   draft_resolution: 'domain_capability_draft_resolution'
-}
-
-export const CAPABILITY_LABELS = getLocalizedLabels(CAPABILITY_MESSAGE_KEYS)
-
-export function getCapabilityLabels(locale: Locale): Record<Capability, string> {
-  return getLocalizedLabels(CAPABILITY_MESSAGE_KEYS, (key) => translate(key, {}, locale))
 }
 
 export type CommitteeType = 'cabinet' | 'mpc' | 'ipc'

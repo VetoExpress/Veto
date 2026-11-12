@@ -24,8 +24,8 @@
 
 ## 文案与多语言
 
-- 说明性文字一律进 `packages/i18n/catalogs/<scope>/zh-CN.json` 与 `en-US.json`：标签、按钮、标题、提示与占位符、空状态、错误与通知、确认文案、设置项说明、tooltip、aria-label 与 alt。键名沿用 `scope_snake_case`；前端经 `$lib/i18n` 的 `t()` 取用，平台经 next-intl 与 `platformTranslate()`，Electron 主进程用 `translate()`。
-- 同一改动内补齐两种语言的键。`pnpm i18n:compile` 会校验两侧键名与 ICU 占位符一致；新增或改动文案后先编译再验收。动态值用 ICU 占位符，日期与数字用 `formatDate` / `formatNumber`。
+- 说明性文字按应用归属维护：frontend 文案放入 `apps/frontend/i18n/catalogs/<scope>/zh-CN.json` 与 `en-US.json`，平台文案放入 `apps/platform/i18n/catalogs/<scope>/zh-CN.json` 与 `en-US.json`，Electron 主进程文案放入 `apps/electron/src/main/i18n/catalogs/<scope>/zh-CN.json` 与 `en-US.json`。标签、按钮、标题、提示与占位符、空状态、错误与通知、确认文案、设置项说明、tooltip、aria-label 与 alt 都必须进入对应 catalog。键名沿用 `scope_snake_case`；前端经 `$lib/i18n` 的 `t()` 取用，平台经 next-intl 与 `platformTranslate()`，Electron 主进程经本地 `t()` 取用。
+- 同一改动内补齐对应应用的两种语言键。frontend 的 `pnpm i18n:compile` 会校验两侧 key、ICU 参数并生成本地翻译代码；新增或改动文案后先编译再验收。动态值用 ICU 占位符，日期与数字用 `formatDate` / `formatNumber`。
 - 装饰性文字直接写在组件或素材里，不进 catalog：品牌字样、Logo 与图形内的字、纯视觉点缀、跨语言通用的符号与单位代号。
 - 用户数据与外部内容按原文显示，不翻译：会议名、单位名、文件内容、导入数据。
 

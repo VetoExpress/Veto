@@ -860,5 +860,7 @@
   "procedure_caucus_capacity_calculation": "{total} seconds ÷ {seconds} seconds per speaker = Up to {speakers} speakers",
   "procedure_caucus_remaining_capacity": "Time remaining allows {speakers} speakers ({remaining} ÷ {seconds} seconds per speaker)",
   "procedure_yield_time_description": "{name}: {type} ({remaining} remaining)",
-  "procedure_committee_count": "{count, plural, one {# committee} other {# committees}}"
+  "procedure_committee_count": "{count, plural, one {# committee} other {# committees}}",
+  "procedure_document_vote_rule": "Document vote",
+  "procedure_document_vote_rule_summary": "{ratio} · {basis}"
 }

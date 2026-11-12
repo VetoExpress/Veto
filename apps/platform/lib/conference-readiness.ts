@@ -1,6 +1,6 @@
 import { message } from "@/i18n/messages"
 import { platformTranslate, type MessageValues } from "@/i18n/messages"
-import { defaultLocale, type Locale } from "@vetoexpress/i18n"
+import { defaultLocale, type Locale } from "@/i18n/locale"
 import type { Conference } from "./conference-client"
 
 export interface ReadinessCheck {

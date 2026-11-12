@@ -10,7 +10,7 @@ import type {
 } from '../../../../../shared/action-types'
 import { ACTION_MESSAGE_KEYS, getLocalizedLabels } from '../../../../../shared/action-types'
 import { t } from '$lib/i18n'
-import type { MessageKey } from '@vetoexpress/i18n'
+import type { MessageKey } from '$lib/i18n'
 
 export type { Attendance, ParticipantSeat, Seat, SeatView } from './delegate'
 export type { ConferenceActionType, Entry, ConferenceEntry }
