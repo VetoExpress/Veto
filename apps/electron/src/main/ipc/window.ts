@@ -5,17 +5,19 @@
  * 由 Renderer 进程通过 preload 调用。
  */
 
-import { ipcMain, BrowserWindow, WebContentsView, shell } from 'electron'
+import { ipcMain, BrowserWindow, WebContentsView, shell, type Session } from 'electron'
 import { is } from '@electron-toolkit/utils'
 import { join } from 'path'
 import { getAppUrl } from '../dev-server'
+import { getLocale } from '../i18n'
 import { createLogger } from '../logger'
+import type { Locale } from '../../shared/i18n'
 
 const log = createLogger('WindowIPC')
 
 const TITLEBAR_HEIGHT = 48
 const STATUSBAR_HEIGHT = 30
-const CLOUD_PLATFORM_URL = 'https://platform.miaoyww.top/?from=app&embedded=1'
+const CLOUD_PLATFORM_ORIGIN = 'https://platform.miaoyww.top'
 
 type CloudPlatformState = {
   open: boolean
@@ -25,6 +27,37 @@ type CloudPlatformState = {
 
 let cloudPlatformView: WebContentsView | null = null
 let cloudPlatformWindow: BrowserWindow | null = null
+let localeHeadersRegistered = false
+
+function cloudPlatformUrl(): string {
+  return `${CLOUD_PLATFORM_ORIGIN}/?from=app&embedded=1&lang=${encodeURIComponent(getLocale())}`
+}
+
+function registerLocaleRequestHeaders(session: Session): void {
+  if (localeHeadersRegistered) return
+  localeHeadersRegistered = true
+  session.webRequest.onBeforeSendHeaders(
+    { urls: [`${CLOUD_PLATFORM_ORIGIN}/*`] },
+    (details, callback) => {
+      const locale = getLocale()
+      details.requestHeaders['X-Veto-Locale'] = locale
+      details.requestHeaders['Accept-Language'] = locale
+      callback({ requestHeaders: details.requestHeaders })
+    }
+  )
+}
+
+export function notifyCloudPlatformLocale(locale: Locale): void {
+  const contents = cloudPlatformView?.webContents
+  if (!contents || contents.isDestroyed()) return
+  try {
+    contents.send('veto:i18n:locale-changed', locale)
+  } catch (error) {
+    log.warn('Failed to notify embedded cloud platform of language change', {
+      errorType: error instanceof Error ? error.name : typeof error
+    })
+  }
+}
 
 function getCloudPlatformState(): CloudPlatformState {
   const contents = cloudPlatformView?.webContents
@@ -79,6 +112,7 @@ function openCloudPlatform(win: BrowserWindow): void {
     }
   })
   cloudPlatformView = view
+  registerLocaleRequestHeaders(view.webContents.session)
   win.contentView.addChildView(view)
   win.on('resize', updateCloudPlatformBounds)
   win.on('closed', closeCloudPlatform)
@@ -95,11 +129,11 @@ function openCloudPlatform(win: BrowserWindow): void {
     void shell.openExternal(url)
     return { action: 'deny' }
   })
-  const publish = () => publishCloudPlatformState()
+  const publish = (): void => publishCloudPlatformState()
   view.webContents.on('did-navigate', publish)
   view.webContents.on('did-navigate-in-page', publish)
   view.webContents.on('did-finish-load', publish)
-  void view.webContents.loadURL(CLOUD_PLATFORM_URL).catch((error: unknown) => {
+  void view.webContents.loadURL(cloudPlatformUrl()).catch((error: unknown) => {
     log.error('Failed to load embedded cloud platform', {
       errorType: error instanceof Error ? error.name : typeof error,
       message: error instanceof Error ? error.message : String(error)

@@ -81,7 +81,7 @@ export default function Page() {
       </a>
 
       <div className="absolute top-6 right-6 z-20 flex items-center gap-2">
-        <LanguageSwitcher />
+        <LanguageSwitcher className="h-10 rounded-full" />
         {!isDesktop && (
           <ThemeToggler className="flex size-10 cursor-pointer items-center justify-center rounded-full border bg-card/80 shadow-sm backdrop-blur [&_svg]:size-5" />
         )}

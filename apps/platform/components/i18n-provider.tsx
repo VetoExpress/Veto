@@ -13,8 +13,16 @@ import {
 import { NextIntlClientProvider, useLocale } from "next-intl"
 import { usePathname } from "next/navigation"
 import { LOCALE_COOKIE, messages, resolveLocale } from "@/i18n/messages"
-import type { Locale } from "@/i18n/locale"
+import { isLocale, type Locale } from "@/i18n/locale"
 import { platformTranslate, type MessageValues } from "@/i18n/messages"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { cn } from "@/lib/utils"
 
 const LocaleContext = createContext<{
   locale: Locale
@@ -47,10 +55,19 @@ export function I18nProvider({
   const revision = useRef(0)
   const currentLocale = useRef(initialLocale)
   const [error, setError] = useState(false)
+  const syncLocaleParameter = useCallback((next: Locale) => {
+    const url = new URL(window.location.href)
+    if (!localeBridge() && !url.searchParams.has("lang")) return
+    if (url.searchParams.get("lang") === next) return
+    url.searchParams.set("lang", next)
+    window.history.replaceState(window.history.state, "", url)
+  }, [])
   const applyLocale = useCallback(
-    (next: Locale) => {
-      document.cookie = `${LOCALE_COOKIE}=${next}; Path=/; Max-Age=31536000; SameSite=Lax${location.protocol === "https:" ? "; Secure" : ""}`
+    (next: Locale, persist = false) => {
+      if (persist)
+        document.cookie = `${LOCALE_COOKIE}=${next}; Path=/; Max-Age=31536000; SameSite=Lax${location.protocol === "https:" ? "; Secure" : ""}`
       document.documentElement.lang = next
+      syncLocaleParameter(next)
       if (currentLocale.current === next) return
       currentLocale.current = next
       updateLocale(next)
@@ -69,13 +86,13 @@ export function I18nProvider({
       if (titleKey)
         document.title = `${platformTranslate(titleKey, {}, next)} | ${platformTranslate("platform_brand", {}, next)}`
     },
-    [pathname]
+    [pathname, syncLocaleParameter]
   )
   const setLocale = useCallback(
     (next: Locale) => {
       const request = ++revision.current
       setError(false)
-      applyLocale(next)
+      applyLocale(next, true)
       const bridge = localeBridge()
       if (bridge)
         void bridge.setLocale(next).catch((cause: unknown) => {
@@ -160,17 +177,35 @@ export function usePlatformTranslations() {
   return { t: translate, locale }
 }
 
-export function LanguageSwitcher() {
+const languageNames = {
+  "zh-CN": "中文",
+  "en-US": "English",
+} as const
+
+export function LanguageSwitcher({ className }: { className?: string }) {
   const { locale, setLocale } = usePlatformLocale()
+  const { t } = usePlatformTranslations()
   return (
-    <select
-      aria-label={locale === "zh-CN" ? "界面语言" : "Interface language"}
+    <Select
       value={locale}
-      onChange={(event) => setLocale(event.target.value as Locale)}
-      className="h-9 max-w-28 rounded-lg border border-input bg-background px-2 text-sm"
+      items={languageNames}
+      onValueChange={(next) => {
+        if (isLocale(next)) setLocale(next)
+      }}
     >
-      <option value="zh-CN">中文</option>
-      <option value="en-US">English</option>
-    </select>
+      <SelectTrigger
+        aria-label={t("common_language")}
+        className={cn("h-9 w-28 bg-background", className)}
+      >
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent align="end">
+        {Object.entries(languageNames).map(([value, label]) => (
+          <SelectItem key={value} value={value}>
+            {label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   )
 }

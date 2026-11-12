@@ -7,9 +7,21 @@ export function isLocale(value: unknown): value is Locale {
   return value === "zh-CN" || value === "en-US"
 }
 
-export function resolveLocale(value?: string | null): Locale {
+function matchLocale(value?: string | null): Locale | undefined {
   const language = value?.trim().replaceAll("_", "-").toLowerCase()
-  return language === "en" || language?.startsWith("en-")
-    ? "en-US"
-    : defaultLocale
+  if (language === "en" || language?.startsWith("en-")) return "en-US"
+  if (language === "zh" || language?.startsWith("zh-")) return "zh-CN"
+  return undefined
+}
+
+export function resolveLocale(value?: string | null): Locale {
+  return matchLocale(value) ?? defaultLocale
+}
+
+export function resolvePreferredLocale(value?: string | null): Locale {
+  for (const entry of value?.split(",") ?? []) {
+    const locale = matchLocale(entry.split(";")[0])
+    if (locale) return locale
+  }
+  return defaultLocale
 }

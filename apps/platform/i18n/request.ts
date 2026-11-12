@@ -1,9 +1,11 @@
-import { cookies } from "next/headers"
+import { headers } from "next/headers"
 import { getRequestConfig } from "next-intl/server"
-import { LOCALE_COOKIE, messages, resolveLocale } from "./messages"
+import { messages, resolveLocale } from "./messages"
 
 export default getRequestConfig(async () => {
-  const cookieStore = await cookies()
-  const locale = resolveLocale(cookieStore.get(LOCALE_COOKIE)?.value)
+  const requestHeaders = await headers()
+  const locale = resolveLocale(
+    requestHeaders.get("x-veto-locale") ?? requestHeaders.get("accept-language")
+  )
   return { locale, messages: messages[locale], timeZone: "Asia/Shanghai" }
 })

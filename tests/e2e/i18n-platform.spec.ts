@@ -1,6 +1,11 @@
 import { expect, test, type Page } from '@playwright/test'
 
 const base = 'http://localhost:4174'
+test.use({ locale: 'zh-CN' })
+async function chooseLanguage(page: Page, label: string, language: '中文' | 'English') {
+  await page.getByRole('combobox', { name: label }).click()
+  await page.getByRole('option', { name: language, exact: true }).click()
+}
 const conference = {
   id: 'i18n',
   name: '用户原文大会',
@@ -83,11 +88,40 @@ test('server first English and Chinese requests remain isolated', async ({ brows
     await Promise.all([englishPage.goto(`${base}/login`), chinesePage.goto(`${base}/login`)])
     await expect(englishPage.getByLabel('Email', { exact: true })).toBeVisible()
     await expect(chinesePage.getByLabel('邮箱', { exact: true })).toBeVisible()
-    await englishPage.getByRole('combobox', { name: 'Interface language' }).selectOption('zh-CN')
+    await chooseLanguage(englishPage, 'Interface language', '中文')
     await expect(chinesePage.locator('html')).toHaveAttribute('lang', 'zh-CN')
     await expect(chinesePage.getByLabel('邮箱', { exact: true })).toBeVisible()
   } finally {
     await Promise.all([english.close(), chinese.close()])
+  }
+})
+
+test('browser language seeds the first visit without saving a preference', async ({ browser }) => {
+  const context = await browser.newContext({ locale: 'en-US' })
+  try {
+    const page = await context.newPage()
+    const response = await page.goto(`${base}/login`)
+    expect(await response?.text()).toContain('lang="en-US"')
+    await expect(page.getByLabel('Email', { exact: true })).toBeVisible()
+    expect((await context.cookies()).some((cookie) => cookie.name === 'veto-locale')).toBe(false)
+  } finally {
+    await context.close()
+  }
+})
+
+test('language URL parameter overrides the browser language', async ({ browser }) => {
+  const context = await browser.newContext({ locale: 'en-US' })
+  try {
+    const page = await context.newPage()
+    const response = await page.goto(`${base}/login?lang=zh-CN`)
+    expect(await response?.text()).toContain('lang="zh-CN"')
+    await expect(page.getByLabel('邮箱', { exact: true })).toBeVisible()
+    await chooseLanguage(page, '界面语言', 'English')
+    await expect(page).toHaveURL(/lang=en-US/)
+    await page.reload()
+    await expect(page.getByLabel('Email', { exact: true })).toBeVisible()
+  } finally {
+    await context.close()
   }
 })
 
@@ -104,7 +138,7 @@ test('language switching retains login input and the document without navigation
   page.on('framenavigated', (frame) => {
     if (frame === page.mainFrame()) navigations++
   })
-  await page.getByRole('combobox', { name: '界面语言' }).selectOption('en-US')
+  await chooseLanguage(page, '界面语言', 'English')
   await expect(page.getByLabel('Email', { exact: true })).toHaveValue('draft@example.test')
   await expect(page.getByLabel('Password', { exact: true })).toHaveValue('unsaved-password')
   await expect(page.locator('html')).toHaveAttribute('lang', 'en-US')
@@ -134,7 +168,7 @@ test('conference drafts, selected tab, user content and timeline edits survive s
   await page.getByLabel('大会名称', { exact: true }).fill('尚未保存的名字')
   await page.getByLabel('大会说明', { exact: true }).fill('尚未保存的说明')
   const before = requests
-  await page.getByRole('combobox', { name: '界面语言' }).selectOption('en-US')
+  await chooseLanguage(page, '界面语言', 'English')
   await expect(page.getByRole('tab', { name: 'Conference settings', exact: true })).toHaveAttribute(
     'aria-selected',
     'true'
@@ -149,7 +183,7 @@ test('conference drafts, selected tab, user content and timeline edits survive s
     page.getByRole('button', { name: 'Save basic information', exact: true })
   ).toBeVisible()
   expect(requests).toBe(before)
-  await page.getByRole('combobox', { name: 'Interface language' }).selectOption('zh-CN')
+  await chooseLanguage(page, 'Interface language', '中文')
   await expect(page.getByLabel('大会名称', { exact: true })).toHaveValue('尚未保存的名字')
 })
 
@@ -161,7 +195,7 @@ test('account draft and password validation update in place', async ({ page }) =
   await page.getByLabel('确认新密码', { exact: true }).fill('different-password')
   await page.getByRole('button', { name: '重置密码', exact: true }).click()
   await expect(page.getByText('两次输入的密码不一致', { exact: true })).toBeVisible()
-  await page.getByRole('combobox', { name: '界面语言' }).selectOption('en-US')
+  await chooseLanguage(page, '界面语言', 'English')
   await expect(page.getByLabel('Username', { exact: true })).toHaveValue('尚未保存用户')
   await expect(page.getByLabel('New password', { exact: true })).toHaveValue('new-password')
   await expect(page.getByText('Passwords do not match', { exact: true })).toBeVisible()
@@ -207,7 +241,7 @@ test('desktop language events override a stale initialization snapshot', async (
     (window as Window & { resolveLanguage: (locale: string) => void }).resolveLanguage('zh-CN')
   )
   await expect(page.locator('html')).toHaveAttribute('lang', 'en-US')
-  await page.getByRole('combobox', { name: 'Interface language' }).selectOption('zh-CN')
+  await chooseLanguage(page, 'Interface language', '中文')
   expect(
     await page.evaluate(() => (window as Window & { savedLanguage?: string }).savedLanguage)
   ).toBe('zh-CN')

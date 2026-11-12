@@ -4,6 +4,7 @@ import { defaultLocale, resolveLocale, type Locale } from '../shared/i18n'
 import { loadStore, saveStore } from './data/store'
 import { getLocale, isLocale, onLocaleChanged, t, updateLocale } from './i18n'
 import { isAccountOrigin } from './ipc/trusted-origin'
+import { notifyCloudPlatformLocale } from './ipc/window'
 import { createLogger } from './logger'
 
 const log = createLogger('DesktopI18n')
@@ -62,6 +63,7 @@ function notifyWindows(locale: Locale): void {
       )
     }
   }
+  notifyCloudPlatformLocale(locale)
 }
 
 export function initializeDesktopI18n(): void {

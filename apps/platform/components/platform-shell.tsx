@@ -144,7 +144,9 @@ export function PlatformShell({
   )
   const accountActions = (
     <div className="flex shrink-0 items-center gap-2">
-      <LanguageSwitcher />
+      <LanguageSwitcher
+        className={isDesktop ? "h-9 rounded-lg" : "h-11 rounded-full"}
+      />
       <Link
         href="/account"
         className={cn(

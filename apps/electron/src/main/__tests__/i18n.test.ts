@@ -9,6 +9,7 @@ const state = vi.hoisted(() => ({
   handlers: new Map<string, (event: IpcMainInvokeEvent, ...args: unknown[]) => unknown>(),
   save: vi.fn(),
   load: vi.fn(),
+  notifyCloudPlatform: vi.fn(),
   log: { warn: vi.fn(), error: vi.fn() },
   dev: true
 }))
@@ -34,6 +35,9 @@ vi.mock('@electron-toolkit/utils', () => ({
   }
 }))
 vi.mock('../logger', () => ({ createLogger: () => state.log }))
+vi.mock('../ipc/window', () => ({
+  notifyCloudPlatformLocale: state.notifyCloudPlatform
+}))
 vi.mock('../data/store', () => ({
   loadStore: (domain: string) => state.load(domain),
   saveStore: (domain: string, value: Record<string, unknown>) => state.save(domain, value),
@@ -176,11 +180,13 @@ describe('desktop language authority', () => {
     state.windows = [failing, main, display, platform, foreign, closed]
     desktop.bindWindowTitle(display as unknown as BrowserWindow, 'electron_window_display_title')
     desktop.setDesktopLocale('zh-CN')
+    expect(state.notifyCloudPlatform).toHaveBeenCalledWith('zh-CN')
     for (const window of [main, display, platform]) {
       expect(window.webContents.send).toHaveBeenCalledWith('veto:i18n:locale-changed', 'zh-CN')
     }
     expect(display.setTitle).toHaveBeenLastCalledWith('VETO 大会 - 显示窗口')
     desktop.setDesktopLocale('en-US')
+    expect(state.notifyCloudPlatform).toHaveBeenLastCalledWith('en-US')
     expect(display.setTitle).toHaveBeenLastCalledWith('VETO Conference - Display Window')
     expect(foreign.webContents.send).not.toHaveBeenCalled()
     expect(closed.webContents.send).not.toHaveBeenCalled()
