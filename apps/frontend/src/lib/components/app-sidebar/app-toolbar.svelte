@@ -33,27 +33,7 @@
       </div>
     </div>
     <nav class="hidden items-center gap-1 md:flex" aria-label={t('procedure_workspace_navigation')}>
-      <button
-        type="button"
-        class={`nav-tab${!$cloudPlatformView.open && $page.url.pathname === '/conference' ? ' nav-tab-active' : ''}`}
-        aria-current={!$cloudPlatformView.open && $page.url.pathname === '/conference' ? 'page' : undefined}
-        onclick={() => {
-          cloudPlatformView.close()
-          goto(resolve('/conference'))
-        }}
-      >
-        <LayoutDashboard class="size-4" />{t('procedure_workspace')}
-      </button>
-      <button
-        type="button"
-        class={`nav-tab${$cloudPlatformView.open ? ' nav-tab-active' : ''}`}
-        aria-current={$cloudPlatformView.open ? 'page' : undefined}
-        onclick={() => cloudPlatformView.open()}
-      >
-        <Cloud class="size-4" />{t('settings_cloud_platform')}
-      </button>
-      {#if $cloudPlatformView.open}
-        <span class="mx-1 h-5 w-px bg-border" aria-hidden="true"></span>
+      {#if electronEnvironment}
         <button
           type="button"
           class="nav-icon"
@@ -74,7 +54,27 @@
         >
           <ArrowRight class="size-4" />
         </button>
+        <span class="mx-1 h-5 w-px bg-border" aria-hidden="true"></span>
       {/if}
+      <button
+        type="button"
+        class={`nav-tab${!$cloudPlatformView.open && $page.url.pathname === '/conference' ? ' nav-tab-active' : ''}`}
+        aria-current={!$cloudPlatformView.open && $page.url.pathname === '/conference' ? 'page' : undefined}
+        onclick={() => {
+          cloudPlatformView.close()
+          goto(resolve('/conference'))
+        }}
+      >
+        <LayoutDashboard class="size-4" />{t('procedure_workspace')}
+      </button>
+      <button
+        type="button"
+        class={`nav-tab${$cloudPlatformView.open ? ' nav-tab-active' : ''}`}
+        aria-current={$cloudPlatformView.open ? 'page' : undefined}
+        onclick={() => cloudPlatformView.open()}
+      >
+        <Cloud class="size-4" />{t('settings_cloud_platform')}
+      </button>
       <button
         type="button"
         class={`nav-tab${!$cloudPlatformView.open && $page.url.pathname === '/conference/tools' ? ' nav-tab-active' : ''}`}

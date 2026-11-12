@@ -1,5 +1,29 @@
 import { test, expect } from '@playwright/test'
 
+test('桌面端导航栏始终显示前进后退按钮并位于工作区左侧', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('veto-locale', 'zh-CN')
+    Object.assign(window, { electron: { ipcRenderer: { send: () => {} } } })
+  })
+  await page.goto('http://localhost:4173/conference')
+
+  const nav = page.getByRole('navigation', { name: '工作区导航' })
+  const back = nav.getByRole('button', { name: '后退', exact: true })
+  const forward = nav.getByRole('button', { name: '前进', exact: true })
+  const workspace = nav.getByRole('button', { name: '工作区', exact: true })
+
+  await expect(back).toBeVisible()
+  await expect(forward).toBeVisible()
+  await expect(back).toBeDisabled()
+  await expect(forward).toBeDisabled()
+
+  const backBox = await back.boundingBox()
+  const forwardBox = await forward.boundingBox()
+  const workspaceBox = await workspace.boundingBox()
+  expect(backBox!.x).toBeLessThan(forwardBox!.x)
+  expect(forwardBox!.x).toBeLessThan(workspaceBox!.x)
+})
+
 test('最近打开的云端大会重新认证席位后进入对应会场', async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem('veto_conferences', JSON.stringify([{
