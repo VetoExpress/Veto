@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { t } from '$lib/i18n'
+  import { t, formatNumber } from '$lib/i18n'
   import { Vote, Check, X, Minus, SkipForward, ArrowRight } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import { Badge } from '$lib/components/ui/badge/index.js'
@@ -16,7 +16,7 @@
     closeVotingSession,
     tallyVotes
   } from '$lib/classes/stores/conference/conference-store'
-  import { calculateMajorityThresholds } from '$lib/classes/services/engine/conference-engine'
+  import { evaluateVote } from '$lib/classes/utils/committee/procedure-rules'
   import { cn } from '$lib/classes/utils.js'
   import { isParticipantSeat } from '$lib/classes/types/delegate'
 
@@ -45,12 +45,32 @@
       : undefined
   )
 
-  const thresholds = $derived(
-    conf ? calculateMajorityThresholds(conf.seats.filter(isParticipantSeat)) : null
+  const snapshot = $derived(activeSession?.rulesSnapshot)
+  // Completed sessions use their persisted evaluation; legacy results are never reconstructed.
+  const evaluation = $derived(
+    activeSession?.evaluation ??
+      (activeSession && !activeSession.endedAt && snapshot
+        ? evaluateVote(activeSession.ballots, snapshot)
+        : undefined)
   )
-
+  const threshold = $derived(snapshot?.threshold)
+  const majorityLabel = $derived(
+    threshold?.type === 'fixed'
+      ? t('components_threshold_fixed', { count: formatNumber(threshold.value) })
+      : t(
+          (threshold?.type ?? activeSession?.majorityRule) === 'simple_majority'
+            ? 'components_simple_majority'
+            : 'components_two_thirds_majority'
+        )
+  )
   const tally = $derived(
-    activeSession ? tallyVotes(activeSession.ballots) : { yes: 0, no: 0, abstain: 0 }
+    evaluation ??
+      (activeSession ? tallyVotes(activeSession.ballots) : { yes: 0, no: 0, abstain: 0 })
+  )
+  const vetoNames = $derived(
+    evaluation?.vetoSeatIds
+      .map((id) => snapshot?.seats.find((seat) => seat.id === id)?.name ?? id)
+      .join(', ') ?? ''
   )
 
   const totalVoted = $derived(tally.yes + tally.no + tally.abstain)
@@ -59,17 +79,22 @@
   const isRound2 = $derived((activeSession?.round ?? 1) === 2)
   const isVotingComplete = $derived(activeSession ? currentSeatId === null : true)
 
-  // 按 sortOrder 排序的出席席位列表
-  const presentSeats = $derived(
-    conf
-      ? conf.seats
-          .filter(isParticipantSeat)
-          .filter(
-            (seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights
-          )
-          .sort((a, b) => a.procedure.sortOrder - b.procedure.sortOrder)
-      : []
-  )
+  const presentSeats = $derived.by(() => {
+    if (!activeSession) return []
+    if (snapshot)
+      return snapshot.seats
+        .filter((seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights)
+        .toSorted((a, b) => a.procedure.sortOrder - b.procedure.sortOrder)
+    if (activeSession.endedAt)
+      return activeSession.ballots.map((ballot) => ({
+        id: ballot.seatId,
+        name: conf?.seats.find((seat) => seat.id === ballot.seatId)?.name ?? ballot.seatId,
+        shortName: conf?.seats.find((seat) => seat.id === ballot.seatId)?.shortName
+      }))
+    return (conf?.seats.filter(isParticipantSeat) ?? [])
+      .filter((seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights)
+      .sort((a, b) => a.procedure.sortOrder - b.procedure.sortOrder)
+  })
 
   // 当前正在投票的席位
   const currentSeat = $derived(presentSeats.find((d) => d.id === currentSeatId) ?? null)
@@ -130,12 +155,37 @@
         <p class="mt-1 text-base font-semibold text-foreground">「{documentName}」</p>
       {/if}
       <p class="mt-1 text-sm text-muted-foreground">
-        {t('procedure_vote_majority_heading', { value1: activeSession.majorityRule === 'simple_majority' ? t('procedure_simple_majority') : t('procedure_two_thirds_majority_2') })}
+        {t('procedure_vote_majority_heading', { value1: majorityLabel })}
       </p>
     </div>
 
+    {#if evaluation}
+      <p class="text-center text-sm text-muted-foreground">
+        {#if snapshot}{t(
+            snapshot.denominator === 'yes_no'
+              ? 'components_basis_yes_no'
+              : snapshot.denominator === 'present_participants'
+                ? 'components_basis_present_participants'
+                : 'components_basis_present_voting_eligible'
+          )}{/if}
+        {t('components_vote_threshold_summary', {
+          denominator: formatNumber(evaluation.denominator),
+          required: formatNumber(evaluation.required)
+        })}
+      </p>
+    {:else if activeSession.endedAt}
+      <p class="text-center text-sm text-muted-foreground">
+        {t('components_legacy_vote_rules_unavailable')}
+      </p>
+    {/if}
+    {#if evaluation?.result === 'failed' && evaluation.vetoSeatIds.length > 0}
+      <p role="status" class="text-center text-sm text-destructive">
+        {t('components_vote_veto_rejection', { seats: vetoNames })}
+      </p>
+    {/if}
+
     <!-- ====== 统计卡片 ====== -->
-    {#if thresholds}
+    {#if activeSession}
       <div class="grid grid-cols-4 gap-3">
         <Card
           class="border-emerald-300 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-950/30"
@@ -160,9 +210,9 @@
         <Card>
           <CardContent class="p-3 text-center">
             <div class="text-2xl font-bold text-muted-foreground">
-              {totalVoted}/{thresholds.presentCount}
+              {totalVoted}/{presentSeats.length}
             </div>
-            <div class="text-[10px] text-muted-foreground">{t('procedure_voted_present')}</div>
+            <div class="text-[10px] text-muted-foreground">{t('components_votes_recorded')}</div>
           </CardContent>
         </Card>
       </div>
@@ -191,7 +241,7 @@
             {/if}
           </CardTitle>
           <CardDescription>
-            {t('procedure_vote_cast_count', { value1: activeSession.majorityRule === 'simple_majority' ? t('procedure_simple_majority') : t('procedure_two_thirds_majority_2'), value2: totalVoted })}
+            {t('procedure_vote_cast_count', { value1: majorityLabel, value2: totalVoted })}
           </CardDescription>
         </CardHeader>
       </Card>
@@ -201,7 +251,10 @@
         <CardHeader class="pb-3 text-center">
           <div class="flex items-center justify-center gap-2">
             <span class="text-xs text-muted-foreground">
-              {t('procedure_vote_position', { value1: presentSeats.length, value2: currentPosition })}
+              {t('procedure_vote_position', {
+                value1: presentSeats.length,
+                value2: currentPosition
+              })}
             </span>
           </div>
           <CardTitle class="text-2xl">{currentSeat.name}</CardTitle>
@@ -262,7 +315,9 @@
             <Check size={24} class="mx-auto mb-2" />
             {t('procedure_all_seats_have_voted')}
           </CardTitle>
-          <CardDescription>{t('procedure_all_seats_have_voted_you_can_announce_the_result')}</CardDescription>
+          <CardDescription>
+            {t('procedure_all_seats_have_voted_you_can_announce_the_result')}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div class="flex justify-center">
@@ -278,7 +333,9 @@
     <!-- ====== 席位投票列表 ====== -->
     <Card>
       <CardHeader class="pb-2">
-        <CardTitle class="text-sm font-medium text-muted-foreground">{t('procedure_voting_record')}</CardTitle>
+        <CardTitle class="text-sm font-medium text-muted-foreground">
+          {t('procedure_voting_record')}
+        </CardTitle>
       </CardHeader>
       <CardContent class="p-0">
         <div class="divide-y">
@@ -320,7 +377,9 @@
       <CardContent class="p-12 text-center">
         <Vote size={40} class="mx-auto mb-3 opacity-30" />
         <p class="text-muted-foreground">{t('procedure_no_vote_in_progress')}</p>
-        <p class="mt-1 text-xs text-muted-foreground/70">{t('procedure_put_a_motion_to_a_vote_to_begin_voting_here')}</p>
+        <p class="mt-1 text-xs text-muted-foreground/70">
+          {t('procedure_put_a_motion_to_a_vote_to_begin_voting_here')}
+        </p>
       </CardContent>
     </Card>
   {/if}

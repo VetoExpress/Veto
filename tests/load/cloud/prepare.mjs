@@ -1,16 +1,39 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile, rename } from 'node:fs/promises'
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import { parseArgs } from 'node:util'
 import { conferenceInput, organizerSeed, seatFixtures } from '../local/seed.mjs'
 import { verifyLocalBusiness } from '../local/smoke.mjs'
 
 const dir = path.dirname(fileURLToPath(import.meta.url))
 const apiDir = path.resolve(dir, '../../../../veto-api')
-const stateDir = path.resolve(dir, '../results/cloud-setup')
-const fixturePath = path.resolve(dir, '../fixtures/cloud.seats.json')
-const baseUrl = process.argv[2]
+const { values, positionals } = parseArgs({
+  allowPositionals: true,
+  options: {
+    seats: { type: 'string', default: '2000' },
+    conferences: { type: 'string', default: '4' }
+  }
+})
+const count = Number(values.seats)
+const conferenceCount = Number(values.conferences)
+if (
+  !Number.isInteger(count) ||
+  count < 2 ||
+  count > 10000 ||
+  !Number.isInteger(conferenceCount) ||
+  conferenceCount < 1 ||
+  conferenceCount > count / 2 ||
+  count % conferenceCount
+)
+  throw new Error('Invalid seat/conference counts')
+const stateDir = path.resolve(dir, `../results/cloud-setup${count === 2000 ? '' : `-${count}`}`)
+const fixturePath = path.resolve(
+  dir,
+  `../fixtures/cloud${count === 2000 ? '' : `-${count}`}.seats.json`
+)
+const baseUrl = positionals[0]
 if (
   !baseUrl ||
   !/^https:\/\/(api\.miaoyww\.top|veto-usage\.miaoyww\.workers\.dev)\/v1$/.test(baseUrl)
@@ -24,8 +47,22 @@ try {
 } catch (error) {
   if (error.code !== 'ENOENT') throw error
 }
-if (manifest && manifest.baseUrl !== baseUrl) throw new Error('Existing manifest target mismatch')
-const save = () => writeFile(manifestPath, JSON.stringify(manifest, null, 2), { mode: 0o600 })
+if (
+  manifest &&
+  (manifest.baseUrl !== baseUrl ||
+    (manifest.seatCount && manifest.seatCount !== count) ||
+    (manifest.conferenceCount && manifest.conferenceCount !== conferenceCount))
+)
+  throw new Error('Existing manifest target or counts mismatch')
+let saving = Promise.resolve()
+const save = () => {
+  const snapshot = JSON.stringify(manifest, null, 2)
+  saving = saving.then(async () => {
+    await writeFile(`${manifestPath}.tmp`, snapshot, { mode: 0o600 })
+    await rename(`${manifestPath}.tmp`, manifestPath)
+  })
+  return saving
+}
 
 async function api(route, options = {}) {
   const { method = 'GET', token, headers = {}, body, status = 200, binary = false } = options
@@ -55,6 +92,8 @@ if (!manifest) {
   const seed = organizerSeed()
   manifest = {
     baseUrl,
+    seatCount: count,
+    conferenceCount,
     runId: randomUUID(),
     organizer: { email: seed.email, password: seed.password },
     conferenceIds: [],
@@ -104,11 +143,11 @@ const login = await api('/auth/login', { method: 'POST', body: manifest.organize
 if (!login.token) throw new Error('No organizer token')
 manifest.organizerToken = login.token
 await save()
-for (let group = manifest.conferenceIds.length; group < 4; group++) {
-  const input = conferenceInput(500)
-  input.name = `CF pressure 2000 ${manifest.runId.slice(0, 8)} ${group + 1}`
+for (let group = manifest.conferenceIds.length; group < conferenceCount; group++) {
+  const input = conferenceInput(count / conferenceCount)
+  input.name = `CF pressure ${count} ${manifest.runId.slice(0, 8)} ${group + 1}`
   input.organizer = 'Veto isolated Cloudflare load test'
-  input.endsAt = new Date(Date.now() + 3600000).toISOString()
+  input.endsAt = new Date(Date.now() + 4 * 3600000).toISOString()
   let { conference } = await api('/conferences', {
     method: 'POST',
     token: login.token,
@@ -131,7 +170,7 @@ for (let group = manifest.conferenceIds.length; group < 4; group++) {
   manifest.conferenceIds.push(conference.id)
   manifest.seats.push(...seatFixtures(active.conference))
   await save()
-  console.log(`[cloud-setup] Created ${group + 1}/4 conferences`)
+  console.log(`[cloud-setup] Created ${group + 1}/${conferenceCount} conferences`)
 }
 const claimed = new Set(manifest.claimed)
 let next = 0
@@ -181,7 +220,7 @@ await Promise.all(
       sessions[index] = session
       claimed.add(seat.seatId)
       if (claimed.size % 100 === 0) {
-        console.log(`[cloud-setup] Claimed ${claimed.size}/2000`)
+        console.log(`[cloud-setup] Claimed ${claimed.size}/${count}`)
         manifest.claimed = [...claimed]
         await save()
       }
@@ -210,7 +249,9 @@ const checks = await verifyLocalBusiness(api, baseUrl, probes)
 const groups = manifest.conferenceIds.map((id) =>
   manifest.seats.filter((seat) => seat.conferenceId === id)
 )
-const seats = Array.from({ length: 500 }, (_, index) => groups.map((group) => group[index])).flat()
+const seats = Array.from({ length: count / conferenceCount }, (_, index) =>
+  groups.map((group) => group[index])
+).flat()
 await writeFile(fixturePath, JSON.stringify({ seats }, null, 2), { mode: 0o600 })
 await writeFile(
   path.join(stateDir, 'ready.json'),

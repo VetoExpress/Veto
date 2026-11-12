@@ -43,7 +43,12 @@ import { getDisplayBridge, buildDisplayData } from '$lib/classes/clients/confere
 import { bootstrapStore, saveToStore } from '../../helpers/store-bridge'
 import { generateInviteCode } from '$lib/classes/services/seat-access'
 import { createConferenceSaver } from '$lib/classes/services/conference-save'
-import { makeCheckpoint, saveCheckpoint, restoreCheckpoint, type CommitteeCheckpoint } from '$lib/classes/services/committee-checkpoints'
+import {
+  makeCheckpoint,
+  saveCheckpoint,
+  restoreCheckpoint,
+  type CommitteeCheckpoint
+} from '$lib/classes/services/committee-checkpoints'
 import { destroyAllTimers } from '$lib/classes/services/timer/timer'
 
 const STORAGE_KEY = 'veto_conferences'
@@ -103,6 +108,15 @@ export function setSubstantiveVotingMajority(majorityRule: MajorityRule): void {
   syncEngine(engine)
 }
 
+export function setProcedureRules(
+  config: import('$lib/classes/types/procedure-rules').ProcedureRulesConfig
+): boolean {
+  const engine = getCurrentEngine()
+  if (!engine || !engine.setProcedureRules(config)) return false
+  syncEngine(engine)
+  return true
+}
+
 // ---- 文件持久化（双重写入：localStorage + 文件）--------------------------
 
 function loadConferencesFromStorage(): Conference[] {
@@ -150,21 +164,26 @@ conferences.subscribe(saveConferencesToStorage)
 
 /** 启动完成 Promise：文件数据已加载并同步到 localStorage */
 export async function retryConferenceStorage(): Promise<void> {
-  if (storageReady) { await saveConferencesNow(); return }
-  try {
-  const data = await bootstrapStore<ConferenceDTO[]>(STORE_DOMAIN, [])
-  if (!Array.isArray(data)) throw new Error(t('services_conference_corrupt'))
-  const restored = data.map((conference) => Conference.fromJSON(conference))
-  for (const conference of restored) {
-    for (const committee of conference.committees) {
-      registerEngine(committee)
-      savedPhases.set(committee.id, committee.phase)
-    }
+  if (storageReady) {
+    await saveConferencesNow()
+    return
   }
-  conferences.set(restored)
-  storageReady = true
-  saver.status.set({ state: 'saved' })
-  } catch (error) { saver.fail(error) }
+  try {
+    const data = await bootstrapStore<ConferenceDTO[]>(STORE_DOMAIN, [])
+    if (!Array.isArray(data)) throw new Error(t('services_conference_corrupt'))
+    const restored = data.map((conference) => Conference.fromJSON(conference))
+    for (const conference of restored) {
+      for (const committee of conference.committees) {
+        registerEngine(committee)
+        savedPhases.set(committee.id, committee.phase)
+      }
+    }
+    conferences.set(restored)
+    storageReady = true
+    saver.status.set({ state: 'saved' })
+  } catch (error) {
+    saver.fail(error)
+  }
 }
 export const conferencesReady: Promise<void> = retryConferenceStorage()
 
@@ -172,7 +191,7 @@ export async function createCommitteeCheckpoint(label = '手动快照'): Promise
   const conference = get(currentConferenceRecord)
   const committee = getCurrentEngine()
   if (!conference || !committee || !storageReady) return false
-  if (!await saveConferencesNow()) return false
+  if (!(await saveConferencesNow())) return false
   return saveCheckpoint(makeCheckpoint(conference.id, committee, label))
 }
 
@@ -187,16 +206,26 @@ export async function restoreCommitteeCheckpoint(checkpoint: CommitteeCheckpoint
     destroyAllTimers()
     if (current.activeSpeaker) current.activeSpeaker = { ...current.activeSpeaker, paused: true }
     if (current.activeCaucus) current.activeCaucus = { ...current.activeCaucus, paused: true }
-    if (!await saveCheckpoint(makeCheckpoint(conference.id, current, '恢复前自动备份'))) throw new Error(t('services_checkpoint_backup_failed'))
+    if (!(await saveCheckpoint(makeCheckpoint(conference.id, current, '恢复前自动备份'))))
+      throw new Error(t('services_checkpoint_backup_failed'))
     const data = get(conferences).map((item) => {
       const json = item.toJSON()
-      return item.id === conference.id ? { ...json, committees: json.committees.map((committee) => committee.id === restored.id ? restored.toJSON() : committee) } : json
+      return item.id === conference.id
+        ? {
+            ...json,
+            committees: json.committees.map((committee) =>
+              committee.id === restored.id ? restored.toJSON() : committee
+            )
+          }
+        : json
     })
-    if (!await saver.save(data)) throw new Error(t('services_checkpoint_restore_failed'))
+    if (!(await saver.save(data))) throw new Error(t('services_checkpoint_restore_failed'))
     registerEngine(restored)
     syncEngine(restored)
     getDisplayBridge().sendUpdate(buildDisplayData(restored))
-  } finally { restoringCheckpoint.set(false) }
+  } finally {
+    restoringCheckpoint.set(false)
+  }
 }
 
 /** 当前激活的大会 ID */
@@ -425,7 +454,10 @@ export function restoreSyncedConference(data: ConferenceDTO): void {
     registerEngine(committee)
     savedPhases.set(committee.id, committee.phase)
   }
-  conferences.update((list) => [...list.filter((conference) => conference.id !== data.id), restored])
+  conferences.update((list) => [
+    ...list.filter((conference) => conference.id !== data.id),
+    restored
+  ])
 }
 
 /** Reconcile a cloud Chair projection into the local procedure aggregate. */
@@ -469,11 +501,12 @@ export function setSeatVotingRights(seatId: string, hasVotingRights: boolean): v
   syncEngine(engine)
 }
 
-export function completeRollCall(): void {
+export function completeRollCall(): boolean {
   const engine = getCurrentEngine()
-  if (!engine) return
-  engine.completeRollCall()
+  if (!engine) return false
+  const completed = engine.completeRollCall()
   syncEngine(engine)
+  return completed
 }
 
 export function resetRollCall(): void {

@@ -274,7 +274,14 @@ export function setDisplayBridge(bridge: ConferenceDisplayBridge): void {
 
 import type { Committee as CommitteeDTO } from '$lib/classes/types/conference'
 import { tallyVotes } from '$lib/classes/stores/conference/conference-store'
-import { calculateMajorityThresholds } from '$lib/classes/services/engine/conference-engine'
+import { resolveMotion } from '$lib/classes/utils/committee/motions'
+import {
+  calculateQuorum,
+  defaultProcedureRules,
+  evaluateVote,
+  proceduralThreshold,
+  thresholdCount
+} from '$lib/classes/utils/committee/procedure-rules'
 import type { Committee } from '$lib/classes/domain/committee.svelte'
 
 /**
@@ -295,6 +302,11 @@ export function buildDisplayData(
 ): ConferenceDisplayData {
   // 统一为 Committee JSON 格式
   const conf: CommitteeDTO = 'toJSON' in source ? source.toJSON() : source
+  const rules = conf.procedureRules ?? defaultProcedureRules(conf.substantiveVotingMajority)
+  const participantSeats = conf.seats.filter(isParticipantSeat)
+  const liveQuorum = calculateQuorum(participantSeats, rules.quorum)
+  const quorum =
+    conf.phase === 'roll_call' ? liveQuorum : (conf.quorumRecord?.evaluation ?? liveQuorum)
 
   // 如果传入的是引擎，则使用引擎方法获取 seat 信息以优化查找
   const engine: Committee | null = 'toJSON' in source ? source : null
@@ -347,16 +359,28 @@ export function buildDisplayData(
     })()
   let votingData: ConferenceDisplayData['votingSession'] | undefined
   if (activeVoting) {
-    const tally = tallyVotes(activeVoting.ballots)
-    const participantSeats = conf.seats.filter(isParticipantSeat)
-    const thresholds = calculateMajorityThresholds(participantSeats)
-
-    // 构建每个有投票权的出席席位的投票状态（排除观察员）
-    const presentSeats = participantSeats
+    const snapshot = activeVoting.rulesSnapshot
+    const evaluation =
+      activeVoting.evaluation ??
+      (!activeVoting.endedAt && snapshot ? evaluateVote(activeVoting.ballots, snapshot) : undefined)
+    const tally = evaluation ?? tallyVotes(activeVoting.ballots)
+    const presentSeats = (snapshot?.seats ?? participantSeats)
       .filter((seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights)
       .sort((a, b) => a.procedure.sortOrder - b.procedure.sortOrder)
 
-    const ballotsDisplay = presentSeats.map((d) => {
+    // Historical ballots remain visible even if their live seat was removed or marked absent.
+    const roster =
+      !snapshot && activeVoting.endedAt
+        ? activeVoting.ballots.map(
+            (ballot) =>
+              findSeat(ballot.seatId) ?? {
+                id: ballot.seatId,
+                name: ballot.seatId,
+                shortName: undefined
+              }
+          )
+        : presentSeats
+    const ballotsDisplay = roster.map((d) => {
       const ballot = activeVoting.ballots.find((b) => b.seatId === d.id)
       return {
         seatId: d.id,
@@ -370,7 +394,11 @@ export function buildDisplayData(
       targetDescription: activeVoting.targetType,
       targetType: activeVoting.targetType,
       majorityRule: activeVoting.majorityRule,
-      tally: { ...tally, present: thresholds.presentCount },
+      evaluation,
+      rules: snapshot
+        ? { kind: snapshot.kind, denominator: snapshot.denominator, threshold: snapshot.threshold }
+        : undefined,
+      tally: { yes: tally.yes, no: tally.no, abstain: tally.abstain, present: roster.length },
       result: activeVoting.result,
       round: activeVoting.round ?? 1,
       currentSeatId: activeVoting.currentSeatId ?? null,
@@ -454,6 +482,10 @@ export function buildDisplayData(
   const effectivePhase: ConferenceDisplayData['phase'] = hasActiveMotionPhase
     ? 'motion'
     : conf.phase
+  const attendanceSeats =
+    effectivePhase === 'voting' && activeVoting?.rulesSnapshot
+      ? activeVoting.rulesSnapshot.seats
+      : participantSeats
 
   return {
     locale: getLocale(),
@@ -461,13 +493,11 @@ export function buildDisplayData(
     phase: effectivePhase,
     venue: conf.name,
     name: conf.name,
-    presentCount: conf.seats
-      .filter(isParticipantSeat)
-      .filter((seat) => seat.procedure.attendance === 'present').length,
-    votingCount: conf.seats
-      .filter(isParticipantSeat)
-      .filter((seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights)
-      .length,
+    presentCount: attendanceSeats.filter((seat) => seat.procedure.attendance === 'present').length,
+    votingCount: attendanceSeats.filter(
+      (seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights
+    ).length,
+    quorum,
     currentSpeaker: (() => {
       if (!currentSpeakerSeat) return undefined
       const remainingSec = conf.activeSpeaker
@@ -528,13 +558,34 @@ export function buildDisplayData(
           return {
             type: displayMotion.type,
             topic:
-              displayMotion.type === 'moderated_caucus' ||
-              displayMotion.type === 'moderated_debate'
+              displayMotion.type === 'moderated_caucus' || displayMotion.type === 'moderated_debate'
                 ? displayMotion.topic
                 : undefined,
             status: displayMotion.status,
             proposedBy,
             motionId: displayMotion.id,
+            votingRule:
+              displayMotion.status === 'pending' && resolveMotion(displayMotion.type).requiresVoting
+                ? (() => {
+                    const threshold = proceduralThreshold(
+                      rules,
+                      displayMotion.type,
+                      resolveMotion(displayMotion.type).votingMajority
+                    )
+                    const denominator = participantSeats.filter(
+                      (seat) =>
+                        seat.procedure.attendance === 'present' &&
+                        (rules.proceduralVote.denominator === 'present_participants' ||
+                          seat.procedure.hasVotingRights)
+                    ).length
+                    return {
+                      threshold,
+                      basis: rules.proceduralVote.denominator,
+                      denominator,
+                      required: thresholdCount(denominator, threshold)
+                    }
+                  })()
+                : undefined,
             totalTimeSec:
               displayMotion.type === 'moderated_caucus'
                 ? (displayMotion as any).totalTimeSec
@@ -611,7 +662,9 @@ export function buildDisplayData(
           }
         })()
       : undefined,
-    rollCall: extra?.rollCall,
+    rollCall: extra?.rollCall
+      ? { ...extra.rollCall, quorum: extra.rollCall.quorum ?? liveQuorum }
+      : undefined,
     attendanceChange: extra?.attendanceChange,
     motionDraft: extra?.motionDraft,
     pointDraft: extra?.pointDraft

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { t } from '$lib/i18n'
+  import { t, formatNumber } from '$lib/i18n'
   import SeatNameDisplay from '$lib/components/conference-display/seat-name-display.svelte'
   import DisplayPage from '$lib/components/conference-display/display-page.svelte'
   /**
@@ -8,7 +8,7 @@
    * 点名阶段内容组件 —— 通过 $props 接收 Shell 传入的数据。
    *
    * 视图逻辑：
-   * - isComplete          → 仅显示汇总（出席/简单多数/2/3多数）
+   * - isComplete          → 显示出席和法定人数汇总
    * - 进行中 + lastMarked → 显示席位名/进度条/统计，叠加 PRESENT/ABSENT badge
    * - 进行中（无标记）     → 仅显示席位名/进度条/统计
    */
@@ -19,16 +19,33 @@
 
 {#if data.rollCall}
   {@const rc = data.rollCall}
+  {@const quorum = rc.quorum ?? data.quorum}
   {@const isComplete = rc.currentIndex >= rc.totalCount}
 
   <DisplayPage>
     <div class="flex w-full max-w-5xl flex-col items-center gap-10">
+      {#if quorum}
+        <div role="status" class="text-center text-xl text-white/60">
+          <p class={{ 'text-red-400': !quorum.met }}>
+            {t(quorum.met ? 'components_quorum_met' : 'components_quorum_unmet')}
+          </p>
+          <p>
+            {t('components_quorum_summary', {
+              present: formatNumber(quorum.present),
+              denominator: formatNumber(quorum.denominator),
+              required: formatNumber(quorum.required)
+            })}
+          </p>
+        </div>
+      {/if}
       {#if isComplete}
         <!-- ===== 点名完成汇总（独占视图，不混入进行中元素） ===== -->
         <div class="flex flex-col items-center gap-10">
           <div class="flex items-center gap-3 text-white/40">
             <div class="h-px w-12 bg-white/10"></div>
-            <span class="text-lg tracking-[0.08em] uppercase">{t('components_roll_call_complete')}</span>
+            <span class="text-lg tracking-[0.08em] uppercase">
+              {t('components_roll_call_complete')}
+            </span>
             <div class="h-px w-12 bg-white/10"></div>
           </div>
 
@@ -41,18 +58,20 @@
                 {t('components_attendance_total', { count: rc.totalCount })}
               </div>
             </div>
-            <div class="flex flex-col items-center gap-3">
-              <div class="text-9xl font-light tabular-nums leading-none text-white/40">
-                {rc.simpleMajorityThreshold}
+            {#if quorum}
+              <div class="flex flex-col items-center gap-3">
+                <div class="text-9xl font-light tabular-nums leading-none text-white/40">
+                  {formatNumber(quorum.denominator)}
+                </div>
+                <div class="text-sm text-white/30">{t('components_quorum_denominator')}</div>
               </div>
-              <div class="text-sm tracking-[0.12em] text-white/30 uppercase">{t('components_simple_majority')}</div>
-            </div>
-            <div class="flex flex-col items-center gap-3">
-              <div class="text-9xl font-light tabular-nums leading-none text-white/40">
-                {rc.twoThirdsThreshold}
+              <div class="flex flex-col items-center gap-3">
+                <div class="text-9xl font-light tabular-nums leading-none text-white/40">
+                  {formatNumber(quorum.required)}
+                </div>
+                <div class="text-sm text-white/30">{t('components_quorum_required')}</div>
               </div>
-              <div class="text-sm tracking-[0.12em] text-white/30 uppercase">{t('components_two_thirds_majority')}</div>
-            </div>
+            {/if}
           </div>
 
           <div class="text-lg tracking-wider text-white/15">{t('components_wait_chair')}</div>
@@ -87,14 +106,10 @@
 
         <!-- 统计 -->
         <div class="flex gap-16 text-base tracking-wider text-white/25">
-          <span>{t('components_present_count_label')} <span class="font-semibold text-[#5B92E5]">{rc.presentCount}</span></span>
-          <span
-            >{t('components_simple_majority')} <span class="font-semibold text-white/40">{rc.simpleMajorityThreshold}</span
-            ></span
-          >
-          <span
-            >{t('components_two_thirds_compact')} <span class="font-semibold text-white/40">{rc.twoThirdsThreshold}</span></span
-          >
+          <span>
+            {t('components_present_count_label')}
+            <span class="font-semibold text-[#5B92E5]">{rc.presentCount}</span>
+          </span>
         </div>
       {/if}
     </div>

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { t } from '$lib/i18n'
+  import { t, formatNumber } from '$lib/i18n'
   /**
    * conference/[conference_id]/motion.svelte
    * ─────────────────────────────────────────
@@ -29,6 +29,12 @@
     approveMotion,
     rejectMotion
   } from '$lib/classes/stores/conference/conference-store'
+  import {
+    defaultProcedureRules,
+    proceduralThreshold,
+    thresholdCount
+  } from '$lib/classes/utils/committee/procedure-rules'
+  import { isParticipantSeat } from '$lib/classes/types/delegate'
   import { resolveMotion } from '$lib/classes/services/engine/conference-engine'
   import { MOTION_LABELS } from '$lib/classes/types/conference'
   import { VETO_NAME } from '$lib/classes/const'
@@ -62,8 +68,30 @@
       : null
   )
 
+  const rules = $derived(
+    conf?.procedureRules ?? defaultProcedureRules(conf?.substantiveVotingMajority)
+  )
+  const threshold = $derived(
+    proceduralThreshold(rules, pendingMotion?.type, resolution?.votingMajority)
+  )
+  const denominator = $derived(
+    conf?.seats
+      .filter(isParticipantSeat)
+      .filter(
+        (seat) =>
+          seat.procedure.attendance === 'present' &&
+          (rules.proceduralVote.denominator === 'present_participants' ||
+            seat.procedure.hasVotingRights)
+      ).length ?? 0
+  )
   const majorityLabel = $derived(
-    resolution?.votingMajority === 'simple_majority' ? t('procedure_simple_majority') : t('procedure_two_thirds_majority_2')
+    threshold.type === 'fixed'
+      ? t('components_threshold_fixed', { count: formatNumber(threshold.value) })
+      : t(
+          threshold.type === 'simple_majority'
+            ? 'components_simple_majority'
+            : 'components_two_thirds_majority'
+        )
   )
 
   function handleApprove(): void {
@@ -121,7 +149,9 @@
         >
           <div class="flex items-center justify-center gap-2">
             <Icon size={24} class="text-indigo-600 dark:text-indigo-400" />
-            <span class="text-lg font-semibold text-indigo-700 dark:text-indigo-400">{t('procedure_motion_ruling')}</span>
+            <span class="text-lg font-semibold text-indigo-700 dark:text-indigo-400">
+              {t('procedure_motion_ruling')}
+            </span>
           </div>
 
           <div class="mt-4 space-y-2">
@@ -140,7 +170,13 @@
                   {t('procedure_topic')}
                   <span class="font-medium text-foreground">{(pendingMotion as any).topic}</span>
                 </p>
-                <p class="mt-0.5">{t('procedure_caucus_motion_summary', { minutes: (pendingMotion as any).totalTimeSec / 60, seconds: (pendingMotion as any).speakingTimePerPersonSec, speakers: (pendingMotion as any).maxSpeakers })}</p>
+                <p class="mt-0.5">
+                  {t('procedure_caucus_motion_summary', {
+                    minutes: (pendingMotion as any).totalTimeSec / 60,
+                    seconds: (pendingMotion as any).speakingTimePerPersonSec,
+                    speakers: (pendingMotion as any).maxSpeakers
+                  })}
+                </p>
               </div>
             {:else if pendingMotion.type === 'moderated_debate'}
               <div
@@ -150,11 +186,15 @@
                   {t('procedure_topic')}
                   <span class="font-medium text-foreground">{pendingMotion.topic}</span>
                 </p>
-                <p class="mt-0.5">{t('procedure_motion_duration', { value1: pendingMotion.durationSec / 60 })}</p>
+                <p class="mt-0.5">
+                  {t('procedure_motion_duration', { value1: pendingMotion.durationSec / 60 })}
+                </p>
               </div>
             {:else if pendingMotion.type === 'unmoderated_caucus' || pendingMotion.type === 'unmoderated_debate'}
               <div class="mt-3 text-sm text-muted-foreground">
-                {t('procedure_motion_duration', { value1: (pendingMotion as any).durationSec / 60 })}
+                {t('procedure_motion_duration', {
+                  value1: (pendingMotion as any).durationSec / 60
+                })}
               </div>
             {:else if pendingMotion.type === 'modify_speaking_time'}
               <div class="mt-3 text-sm text-muted-foreground">
@@ -182,6 +222,15 @@
             class="mt-4 inline-flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-100 px-3 py-1 text-xs font-medium text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950 dark:text-indigo-400"
           >
             {t('procedure_motion_voting_rule', { value1: majorityLabel })}
+            {t(
+              rules.proceduralVote.denominator === 'present_participants'
+                ? 'components_basis_present_participants'
+                : 'components_basis_present_voting_eligible'
+            )}
+            {t('components_vote_threshold_summary', {
+              denominator: formatNumber(denominator),
+              required: formatNumber(thresholdCount(denominator, threshold))
+            })}
           </div>
         </div>
 
@@ -189,8 +238,12 @@
 
         <!-- 主席裁决 -->
         <div class="text-center">
-          <p class="text-base font-medium text-foreground">{t('procedure_seats_supporting_this_motion_please_raise_your_placards')}</p>
-          <p class="mt-1 text-sm text-muted-foreground">{t('procedure_the_chair_rules_after_observing_the_placards')}</p>
+          <p class="text-base font-medium text-foreground">
+            {t('procedure_seats_supporting_this_motion_please_raise_your_placards')}
+          </p>
+          <p class="mt-1 text-sm text-muted-foreground">
+            {t('procedure_the_chair_rules_after_observing_the_placards')}
+          </p>
         </div>
 
         <div class="flex items-center justify-center gap-4">
@@ -215,7 +268,9 @@
       <div class="flex flex-col items-center gap-4 text-muted-foreground">
         <Vote size={48} class="opacity-30" />
         <p class="text-lg font-medium">{t('procedure_no_motion_awaiting_a_vote')}</p>
-        <Button variant="outline" size="sm" onclick={goBack}>{t('procedure_back_to_meeting')}</Button>
+        <Button variant="outline" size="sm" onclick={goBack}>
+          {t('procedure_back_to_meeting')}
+        </Button>
       </div>
     </div>
   {/if}

@@ -33,10 +33,14 @@
   import type { MotionType, Attendance, ParticipantSeat } from '$lib/classes/types/conference'
   import SeatSelector from '$lib/components/conference/common/seat-selector.svelte'
   import { toSeatView } from '$lib/classes/types/delegate'
+  import { defaultProcedureRules } from '$lib/classes/utils/committee/procedure-rules'
 
   let { open = $bindable(false) }: { open: boolean } = $props()
 
   const conf = $derived($currentCommittee)
+  const procedureRules = $derived(
+    conf?.procedureRules ?? defaultProcedureRules(conf?.substantiveVotingMajority)
+  )
   const conferenceId = $derived(page.params.conference_id ?? conf?.id ?? null)
   const committeeId = $derived(page.params.committee_id ?? null)
 
@@ -353,7 +357,9 @@
         <!-- 第一步：动议提出方（始终可见） -->
         {#if conf}
           <div>
-            <Label class="mb-2 block text-xs text-muted-foreground">{t('procedure_motion_proposer')}</Label>
+            <Label class="mb-2 block text-xs text-muted-foreground">
+              {t('procedure_motion_proposer')}
+            </Label>
             <SeatSelector seats={conf.participantSeats} bind:value={selectedProposer} />
           </div>
         {/if}
@@ -362,7 +368,9 @@
         {#if selectedProposer}
           <Separator />
           <div>
-            <Label class="mb-2 block text-xs text-muted-foreground">{t('procedure_motion_type')}</Label>
+            <Label class="mb-2 block text-xs text-muted-foreground">
+              {t('procedure_motion_type')}
+            </Label>
             <ToggleGroup.Root type="single" bind:value={toggleValue} class="grid grid-cols-4 gap-2">
               {#each motionTypes as mt (mt)}
                 {@const Icon = MOTION_ICONS[mt] ?? Presentation}
@@ -393,7 +401,9 @@
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <Label class="mb-1.5 block text-xs text-muted-foreground">{t('procedure_total_duration_seconds')}</Label>
+                <Label class="mb-1.5 block text-xs text-muted-foreground">
+                  {t('procedure_total_duration_seconds')}
+                </Label>
                 <Input
                   type="number"
                   min="30"
@@ -417,7 +427,9 @@
                 </div>
               </div>
               <div>
-                <Label class="mb-1.5 block text-xs text-muted-foreground">{t('procedure_speaking_time_per_person_seconds')}</Label>
+                <Label class="mb-1.5 block text-xs text-muted-foreground">
+                  {t('procedure_speaking_time_per_person_seconds')}
+                </Label>
                 <Input
                   type="number"
                   min="15"
@@ -447,7 +459,11 @@
               <div
                 class="rounded-md bg-muted/50 px-3 py-2 text-center text-xs text-muted-foreground"
               >
-                {t('procedure_caucus_capacity_calculation', { total: committedMcTotalSec, seconds: committedMcSpeakerSec, speakers: mcMaxSpeakers })}
+                {t('procedure_caucus_capacity_calculation', {
+                  total: committedMcTotalSec,
+                  seconds: committedMcSpeakerSec,
+                  speakers: mcMaxSpeakers
+                })}
               </div>
             {/if}
           </div>
@@ -467,7 +483,9 @@
               />
             </div>
             <div>
-              <Label class="mb-1.5 block text-xs text-muted-foreground">{t('procedure_duration_minutes')}</Label>
+              <Label class="mb-1.5 block text-xs text-muted-foreground">
+                {t('procedure_duration_minutes')}
+              </Label>
               <Input
                 type="number"
                 min="1"
@@ -476,12 +494,16 @@
                 class="h-9 w-32 text-sm"
                 onblur={() => (committedUcDurationMin = ucDurationMin)}
               />
-              <p class="mt-1 text-[10px] text-muted-foreground">{t('procedure_the_countdown_starts_for_this_topic_when_the_debate_begins')}</p>
+              <p class="mt-1 text-[10px] text-muted-foreground">
+                {t('procedure_the_countdown_starts_for_this_topic_when_the_debate_begins')}
+              </p>
             </div>
           </div>
         {:else if selectedType === 'unmoderated_caucus' || selectedType === 'unmoderated_debate'}
           <div>
-            <Label class="mb-1.5 block text-xs text-muted-foreground">{t('procedure_duration_minutes')}</Label>
+            <Label class="mb-1.5 block text-xs text-muted-foreground">
+              {t('procedure_duration_minutes')}
+            </Label>
             <Input
               type="number"
               min="1"
@@ -490,11 +512,15 @@
               class="h-9 text-sm w-32"
               onblur={() => (committedUcDurationMin = ucDurationMin)}
             />
-            <p class="mt-1 text-[10px] text-muted-foreground">{t('procedure_the_countdown_starts_when_this_begins')}</p>
+            <p class="mt-1 text-[10px] text-muted-foreground">
+              {t('procedure_the_countdown_starts_when_this_begins')}
+            </p>
           </div>
         {:else if selectedType === 'modify_speaking_time'}
           <div>
-            <Label class="mb-1.5 block text-xs text-muted-foreground">{t('procedure_new_default_speaking_time_seconds')}</Label>
+            <Label class="mb-1.5 block text-xs text-muted-foreground">
+              {t('procedure_new_default_speaking_time_seconds')}
+            </Label>
             <Input
               type="number"
               min="30"
@@ -508,7 +534,9 @@
         {:else if selectedType === 'substantive_vote'}
           <Separator />
           <div>
-            <Label class="mb-1.5 block text-xs text-muted-foreground">{t('procedure_document_name')}</Label>
+            <Label class="mb-1.5 block text-xs text-muted-foreground">
+              {t('procedure_document_name')}
+            </Label>
             <Input
               bind:value={documentName}
               class="h-9 text-sm"
@@ -524,12 +552,24 @@
               </datalist>
             {/if}
             <p class="mt-1 text-[10px] text-muted-foreground">
-              {t('procedure_motion_document_voting_rule', { value1: conf?.substantiveVotingMajority === 'simple_majority' ? t('procedure_simple_majority_2') : t('procedure_two_thirds_majority_3') })}
+              {t('procedure_motion_document_voting_rule', {
+                value1: `${t(
+                  procedureRules.documentVote.ratio === 'simple_majority'
+                    ? 'components_simple_majority'
+                    : 'components_two_thirds_majority'
+                )} · ${t(
+                  procedureRules.documentVote.denominator === 'yes_no'
+                    ? 'components_basis_yes_no'
+                    : 'components_basis_present_voting_eligible'
+                )}`
+              })}
             </p>
           </div>
         {:else if selectedType === 'individual_speech'}
           <div>
-            <Label class="mb-1.5 block text-xs text-muted-foreground">{t('procedure_speaking_duration_seconds')}</Label>
+            <Label class="mb-1.5 block text-xs text-muted-foreground">
+              {t('procedure_speaking_duration_seconds')}
+            </Label>
             <Input
               type="number"
               min="1"
@@ -551,14 +591,19 @@
             </div>
             {#if selectedProposer}
               <p class="mt-1 text-[10px] text-muted-foreground">
-                {t('procedure_individual_speech_duration', { value1: selectedProposer.name, value2: committedIsDurationSec })}
+                {t('procedure_individual_speech_duration', {
+                  value1: selectedProposer.name,
+                  value2: committedIsDurationSec
+                })}
               </p>
             {/if}
           </div>
         {:else if selectedType === 'change_attendance'}
           <Separator />
           <div>
-            <Label class="mb-1.5 block text-xs text-muted-foreground">{t('procedure_new_attendance')}</Label>
+            <Label class="mb-1.5 block text-xs text-muted-foreground">
+              {t('procedure_new_attendance')}
+            </Label>
             <div
               class="flex-1 rounded-lg border px-3 py-2 text-sm text-center font-medium {newAttendance ===
               'present'
@@ -568,13 +613,18 @@
               {newAttendance === 'present' ? t('procedure_present_2') : t('procedure_absent')}
             </div>
             <p class="mt-1 text-[10px] text-muted-foreground">
-              {t('procedure_attendance_change_explanation', { value1: selectedProposer?.procedure.attendance === 'present'
-                ? t('procedure_present_2')
-                : t('procedure_absent') })}
+              {t('procedure_attendance_change_explanation', {
+                value1:
+                  selectedProposer?.procedure.attendance === 'present'
+                    ? t('procedure_present_2')
+                    : t('procedure_absent')
+              })}
             </p>
           </div>
         {:else if selectedType}
-          <div class="text-xs text-muted-foreground">{t('procedure_this_motion_will_be_put_to_a_placard_vote')}</div>
+          <div class="text-xs text-muted-foreground">
+            {t('procedure_this_motion_will_be_put_to_a_placard_vote')}
+          </div>
         {/if}
       </div>
 

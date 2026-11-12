@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { t } from '$lib/i18n'
+  import { t, formatNumber } from '$lib/i18n'
   /**
    * motion/index.svelte
    * ──────────────────────
@@ -103,6 +103,35 @@
     <div class="mt-3 text-3xl tracking-wider text-white/40">
       {t('components_proposed_by', { name: activeMotion.proposedBy?.name ?? '' })}
     </div>
+
+    {#if activeMotion.votingRule}
+      {@const rule = activeMotion.votingRule}
+      <div class="mt-5 space-y-2 text-center text-xl text-white/50">
+        <p>
+          {rule.threshold.type === 'fixed'
+            ? t('components_threshold_fixed', { count: formatNumber(rule.threshold.value) })
+            : t(
+                rule.threshold.type === 'simple_majority'
+                  ? 'components_simple_majority'
+                  : 'components_two_thirds_majority'
+              )}
+        </p>
+        <p>
+          {t(
+            rule.basis === 'present_participants'
+              ? 'components_basis_present_participants'
+              : 'components_basis_present_voting_eligible'
+          )}
+        </p>
+        <p>
+          {t('components_vote_threshold_summary', {
+            denominator: formatNumber(rule.denominator),
+            required: formatNumber(rule.required)
+          })}
+        </p>
+        <p>{t('components_manual_motion_decision')}</p>
+      </div>
+    {/if}
 
     {#if activeMotion.type === 'moderated_caucus'}
       <div class="mt-15 space-y-2 text-2xl tracking-wider text-white/25">

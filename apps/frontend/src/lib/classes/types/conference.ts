@@ -65,6 +65,13 @@ export type {
   SpeakerTransitionReason
 } from './committee-display'
 export type { TimerStatus, TimerTickData, TimerTickStatus } from './timer'
+export type {
+  ProcedureRulesConfig,
+  ThresholdRule,
+  VotingRulesSnapshot,
+  VoteEvaluation,
+  QuorumEvaluation
+} from './procedure-rules'
 
 // Runtime labels remain exported for existing callers.
 export { ACTION_LABELS, MOTION_LABELS, POINT_LABELS }

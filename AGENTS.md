@@ -44,10 +44,13 @@
 - 每次新增功能、修改行为或修复问题时，在同一功能提交中更新根目录 `CHANGELOG.md` 的“未发布”部分，使用中文描述用户可感知的变化。
 - 遵循 [Keep a Changelog 1.1.0](https://keepachangelog.com/zh-CN/1.1.0/)，按需使用“新增、变更、弃用、移除、修复、安全”分类，省略空分类。发布时使用实际版本和 `YYYY-MM-DD` 日期，最新版本在前；日志不直接堆砌 Git 提交。
 
+<!-- CODEGRAPH_START -->
 ## CodeGraph
 
-仓库存在 `.codegraph/` 目录时，在 grep、find 或直接读取文件之前，先用 CodeGraph 理解或定位代码：
+In repositories indexed by CodeGraph (a `.codegraph/` directory exists at the repo root), reach for it BEFORE grep/find or reading files when you need to understand or locate code:
 
-- MCP 工具可用时，优先使用 `codegraph_explore`；一次调用可返回相关符号的原始源码及调用路径，包括 grep 难以追踪的动态分派。
-- 也可在终端运行 `codegraph explore "<符号名或问题>"`。
-- 仓库没有 `.codegraph/` 时跳过 CodeGraph；是否建立索引由用户决定。
+- **MCP tool** (when available): `codegraph_explore` answers most code questions in one call — the relevant symbols' verbatim source plus the call paths between them, including dynamic-dispatch hops grep can't follow. Name a file or symbol in the query to read its current line-numbered source. If it's listed but deferred, load it by name via tool search.
+- **Shell** (always works): `codegraph explore "<symbol names or question>"` prints the same output.
+
+If there is no `.codegraph/` directory, skip CodeGraph entirely — indexing is the user's decision.
+<!-- CODEGRAPH_END -->

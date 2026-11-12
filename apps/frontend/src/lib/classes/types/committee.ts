@@ -259,6 +259,8 @@ export interface VoteBallot {
 }
 
 export interface VotingSession {
+  rulesSnapshot?: import('./procedure-rules').VotingRulesSnapshot
+  evaluation?: import('./procedure-rules').VoteEvaluation
   id: string
   targetType: VoteTargetType
   targetId: string
@@ -284,6 +286,8 @@ export type CaucusType =
   'moderated' | 'unmoderated' | 'moderated_debate' | 'unmoderated_debate' | 'individual'
 
 export interface Committee {
+  procedureRules?: import('./procedure-rules').ProcedureRulesConfig
+  quorumRecord?: import('./procedure-rules').QuorumRecord
   id: string
   name: string
   phase: ConferencePhase

@@ -3,9 +3,18 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const directory = path.dirname(fileURLToPath(import.meta.url))
-const stateDir = path.resolve(directory, '../results/cloud-setup')
+const count = Number(process.argv[2] ?? 2000)
+if (!Number.isInteger(count) || count < 2 || count > 10000) throw new Error('Invalid seat count')
+const stateDir = path.resolve(
+  directory,
+  `../results/cloud-setup${count === 2000 ? '' : `-${count}`}`
+)
 const manifest = JSON.parse(await readFile(path.join(stateDir, 'manifest.json'), 'utf8'))
-if (manifest.conferenceIds.length !== 4 || !manifest.baseUrl.startsWith('https://api.miaoyww.top/'))
+if (
+  manifest.conferenceIds.length !== (manifest.conferenceCount ?? 4) ||
+  manifest.seats.length !== count ||
+  !manifest.baseUrl.startsWith('https://api.miaoyww.top/')
+)
   throw new Error('Unexpected setup manifest')
 async function api(route, options = {}) {
   const response = await fetch(`${manifest.baseUrl}${route}`, {
@@ -50,7 +59,9 @@ for (const id of manifest.conferenceIds) {
     closed: true,
     deleted: true
   })
-  console.log(`[cloud-cleanup] Closed test conference ${results.length}/4`)
+  console.log(
+    `[cloud-cleanup] Closed test conference ${results.length}/${manifest.conferenceIds.length}`
+  )
 }
 await api('/auth/logout', { method: 'POST' })
 await writeFile(

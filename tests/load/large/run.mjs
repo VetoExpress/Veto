@@ -9,6 +9,7 @@ import path from 'node:path'
 import os from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { Gate, aggregate, parseTiming, distribution } from './metrics.mjs'
+import { businessFlow } from './business.mjs'
 
 const directory = path.dirname(fileURLToPath(import.meta.url))
 const { values } = parseArgs({
@@ -20,6 +21,7 @@ const { values } = parseArgs({
     label: { type: 'string', default: 'baseline' },
     environment: { type: 'string', default: 'local' },
     deployment: { type: 'string' },
+    'full-business': { type: 'boolean', default: false },
     'api-dir': { type: 'string', default: path.resolve(directory, '../../../../veto-api') },
     target: { type: 'string', default: 'http://127.0.0.1:8797/v1' },
     credentials: {
@@ -123,7 +125,8 @@ async function request(state, operation, route, options = {}) {
     bodyMs = null,
     data = null,
     server = {},
-    bytes = 0
+    bytes = 0,
+    errorClass = null
   let ok = false
   const deadline = AbortSignal.timeout(30000)
   try {
@@ -142,6 +145,7 @@ async function request(state, operation, route, options = {}) {
     })
     ttfbMs = performance.now() - dispatched
     status = response.statusCode
+    errorClass = response.headers['x-veto-error-class'] ?? null
     server = parseTiming(response.headers['server-timing'])
     const chunks = []
     const hash = options.hash ? createHash('sha256') : null
@@ -192,6 +196,7 @@ async function request(state, operation, route, options = {}) {
     bodyMs,
     totalMs: performance.now() - issued,
     server,
+    errorClass,
     bytes
   }
   samples.push(sample)
@@ -390,13 +395,23 @@ try {
     await sleep(((state.index % 30000) / count) * Math.min(30000, windowSeconds * 400))
     let sequence = 0
     while (performance.now() < windowEnd) {
-      const route = ['/veto/files', '/veto/news', '/veto/situations'][sequence++ % 3]
+      const routes = values['full-business']
+        ? ['/veto/files', '/veto/news', '/veto/situations', '/veto/directives/mine']
+        : ['/veto/files', '/veto/news', '/veto/situations']
+      const route =
+        routes[(sequence++ + (values['full-business'] ? state.index : 0)) % routes.length]
       await request(state, `browse.${route.split('/').at(-1)}`, route)
       await sleep(Math.min(30000, Math.max(0, windowEnd - performance.now())))
     }
   })
   const writes = writers.map(async (state, index) => {
-    await sleep(Math.min(20000, windowSeconds * 200) + index * 100)
+    await sleep(
+      Math.min(20000, windowSeconds * 200) +
+        index *
+          (values['full-business']
+            ? Math.min(150000, windowSeconds * 400) / Math.max(1, writers.length)
+            : 100)
+    )
     if (performance.now() >= windowEnd) return
     const buffer = buffers[index % buffers.length]
     const title = `${runId}-${index}`
@@ -436,6 +451,7 @@ try {
           verifiedFiles++
       }
     }
+    if (values['full-business']) return
     if (state.seat.expectedCapabilities.includes('publish_situation'))
       await request(state, 'situation.publish', '/veto/situations', {
         method: 'POST',
@@ -448,6 +464,54 @@ try {
         headers: { 'idempotency-key': title }
       })
   })
+  const workflowResults = []
+  const plans = values['full-business']
+    ? conferences.flatMap((group) => {
+        const authors = group
+          .filter((state) => state.seat.expectedCapabilities.includes('draft_news'))
+          .slice(0, 5)
+        const processors = group
+          .filter((state) => state.seat.expectedCapabilities.includes('publish_situation'))
+          .slice(0, 5)
+        const reader = group.find(
+          (state) => !authors.includes(state) && !processors.includes(state)
+        )
+        return authors.flatMap((author, index) =>
+          ['news', 'directive', 'situation'].map((kind) => ({
+            kind,
+            author: kind === 'situation' ? processors[index] : author,
+            reviewer: kind === 'situation' ? author : processors[index],
+            reader,
+            decision: index % 2 ? 'rejected' : 'approved'
+          }))
+        )
+      })
+    : []
+  const workflowJobs = plans.map(async (plan, index) => {
+    // Spread independent business actors through the window instead of one submission burst.
+    await sleep(30000 + (index / Math.max(1, plans.length)) * Math.min(150000, windowSeconds * 400))
+    if (
+      performance.now() >= windowEnd ||
+      ![plan.author, plan.reviewer, plan.reader].every((state) => state?.ready)
+    ) {
+      workflowResults.push({
+        kind: plan.kind,
+        ok: false,
+        step: 'start',
+        code: 'SEAT_NOT_READY_OR_WINDOW_ENDED',
+        visibility: []
+      })
+      return
+    }
+    workflowResults.push(
+      await businessFlow({
+        ...plan,
+        title: `${runId}-${plan.kind}-${index}`,
+        request,
+        active: () => !finished && performance.now() < windowEnd
+      })
+    )
+  })
   await sleep(windowEnd - performance.now())
   const finalReady = states.filter((state) => state.ready).length
   const commonSeats = states.filter(
@@ -455,7 +519,7 @@ try {
   ).length
   phase = 'drain'
   finished = true
-  await Promise.allSettled([...jobs, ...writes])
+  const completedJobs = await Promise.allSettled([...jobs, ...writes, ...workflowJobs])
   // Wait for the one in-flight refresh per seat; no new refreshes can be scheduled.
   const drainDeadline = performance.now() + 60000
   while ((gate.active || gate.waiting.length) && performance.now() < drainDeadline) await sleep(100)
@@ -478,6 +542,10 @@ try {
     wsCloses,
     wsFailures,
     notifications,
+    fullBusiness: values['full-business'],
+    plannedWorkflows: plans.length,
+    workflowResults,
+    jobRejections: completedJobs.filter((job) => job.status === 'rejected').length,
     plannedFiles: writers.length,
     verifiedFiles,
     wsReadyMs: distribution(
@@ -489,6 +557,9 @@ try {
       commonSeats === count &&
       samples.every((sample) => sample.ok) &&
       verifiedFiles === writers.length &&
+      workflowResults.length === plans.length &&
+      workflowResults.every((flow) => flow.ok) &&
+      completedJobs.every((job) => job.status === 'fulfilled') &&
       distribution(samples.filter((sample) => sample.ok).map((sample) => sample.totalMs)).p95 < 2000
   }
   await writeFile(path.join(resultDir, 'summary.json'), JSON.stringify(summary, null, 2))

@@ -1,21 +1,21 @@
 <script lang="ts">
-  import { t } from '$lib/i18n'
+  import { t, formatNumber } from '$lib/i18n'
   import { onDestroy } from 'svelte'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
   import { page } from '$app/state'
-  import { Check, X, Users, Monitor } from '@lucide/svelte'
+  import { Check, X, Users } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import {
     currentCommittee,
     changeSeatAttendance,
     completeRollCall
   } from '$lib/classes/stores/conference/conference-store'
-  import { calculateMajorityThresholds } from '$lib/classes/services/engine/conference-engine'
   import {
-    getDisplayBridge,
-    buildDisplayData
-  } from '$lib/classes/clients/conference-display-client'
+    calculateQuorum,
+    defaultProcedureRules,
+    thresholdCount
+  } from '$lib/classes/utils/committee/procedure-rules'
   import { VETO_NAME, ROLL_CALL_MARK_DELAY } from '$lib/classes/const'
   import type { Attendance, ParticipantSeat } from '$lib/classes/types/conference'
   import { isParticipantSeat, toSeatView } from '$lib/classes/types/delegate'
@@ -42,13 +42,14 @@
 
   // 将点名页面的附加投影交给 chair layout 统一发送到 Display。
   $effect(() => {
-    const rollCallInfo = thresholds
+    const rollCallInfo = quorum
       ? {
           currentIndex,
           totalCount,
-          presentCount: thresholds.presentCount,
-          simpleMajorityThreshold: thresholds.simpleMajorityThreshold,
-          twoThirdsThreshold: thresholds.twoThirdsThreshold,
+          presentCount,
+          quorum,
+          simpleMajorityThreshold: thresholdCount(votingCount, { type: 'simple_majority' }),
+          twoThirdsThreshold: thresholdCount(votingCount, { type: 'two_thirds' }),
           ...(currentSeat ? { currentSeat: toSeatView(currentSeat) } : {}),
           lastMarked: lastRollCallMarked
             ? { ...lastRollCallMarked, seat: toSeatView(lastRollCallMarked.seat) }
@@ -76,11 +77,23 @@
   const currentSeat = $derived(sortedSeats[currentIndex] ?? null)
   const isComplete = $derived(currentIndex >= sortedSeats.length)
 
-  const thresholds = $derived(
-    conf ? calculateMajorityThresholds(conf.seats.filter(isParticipantSeat)) : null
+  const quorum = $derived(
+    conf
+      ? calculateQuorum(
+          sortedSeats,
+          (conf.procedureRules ?? defaultProcedureRules(conf.substantiveVotingMajority)).quorum
+        )
+      : null
   )
-  const presentCount = $derived(thresholds?.presentCount ?? 0)
-  const totalCount = $derived(thresholds?.totalCount ?? 0)
+  const presentCount = $derived(
+    sortedSeats.filter((seat) => seat.procedure.attendance === 'present').length
+  )
+  const votingCount = $derived(
+    sortedSeats.filter(
+      (seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights
+    ).length
+  )
+  const totalCount = $derived(sortedSeats.length)
   const progress = $derived(totalCount > 0 ? Math.round((currentIndex / totalCount) * 100) : 0)
 
   const showConfirmOverlay = $derived(isTransitioning && lastRollCallMarked !== null)
@@ -147,8 +160,10 @@
   }
 
   function handleComplete(): void {
-    completeRollCall()
-    goto(resolve(`/client/${conferenceId}/committee/${committeeId}/chair`))
+    if (!quorum?.met) return
+    if (completeRollCall()) {
+      goto(resolve(`/client/${conferenceId}/committee/${committeeId}/chair`))
+    }
   }
 
   function handleKeydown(e: KeyboardEvent): void {
@@ -178,15 +193,29 @@
 
   <!-- 内容 -->
   <div class="flex flex-1 items-center justify-center overflow-hidden p-6">
-    {#if conf && thresholds}
+    {#if conf && quorum}
       {#if !isComplete}
         <!-- ===== 逐个点名 ===== -->
         <div class="flex w-full max-w-lg flex-col items-center gap-10">
+          <p role="status" class={['text-center text-sm', { 'text-destructive': !quorum.met }]}>
+            {t(quorum.met ? 'components_quorum_met' : 'components_quorum_unmet')}
+            {t('components_quorum_summary', {
+              present: formatNumber(quorum.present),
+              denominator: formatNumber(quorum.denominator),
+              required: formatNumber(quorum.required)
+            })}
+          </p>
+
           <!-- 进度 -->
           <div class="flex w-full flex-col items-center gap-2">
             <div class="flex items-center gap-3 text-sm text-muted-foreground">
               <Users size={14} />
-              <span>{t('procedure_roll_call_position', { value1: currentIndex + 1, value2: totalCount })}</span>
+              <span>
+                {t('procedure_roll_call_position', {
+                  value1: currentIndex + 1,
+                  value2: totalCount
+                })}
+              </span>
             </div>
             <div class="h-1.5 w-full overflow-hidden rounded-full bg-muted">
               <div
@@ -196,16 +225,19 @@
             </div>
             <div class="flex gap-4 text-xs text-muted-foreground">
               <span>
-                {t('procedure_present')} <span class="font-semibold text-foreground">{presentCount}</span>
+                {t('procedure_present')}
+                <span class="font-semibold text-foreground">{presentCount}</span>
               </span>
               <span>
-                {t('procedure_simple_majority')} <span class="font-semibold text-foreground">
-                  {thresholds.simpleMajorityThreshold}
+                {t('components_quorum_denominator')}
+                <span class="font-semibold text-foreground">
+                  {formatNumber(quorum.denominator)}
                 </span>
               </span>
               <span>
-                {t('procedure_two_thirds_majority_2')} <span class="font-semibold text-foreground">
-                  {thresholds.twoThirdsThreshold}
+                {t('components_quorum_required')}
+                <span class="font-semibold text-foreground">
+                  {formatNumber(quorum.required)}
                 </span>
               </span>
             </div>
@@ -221,8 +253,10 @@
               <!-- 席位信息 -->
 
               <div
-                class="text-center transition-opacity duration-300"
-                class:opacity-30={isTransitioning}
+                class={[
+                  'text-center transition-opacity duration-300',
+                  { 'opacity-30': isTransitioning }
+                ]}
               >
                 <div class="text-3xl font-bold text-foreground">{currentSeat.name}</div>
                 {#if currentSeat.shortName}
@@ -258,7 +292,9 @@
                 <!-- 点名结果 -->
                 <div class="mt-2 flex flex-col items-center gap-2">
                   <span class="text-lg font-bold text-foreground">
-                    {lastRollCallMarked.status === 'present' ? t('procedure_present_2') : t('procedure_absent')}
+                    {lastRollCallMarked.status === 'present'
+                      ? t('procedure_present_2')
+                      : t('procedure_absent')}
                   </span>
                 </div>
               {/if}
@@ -302,6 +338,15 @@
       {:else}
         <!-- ===== 点名完成 ===== -->
         <div class="flex w-full max-w-lg flex-col items-center gap-8">
+          <p role="status" class={['text-center text-sm', { 'text-destructive': !quorum.met }]}>
+            {t(quorum.met ? 'components_quorum_met' : 'components_quorum_unmet')}
+            {t('components_quorum_summary', {
+              present: formatNumber(quorum.present),
+              denominator: formatNumber(quorum.denominator),
+              required: formatNumber(quorum.required)
+            })}
+          </p>
+
           <div class="flex items-center gap-2">
             <h2 class="text-2xl font-bold text-foreground">{t('procedure_roll_call_complete')}</h2>
           </div>
@@ -309,17 +354,23 @@
           <div class="grid w-full grid-cols-3 gap-4">
             <div class="rounded-lg border bg-card p-6 text-center">
               <div class="text-3xl font-bold text-foreground">{presentCount}</div>
-              <div class="mt-1 text-sm text-muted-foreground">{t('procedure_roll_call_present_total', { value1: totalCount })}</div>
+              <div class="mt-1 text-sm text-muted-foreground">
+                {t('procedure_roll_call_present_total', { value1: totalCount })}
+              </div>
             </div>
             <div class="rounded-lg border bg-card p-6 text-center">
               <div class="text-3xl font-bold text-foreground">
-                {thresholds.simpleMajorityThreshold}
+                {formatNumber(quorum.denominator)}
               </div>
-              <div class="mt-1 text-sm text-muted-foreground">{t('procedure_simple_majority')}</div>
+              <div class="mt-1 text-sm text-muted-foreground">
+                {t('components_quorum_denominator')}
+              </div>
             </div>
             <div class="rounded-lg border bg-card p-6 text-center">
-              <div class="text-3xl font-bold text-foreground">{thresholds.twoThirdsThreshold}</div>
-              <div class="mt-1 text-sm text-muted-foreground">{t('procedure_two_thirds_majority')}</div>
+              <div class="text-3xl font-bold text-foreground">{formatNumber(quorum.required)}</div>
+              <div class="mt-1 text-sm text-muted-foreground">
+                {t('components_quorum_required')}
+              </div>
             </div>
           </div>
 
@@ -345,8 +396,15 @@
           {/if}
 
           <div class="flex gap-4">
-            <Button variant="outline" size="lg" onclick={goBack}>{t('procedure_back_to_edit')}</Button>
-            <Button size="lg" class="min-w-[160px] gap-2 text-base" onclick={handleComplete}>
+            <Button variant="outline" size="lg" onclick={goBack}>
+              {t('procedure_back_to_edit')}
+            </Button>
+            <Button
+              size="lg"
+              class="min-w-[160px] gap-2 text-base"
+              onclick={handleComplete}
+              disabled={!quorum.met}
+            >
               {t('procedure_complete_roll_call')}
             </Button>
           </div>
@@ -356,7 +414,9 @@
       <div class="flex flex-col items-center gap-3 text-muted-foreground">
         <Users size={40} class="opacity-30" />
         <p class="text-lg font-medium">{t('procedure_no_participants_found')}</p>
-        <p class="text-sm opacity-70">{t('procedure_configure_participants_in_seat_management_first')}</p>
+        <p class="text-sm opacity-70">
+          {t('procedure_configure_participants_in_seat_management_first')}
+        </p>
       </div>
     {/if}
   </div>

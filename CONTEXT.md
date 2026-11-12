@@ -76,19 +76,20 @@ _Avoid_: Role, Team, Group
 
 **SeatGroup 类型**:
 
-| 类型 | 模式 | 说明 |
-|---|---|---|
-| 常规 (Cabinet) | standing ↔ crisis 可切换 | 议事会场 |
-| MPC | 固定 | 主新闻中心 |
-| IPC | 固定 | 推演控制中心 |
+| 类型           | 模式                     | 说明         |
+| -------------- | ------------------------ | ------------ |
+| 常规 (Cabinet) | standing ↔ crisis 可切换 | 议事会场     |
+| MPC            | 固定                     | 主新闻中心   |
+| IPC            | 固定                     | 推演控制中心 |
 
 **常规 (Cabinet)**:
 既可指危机模式下的国家内阁，也可指常委模式下的多国委员会。两种模式中途可切换。
+
 - **危机模式 (crisis)**：Seat 独立运作，各自绑定部门（海军部、情报局等），直接发送指令。
 - **常委模式 (standing)**：内阁统一为国家立场，通过会议机制（发言名单、动议、表决）产出国家文件。
-模式切换和会议机制由 Chair 在本地维护，不向普通 UserClient 同步。
-于是Host无需关注Chair的议程和会议机制，Chair也不需要向Host同步会议机制。
-_Avoid_: Committee, Council
+  模式切换和会议机制由 Chair 在本地维护，不向普通 UserClient 同步。
+  于是Host无需关注Chair的议程和会议机制，Chair也不需要向Host同步会议机制。
+  _Avoid_: Committee, Council
 
 **MPC (主新闻中心)**:
 新闻的生产方。成员起草新闻草稿，提交 IPC 审核后发布。已发布新闻可被 IPC 撤回（从全局列表移除）。
@@ -122,6 +123,14 @@ _Avoid_: Delegation, Voting Seat
 Cloud Service 持有的静态 Seat 配置，包含简称、旗帜和是否具备议事资格等信息。它只在
 ChairCommitteeProjection 中提供给获授权 Chair；出席、投票权、排序和发言队列等运行中状态不属于它。
 _Avoid_: Procedure State, Attendance
+
+**ProcedureRulesConfig（议事规则配置）**:
+由 Chair 本地维护的 Committee 级规则参数，分别定义法定人数、程序性表决和文件表决的分母与门槛，
+以及否决权席位。法定人数以同一分母口径计算应出席席位数和实际出席数；表决在开始时固定规则、
+选民、席位显示名和否决权快照，之后的设置或席位变动不改变该次表决。程序性门槛为空时沿用各动议
+既有默认值。默认配置保持旧委员会行为：法定人数按全部议事席位及简单多数，文件表决按出席且有票权
+席位及三分之二，否决权关闭。
+_Avoid_: Global Rules, Chair Permission
 
 **UserClientSessionProjection（用户端会话投影）**:
 普通 UserClient 认证后得到的最小共享大会数据投影：大会名称、自己的 Committee、自己的 Seat 身份与角色、
@@ -179,24 +188,24 @@ _Avoid_: Role, Permission, Account
 Seat 可执行的操作权限。SeatGroup 设默认值，Seat 级别可覆盖（开/关）；Capability 代码统一使用
 `动词_对象` 命名，不使用 `对象_动词`。
 
-| 能力 | 说明 |
-|---|---|
-| `view_conference` | 查看会议状态 |
-| `view_situation` | 查看全局局势 |
-| `view_news` | 查看全局新闻 |
-| `view_files` | 查看文件 |
-| `draft_news` | 起草新闻草稿 |
-| `review_news` | 审核新闻 |
-| `submit_directive` | 提交指令 |
-| `process_directive` | 处理指令 |
-| `send_files` | 发送文件 |
-| `publish_situation` | 发布局势更新 |
-| `withdraw_news` | 撤回已发布新闻 |
-| `withdraw_situation` | 撤回已发布局势更新 |
-| `withdraw_files` | 撤回已发布文件 |
-| `control_conference` | 进入 Chair 模式，并管理该 Seat 所属的 Committee |
-| `control_timeline` | 控制大会 Timeline；仅 IPC Committee 的 Seat 可使用，内置 IPC 角色模板默认具备 |
-| `draft_resolution` | 起草决议（共享决议工作流暂未开放，Capability 保留） |
+| 能力                 | 说明                                                                          |
+| -------------------- | ----------------------------------------------------------------------------- |
+| `view_conference`    | 查看会议状态                                                                  |
+| `view_situation`     | 查看全局局势                                                                  |
+| `view_news`          | 查看全局新闻                                                                  |
+| `view_files`         | 查看文件                                                                      |
+| `draft_news`         | 起草新闻草稿                                                                  |
+| `review_news`        | 审核新闻                                                                      |
+| `submit_directive`   | 提交指令                                                                      |
+| `process_directive`  | 处理指令                                                                      |
+| `send_files`         | 发送文件                                                                      |
+| `publish_situation`  | 发布局势更新                                                                  |
+| `withdraw_news`      | 撤回已发布新闻                                                                |
+| `withdraw_situation` | 撤回已发布局势更新                                                            |
+| `withdraw_files`     | 撤回已发布文件                                                                |
+| `control_conference` | 进入 Chair 模式，并管理该 Seat 所属的 Committee                               |
+| `control_timeline`   | 控制大会 Timeline；仅 IPC Committee 的 Seat 可使用，内置 IPC 角色模板默认具备 |
+| `draft_resolution`   | 起草决议（共享决议工作流暂未开放，Capability 保留）                           |
 
 _Avoid_: Permission, Right, Role
 

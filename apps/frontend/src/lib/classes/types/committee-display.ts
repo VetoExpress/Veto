@@ -16,6 +16,7 @@ import type {
 import type { MajorityRule, VoteTargetType, ConferenceEntry } from './committee'
 import type { TimerStatus } from './timer'
 import type { Locale } from '$lib/i18n'
+import type { QuorumEvaluation, VoteEvaluation, VotingRulesSnapshot } from './procedure-rules'
 
 export type DisplayPhase = ConferencePhase | 'motion'
 
@@ -52,6 +53,7 @@ export interface ConferenceDisplayData {
   name: string
   presentCount: number
   votingCount: number
+  quorum?: QuorumEvaluation
   motionDraft?: MotionDraft
   pointDraft?: PointDraft
   currentSpeaker?: ConferenceDisplaySpeaker
@@ -66,6 +68,8 @@ export interface ConferenceDisplayData {
     targetDescription: string
     targetType: VoteTargetType
     majorityRule: MajorityRule
+    evaluation?: VoteEvaluation
+    rules?: Pick<VotingRulesSnapshot, 'kind' | 'denominator' | 'threshold'>
     tally: { yes: number; no: number; abstain: number; present: number }
     result?: string
     round: number
@@ -83,6 +87,12 @@ export interface ConferenceDisplayData {
     status: string
     proposedBy: SeatView
     motionId: string
+    votingRule?: {
+      threshold: VotingRulesSnapshot['threshold']
+      basis: VotingRulesSnapshot['denominator']
+      denominator: number
+      required: number
+    }
     totalTimeSec?: number
     speakingTimePerPersonSec?: number
     newTimeSec?: number
@@ -130,6 +140,7 @@ export interface ConferenceDisplayData {
   }
   attendanceChange?: SeatView
   rollCall?: {
+    quorum?: QuorumEvaluation
     currentIndex: number
     totalCount: number
     currentSeat?: SeatView

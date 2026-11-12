@@ -4,12 +4,13 @@
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
-  import * as Select from '$lib/components/ui/select'
   import { globalSettings } from '$lib/classes/stores/app/global-settings.store'
   import {
     currentCommittee,
-    setSubstantiveVotingMajority
+    setProcedureRules
   } from '$lib/classes/stores/conference/conference-store'
+  import { defaultProcedureRules } from '$lib/classes/utils/committee/procedure-rules'
+  import ProcedureRulesSettings from './procedure-rules-settings.svelte'
   import CommitteeSnapshots from './committee-snapshots.svelte'
   import { fly } from 'svelte/transition'
 
@@ -39,45 +40,44 @@
   <ScrollArea>
     <div class="mb-1 text-xl font-bold">{t('settings_committee')}</div>
     <p class="mb-4 text-sm">{t('settings_committee_description')}</p>
-    <div class="space-y-3">
-      <SettingCard title={t('settings_voting_rules')} description={t('settings_voting_description')}>
-        {#if $currentCommittee}
-          <Select.Select
-            type="single"
-            value={$currentCommittee.substantiveVotingMajority}
-            onValueChange={(value) => {
-              if (value === 'two_thirds' || value === 'simple_majority') {
-                setSubstantiveVotingMajority(value)
-              }
-            }}
-          >
-            <Select.SelectTrigger aria-label={t('settings_voting_rules')} class="w-48">
-              {$currentCommittee.substantiveVotingMajority === 'simple_majority'
-                ? t('settings_majority_simple')
-                : t('settings_majority_two_thirds')}
-            </Select.SelectTrigger>
-            <Select.SelectContent>
-              <Select.SelectItem value="two_thirds" label={t('settings_majority_two_thirds')} />
-              <Select.SelectItem value="simple_majority" label={t('settings_majority_simple')} />
-            </Select.SelectContent>
-          </Select.Select>
-        {:else}
+    <div class="flex flex-col gap-3">
+      {#if $currentCommittee}
+        {#key $currentCommittee.id}
+          <ProcedureRulesSettings
+            initialRules={$currentCommittee.procedureRules ??
+              defaultProcedureRules($currentCommittee.substantiveVotingMajority)}
+            seats={$currentCommittee.seats}
+            onSave={setProcedureRules}
+          />
+        {/key}
+      {:else}
+        <SettingCard
+          title={t('settings_procedure_rules')}
+          description={t('settings_procedure_rules_description')}
+        >
           <p class="text-sm text-muted-foreground">{t('settings_voting_enter_committee')}</p>
-        {/if}
-      </SettingCard>
+        </SettingCard>
+      {/if}
 
-      <SettingCard title={t('settings_default_icons')} description={t('settings_default_icons_description')}>
+      <SettingCard
+        title={t('settings_default_icons')}
+        description={t('settings_default_icons_description')}
+      >
         <div class="flex gap-2">
           <Button
             variant={$globalSettings.defaultIconStyle === 'nato' ? 'default' : 'outline'}
             size="sm"
-            onclick={() => saveIconStyle('nato')}>{t('settings_nato')}</Button
+            onclick={() => saveIconStyle('nato')}
           >
+            {t('settings_nato')}
+          </Button>
           <Button
             variant={$globalSettings.defaultIconStyle === 'simple' ? 'default' : 'outline'}
             size="sm"
-            onclick={() => saveIconStyle('simple')}>{t('settings_simple_icons')}</Button
+            onclick={() => saveIconStyle('simple')}
           >
+            {t('settings_simple_icons')}
+          </Button>
         </div>
       </SettingCard>
 
@@ -87,7 +87,9 @@
       >
         <div class="flex items-end gap-4">
           <div class="flex flex-col gap-1.5">
-            <label for="display-offset-x" class="text-xs text-muted-foreground">{t('settings_offset_x')}</label>
+            <label for="display-offset-x" class="text-xs text-muted-foreground">
+              {t('settings_offset_x')}
+            </label>
             <Input
               id="display-offset-x"
               type="number"
@@ -97,7 +99,9 @@
             />
           </div>
           <div class="flex flex-col gap-1.5">
-            <label for="display-offset-y" class="text-xs text-muted-foreground">{t('settings_offset_y')}</label>
+            <label for="display-offset-y" class="text-xs text-muted-foreground">
+              {t('settings_offset_y')}
+            </label>
             <Input
               id="display-offset-y"
               type="number"

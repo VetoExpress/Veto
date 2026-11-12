@@ -1,6 +1,10 @@
 <script lang="ts">
-  import { procedureMessage, renderProcedureMessage, type ProcedureMessage } from '$lib/components/conference/common/message'
-  import { t } from '$lib/i18n'
+  import {
+    procedureMessage,
+    renderProcedureMessage,
+    type ProcedureMessage
+  } from '$lib/components/conference/common/message'
+  import { t, formatNumber } from '$lib/i18n'
   import { goto } from '$app/navigation'
   import { page } from '$app/state'
   import { Plus, RotateCcw, Users } from '@lucide/svelte'
@@ -35,7 +39,10 @@
     resetRollCall
   } from '$lib/classes/stores/conference/conference-store'
   import { addSeat, updateSeat } from '$lib/classes/stores/delegate/delegate-store'
-  import { calculateMajorityThresholds } from '$lib/classes/services/engine/conference-engine'
+  import {
+    calculateQuorum,
+    defaultProcedureRules
+  } from '$lib/classes/utils/committee/procedure-rules'
   import { VETO_NAME } from '$lib/classes/const'
   import { isParticipantSeat } from '$lib/classes/types/delegate'
   import { resolve } from '$app/paths'
@@ -55,16 +62,26 @@
           .sort((a, b) => a.procedure.sortOrder - b.procedure.sortOrder)
       : []
   )
-  const thresholds = $derived(
-    conf ? calculateMajorityThresholds(conf.seats.filter(isParticipantSeat)) : null
+  const quorum = $derived(
+    conf
+      ? calculateQuorum(
+          sortedSeats,
+          (conf.procedureRules ?? defaultProcedureRules(conf.substantiveVotingMajority)).quorum
+        )
+      : null
   )
   const stats = $derived(
-    thresholds
+    quorum
       ? [
-          { value: thresholds.presentCount, label: t('procedure_present_value', { value1: thresholds.totalCount }) },
-          { value: thresholds.votingCount, label: t('procedure_eligible_to_vote') },
-          { value: thresholds.simpleMajorityThreshold, label: t('procedure_simple_majority') },
-          { value: thresholds.twoThirdsThreshold, label: t('procedure_two_thirds_majority') }
+          { value: quorum.present, label: t('components_quorum_present') },
+          { value: quorum.denominator, label: t('components_quorum_denominator') },
+          { value: quorum.required, label: t('components_quorum_required') },
+          {
+            value: sortedSeats.filter(
+              (seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights
+            ).length,
+            label: t('procedure_eligible_to_vote')
+          }
         ]
       : []
   )
@@ -99,7 +116,9 @@
       return
     }
     if (!conf || !participantSeatGroupId) {
-      addSeatError = procedureMessage('procedure_no_participant_seat_group_is_available_in_this_conference')
+      addSeatError = procedureMessage(
+        'procedure_no_participant_seat_group_is_available_in_this_conference'
+      )
       return
     }
 
@@ -155,7 +174,9 @@
         <AlertDialogHeader>
           <AlertDialogTitle>{t('procedure_restart_roll_call')}</AlertDialogTitle>
           <AlertDialogDescription>
-            {t('procedure_this_resets_all_participants_to_absent_and_returns_the_meeting_to_roll_call_continue')}
+            {t(
+              'procedure_this_resets_all_participants_to_absent_and_returns_the_meeting_to_roll_call_continue'
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -179,7 +200,11 @@
   <Dialog.Content class="sm:max-w-md">
     <Dialog.Header>
       <Dialog.Title>{t('procedure_add_seat')}</Dialog.Title>
-      <Dialog.Description>{t('procedure_add_committee_participant', { value1: conf?.name ?? t('procedure_current_committee') })}</Dialog.Description>
+      <Dialog.Description>
+        {t('procedure_add_committee_participant', {
+          value1: conf?.name ?? t('procedure_current_committee')
+        })}
+      </Dialog.Description>
     </Dialog.Header>
     <form class="flex flex-col gap-4" onsubmit={submitNewSeat}>
       <Field.FieldGroup>
@@ -193,20 +218,32 @@
           />
         </Field.Field>
         <Field.Field>
-          <Field.FieldLabel for="new-seat-short-name">{t('procedure_seat_abbreviation_optional')}</Field.FieldLabel>
-          <Input id="new-seat-short-name" bind:value={newSeatShortName} placeholder={t('procedure_for_example_fra')} />
+          <Field.FieldLabel for="new-seat-short-name">
+            {t('procedure_seat_abbreviation_optional')}
+          </Field.FieldLabel>
+          <Input
+            id="new-seat-short-name"
+            bind:value={newSeatShortName}
+            placeholder={t('procedure_for_example_fra')}
+          />
         </Field.Field>
         <Field.Field>
           <div class="flex items-center justify-between gap-4 rounded-md border px-3 py-2.5">
             <div class="space-y-0.5">
-              <Field.FieldLabel for="new-seat-voting-rights">{t('procedure_voting_rights')}</Field.FieldLabel>
-              <p class="text-xs text-muted-foreground">{t('procedure_turn_off_to_add_this_seat_as_an_observer')}</p>
+              <Field.FieldLabel for="new-seat-voting-rights">
+                {t('procedure_voting_rights')}
+              </Field.FieldLabel>
+              <p class="text-xs text-muted-foreground">
+                {t('procedure_turn_off_to_add_this_seat_as_an_observer')}
+              </p>
             </div>
             <Switch id="new-seat-voting-rights" bind:checked={newSeatVotingRights} />
           </div>
         </Field.Field>
       </Field.FieldGroup>
-      {#if addSeatError}<Field.FieldError>{renderProcedureMessage(addSeatError)}</Field.FieldError>{/if}
+      {#if addSeatError}<Field.FieldError>
+          {renderProcedureMessage(addSeatError)}
+        </Field.FieldError>{/if}
       <Dialog.Footer>
         <Button type="button" variant="outline" onclick={() => (showAddSeatDialog = false)}>
           {t('procedure_cancel')}
@@ -219,13 +256,16 @@
 
 <ScrollArea class="min-h-0 flex-1">
   <div class="mx-auto max-w-4xl px-6 py-6">
-    {#if conf && thresholds}
+    {#if conf && quorum}
+      <p role="status" class={['mb-3 text-sm', { 'text-destructive': !quorum.met }]}>
+        {t(quorum.met ? 'components_quorum_met' : 'components_quorum_unmet')}
+      </p>
       <!-- 统计卡片 -->
       <div class="mb-8 grid grid-cols-4 gap-4">
         {#each stats as stat (stat.label)}
           <Card>
             <CardContent class="flex flex-col items-center gap-1 p-5">
-              <span class="text-2xl font-bold text-foreground">{stat.value}</span>
+              <span class="text-2xl font-bold text-foreground">{formatNumber(stat.value)}</span>
               <span class="text-sm text-muted-foreground">{stat.label}</span>
             </CardContent>
           </Card>

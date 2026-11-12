@@ -38,11 +38,26 @@ import {
 } from '$lib/classes/types/delegate'
 import type { Attendance } from '$lib/classes/types/committee'
 import { translate, type MessageKey } from '$lib/i18n'
+import { t } from '$lib/i18n'
 import type { EntryMessageValues } from '../../../../../shared/action-types'
 import { getDisplayBridge, buildDisplayData } from '$lib/classes/clients/conference-display-client'
 import { emitServiceEvent } from '$lib/classes/services/event-bus-bridge'
 import { Timer } from '$lib/classes/services/timer/timer'
-import { calculateMajorityThresholds, determinePassFail, tallyVotes as tallyVotesEngine } from '$lib/classes/utils/committee/voting'
+import {
+  calculateMajorityThresholds,
+  tallyVotes as tallyVotesEngine
+} from '$lib/classes/utils/committee/voting'
+import type { ProcedureRulesConfig, QuorumRecord } from '$lib/classes/types/procedure-rules'
+import {
+  defaultProcedureRules,
+  cloneProcedureRules,
+  validProcedureRulesShape,
+  validateProcedureRules,
+  calculateQuorum,
+  createVotingSnapshot,
+  cloneVotingSnapshot,
+  evaluateVote
+} from '$lib/classes/utils/committee/procedure-rules'
 import { canTransition } from '$lib/classes/utils/committee/phase'
 import { calcMaxSpeakers } from '$lib/classes/utils/committee/caucus'
 
@@ -60,6 +75,17 @@ function message(messageKey: MessageKey, messageValues: EntryMessageValues = {})
 
 function cloneEntry(entry: ConferenceEntry): ConferenceEntry {
   return { ...entry, ...(entry.messageValues ? { messageValues: { ...entry.messageValues } } : {}) }
+}
+
+function cloneVotingSession(session: VotingSession): VotingSession {
+  return {
+    ...session,
+    ballots: session.ballots.map((ballot) => ({ ...ballot })),
+    ...(session.rulesSnapshot ? { rulesSnapshot: cloneVotingSnapshot(session.rulesSnapshot) } : {}),
+    ...(session.evaluation
+      ? { evaluation: { ...session.evaluation, vetoSeatIds: [...session.evaluation.vetoSeatIds] } }
+      : {})
+  }
 }
 
 function cloneSpeakerEntry(entry: SpeakerEntry): SpeakerEntry {
@@ -210,7 +236,33 @@ export class Committee {
 
   // ── 配置 ──
   defaultSpeakingTimeSec: number = $state(120)
-  substantiveVotingMajority: MajorityRule = $state('two_thirds')
+  procedureRules: ProcedureRulesConfig = $state(defaultProcedureRules())
+  quorumRecord: QuorumRecord | undefined = $state(undefined)
+
+  get substantiveVotingMajority(): MajorityRule {
+    return this.procedureRules.documentVote.ratio
+  }
+  set substantiveVotingMajority(value: MajorityRule) {
+    this.procedureRules = {
+      ...this.procedureRules,
+      documentVote: { ...this.procedureRules.documentVote, ratio: value }
+    }
+  }
+
+  setProcedureRules(config: ProcedureRulesConfig): boolean {
+    if (!validateProcedureRules(config, this.participantSeats)) {
+      console.warn('ProcedureRulesInvalid', {
+        operation: 'setProcedureRules',
+        committeeId: this.id,
+        impact: 'configuration unchanged'
+      })
+      return false
+    }
+    this.procedureRules = cloneProcedureRules(config)
+    this.addConferenceEntry('phase_changed', message('domain_rules_saved'))
+    this.touch()
+    return true
+  }
 
   // ── 议题 ──
   agenda: AgendaItem[] = $state([])
@@ -261,17 +313,59 @@ export class Committee {
       data.substantiveVotingMajority === 'two_thirds'
     )
       this.substantiveVotingMajority = data.substantiveVotingMajority
+    if (data.procedureRules !== undefined) {
+      if (!validProcedureRulesShape(data.procedureRules)) {
+        console.error('ProcedureRulesInvalid', {
+          operation: 'restoreCommittee',
+          committeeId: this.id,
+          impact: 'restore rejected'
+        })
+        throw new Error(t('domain_rules_invalid'))
+      }
+      this.procedureRules = cloneProcedureRules(data.procedureRules)
+    }
+    if (data.quorumRecord)
+      this.quorumRecord = {
+        ...data.quorumRecord,
+        rules: { ...data.quorumRecord.rules, threshold: { ...data.quorumRecord.rules.threshold } },
+        evaluation: { ...data.quorumRecord.evaluation }
+      }
     if (data.seats != null) this.seats = data.seats.map(cloneSeat)
     if (data.agenda != null) this.agenda = data.agenda.map((item) => ({ ...item }))
     if (data.phase != null) this.phase = data.phase
-    if (data.motions != null) this.motions = (data.motions as Motion[]).map((motion) => ({ ...motion }))
+    if (data.motions != null)
+      this.motions = (data.motions as Motion[]).map((motion) => ({ ...motion }))
     if (data.dismissedResolvedMotionIds != null)
       this.dismissedResolvedMotionIds = data.dismissedResolvedMotionIds
     if (data.points != null) this.points = data.points.map((point) => ({ ...point }))
     if (data.dismissedPointIds != null) this.dismissedPointIds = data.dismissedPointIds
     if (data.draftResolutions != null) this.draftResolutions = data.draftResolutions
     if (data.documentNames != null) this.documentNames = [...data.documentNames]
-    if (data.votingSessions != null) this.votingSessions = data.votingSessions.map((session) => ({ ...session, ballots: session.ballots.map((ballot) => ({ ...ballot })) }))
+    if (data.votingSessions != null)
+      this.votingSessions = data.votingSessions.map((source) => {
+        const session = cloneVotingSession(source)
+        const hasLegacyRule =
+          session.majorityRule === 'simple_majority' || session.majorityRule === 'two_thirds'
+        const hasLegacyTarget =
+          session.targetType === 'motion' || session.targetType === 'resolution'
+        if (!session.endedAt && !session.rulesSnapshot && hasLegacyRule && hasLegacyTarget) {
+          const motion = this.motions.find((item) => item.id === session.targetId)
+          const kind =
+            session.targetType === 'resolution' || motion?.type === 'substantive_vote'
+              ? 'document'
+              : 'procedural'
+          const legacy = defaultProcedureRules(session.majorityRule)
+          legacy.proceduralVote.threshold = { type: session.majorityRule }
+          session.rulesSnapshot = createVotingSnapshot(legacy, this.participantSeats, kind)
+          console.warn('LegacyVoteSnapshotRecovered', {
+            operation: 'restoreCommittee',
+            committeeId: this.id,
+            sessionId: session.id,
+            impact: 'saved majority and saved roster frozen; historical electorate unavailable'
+          })
+        }
+        return session
+      })
     if (data.minutes != null) this.minutes = data.minutes.map(cloneEntry)
 
     // 还原 speakerList
@@ -292,10 +386,7 @@ export class Committee {
     if (data.activeSpeaker != null) this.activeSpeaker = data.activeSpeaker
     if (data.yieldPending != null) this.yieldPending = data.yieldPending
     if (data.caucusSetup != null) this.caucusSetup = data.caucusSetup
-    if (
-      data.postRollCallPhase === 'pending_speakers_list' ||
-      data.postRollCallPhase === 'voting'
-    )
+    if (data.postRollCallPhase === 'pending_speakers_list' || data.postRollCallPhase === 'voting')
       this.postRollCallPhase = data.postRollCallPhase
   }
 
@@ -340,25 +431,58 @@ export class Committee {
     this.touch()
   }
 
-  completeRollCall(): void {
+  completeRollCall(): boolean {
     const participants = this.participantSeats
-    const presentCount = participants.filter((seat) => seat.procedure?.attendance === 'present').length
+    const evaluation = calculateQuorum(participants, this.procedureRules.quorum)
+    this.quorumRecord = {
+      rules: cloneProcedureRules(this.procedureRules).quorum,
+      evaluation,
+      checkedAt: Date.now()
+    }
+    if (!evaluation.met) {
+      console.warn('QuorumNotMet', {
+        operation: 'completeRollCall',
+        committeeId: this.id,
+        ...evaluation,
+        impact: 'phase unchanged'
+      })
+      this.addConferenceEntry(
+        'roll_call_completed',
+        message('domain_quorum_unmet', {
+          present: evaluation.present,
+          required: evaluation.required,
+          denominator: evaluation.denominator
+        })
+      )
+      this.touch()
+      return false
+    }
+    const presentCount = participants.filter(
+      (seat) => seat.procedure?.attendance === 'present'
+    ).length
     const votingCount = participants.filter(
       (seat) => seat.procedure?.attendance === 'present' && seat.procedure.hasVotingRights
     ).length
-    const simpleMajority = Math.floor(votingCount / 2) + 1
-    const twoThirds = Math.ceil((votingCount * 2) / 3)
-
     const absentSeats = participants.filter((seat) => seat.procedure?.attendance !== 'present')
     const absentNames = absentSeats.map((seat) => seat.shortName ?? seat.name).join('、')
 
     const observerCount = presentCount - votingCount
     const nextPhase = this.postRollCallPhase ?? 'pending_speakers_list'
     this.postRollCallPhase = undefined
-    this.addConferenceEntry('roll_call_completed', message('domain_log_roll_call', {
-      present: presentCount, total: participants.length, observers: observerCount,
-      voters: votingCount, simpleMajority, twoThirds, absentCount: absentSeats.length, absentNames
-    }))
+    this.addConferenceEntry(
+      'roll_call_completed',
+      message('domain_log_roll_call', {
+        present: presentCount,
+        total: participants.length,
+        observers: observerCount,
+        voters: votingCount,
+        denominator: evaluation.denominator,
+        required: evaluation.required,
+        countedPresent: evaluation.present,
+        absentCount: absentSeats.length,
+        absentNames
+      })
+    )
     this.addConferenceEntry(
       'phase_changed',
       nextPhase === 'voting'
@@ -367,16 +491,16 @@ export class Committee {
     )
     this.phase = nextPhase
     this.touch()
+    return true
   }
 
   resetRollCall(): void {
+    this.quorumRecord = undefined
     this.addConferenceEntry('roll_call_reset', message('domain_log_roll_call_reset'))
     this.addConferenceEntry('phase_changed', message('domain_log_phase', { phase: 'roll_call' }))
     this.phase = 'roll_call'
     this.seats = this.seats.map((seat) =>
-      seat.procedure
-        ? { ...seat, procedure: { ...seat.procedure, attendance: 'absent' } }
-        : seat
+      seat.procedure ? { ...seat, procedure: { ...seat.procedure, attendance: 'absent' } } : seat
     )
     this.touch()
   }
@@ -407,7 +531,10 @@ export class Committee {
     this.speakerList.readySpeaker(entryId)
     const entry = this.speakerList.entries.find((s) => s.id === entryId)
     if (entry) {
-      this.addConferenceEntry('speaker_ready', message('domain_log_speaker_ready', { name: this.getSpeakerSeatName(entry) }))
+      this.addConferenceEntry(
+        'speaker_ready',
+        message('domain_log_speaker_ready', { name: this.getSpeakerSeatName(entry) })
+      )
     }
     this.touch()
   }
@@ -429,7 +556,10 @@ export class Committee {
 
     this.addConferenceEntry(
       'speaker_started',
-      message('domain_log_speaker_started', { name: this.getSpeakerSeatName(entry), seconds: allocSec })
+      message('domain_log_speaker_started', {
+        name: this.getSpeakerSeatName(entry),
+        seconds: allocSec
+      })
     )
     this.touch()
   }
@@ -472,11 +602,21 @@ export class Committee {
 
     const speakerName = entry ? this.getSpeakerSeatName(entry) : speaker.entryId
     if (yieldChoice) {
-      this.addConferenceEntry('yield', message('domain_log_finished_yield', {
-        name: speakerName, type: yieldChoice.type, seconds: Math.round(remaining)
-      }), { seatId: entry?.seatId })
+      this.addConferenceEntry(
+        'yield',
+        message('domain_log_finished_yield', {
+          name: speakerName,
+          type: yieldChoice.type,
+          seconds: Math.round(remaining)
+        }),
+        { seatId: entry?.seatId }
+      )
     } else {
-      this.addConferenceEntry('speaker_finished', message('domain_log_speaker_finished', { name: speakerName }), { seatId: entry?.seatId })
+      this.addConferenceEntry(
+        'speaker_finished',
+        message('domain_log_speaker_finished', { name: speakerName }),
+        { seatId: entry?.seatId }
+      )
     }
     this.touch()
   }
@@ -498,9 +638,15 @@ export class Committee {
     // 记录让渡选择到 speaker entry
     list.entries = list.entries.map((s) => (s.id === entry.id ? { ...s, yield: yieldChoice } : s))
 
-    this.addConferenceEntry('yield', message('domain_log_yield', {
-      name: this.getSpeakerSeatName(entry), type: yieldChoice.type, seconds: Math.round(remaining)
-    }), { seatId: entry.seatId })
+    this.addConferenceEntry(
+      'yield',
+      message('domain_log_yield', {
+        name: this.getSpeakerSeatName(entry),
+        type: yieldChoice.type,
+        seconds: Math.round(remaining)
+      }),
+      { seatId: entry.seatId }
+    )
 
     if (yieldChoice.type === 'chair') {
       this.resolveYieldToChair()
@@ -563,7 +709,11 @@ export class Committee {
     const originalSeat = this.getSeat(yp.originalSeatId)
     this.addConferenceEntry(
       'speaker_finished',
-      message('domain_log_yield_delegate', { name: originalSeat?.name ?? yp.originalSeatId, target: targetDel.name, seconds: Math.round(yp.remainingSec) }),
+      message('domain_log_yield_delegate', {
+        name: originalSeat?.name ?? yp.originalSeatId,
+        target: targetDel.name,
+        seconds: Math.round(yp.remainingSec)
+      }),
       { seatId: yp.originalSeatId }
     )
     this.touch()
@@ -589,7 +739,11 @@ export class Committee {
     const originalSeat = this.getSeat(yp.originalSeatId)
     this.addConferenceEntry(
       'yield',
-      message('domain_log_yield_question', { name: originalSeat?.name ?? yp.originalSeatId, target: questionerDel.name, seconds: Math.round(yp.remainingSec) }),
+      message('domain_log_yield_question', {
+        name: originalSeat?.name ?? yp.originalSeatId,
+        target: questionerDel.name,
+        seconds: Math.round(yp.remainingSec)
+      }),
       { seatId: questionerDel.id }
     )
     this.touch()
@@ -618,7 +772,11 @@ export class Committee {
     const originalSeat = this.getSeat(yp.originalSeatId)
     this.addConferenceEntry(
       'yield',
-      message('domain_log_yield_comment', { name: originalSeat?.name ?? yp.originalSeatId, target: commenterDel.name, seconds: Math.round(yp.remainingSec) }),
+      message('domain_log_yield_comment', {
+        name: originalSeat?.name ?? yp.originalSeatId,
+        target: commenterDel.name,
+        seconds: Math.round(yp.remainingSec)
+      }),
       { seatId: commenterDel.id }
     )
     this.touch()
@@ -641,10 +799,14 @@ export class Committee {
     this.motions = [...this.motions, motion]
 
     const proposer = this.getSeat(motion.proposedBySeatId)
-    this.addConferenceEntry('motion_proposed', this.motionMessage(motion, 'proposed', proposer?.name ?? motion.proposedBySeatId), {
-      seatId: motion.proposedBySeatId,
-      motionId: id
-    })
+    this.addConferenceEntry(
+      'motion_proposed',
+      this.motionMessage(motion, 'proposed', proposer?.name ?? motion.proposedBySeatId),
+      {
+        seatId: motion.proposedBySeatId,
+        motionId: id
+      }
+    )
     this.touch()
     return id
   }
@@ -667,9 +829,18 @@ export class Committee {
     this.motions = this.motions.map((m) =>
       m.id === motionId ? { ...m, status: 'rejected' as const } : m
     )
-    this.addConferenceEntry('motion_rejected', motion
-      ? this.motionMessage(motion, 'rejected')
-      : message('domain_log_motion', { outcome: 'rejected', name: '', type: motionId, topic: '' }), { motionId })
+    this.addConferenceEntry(
+      'motion_rejected',
+      motion
+        ? this.motionMessage(motion, 'rejected')
+        : message('domain_log_motion', {
+            outcome: 'rejected',
+            name: '',
+            type: motionId,
+            topic: ''
+          }),
+      { motionId }
+    )
     this.touch()
   }
 
@@ -744,7 +915,10 @@ export class Committee {
       speakerSeatIds: proposerDelId ? [proposerDelId] : []
     }
     const topic = (motion as any).topic
-    this.addConferenceEntry('phase_changed', message('domain_log_caucus_setup', { topic: topic || '', hasTopic: topic ? 'yes' : 'no' }))
+    this.addConferenceEntry(
+      'phase_changed',
+      message('domain_log_caucus_setup', { topic: topic || '', hasTopic: topic ? 'yes' : 'no' })
+    )
     this.touch()
   }
 
@@ -755,7 +929,10 @@ export class Committee {
     list.entries = list.entries.map((s) =>
       s.status === 'waiting' || s.status === 'ready' ? { ...s, allocatedTimeSec: newTime } : s
     )
-    this.addConferenceEntry('phase_changed', message('domain_log_speaking_time', { seconds: newTime }))
+    this.addConferenceEntry(
+      'phase_changed',
+      message('domain_log_speaking_time', { seconds: newTime })
+    )
     this.touch()
   }
 
@@ -783,7 +960,11 @@ export class Committee {
       'motion',
       motion.id,
       majorityRule,
-      message('domain_log_substantive_vote', { documentName: docName || '', hasDocumentName: docName ? 'yes' : 'no', majority: majorityRule })
+      message('domain_log_substantive_vote', {
+        documentName: docName || '',
+        hasDocumentName: docName ? 'yes' : 'no',
+        majority: majorityRule
+      })
     )
   }
 
@@ -833,9 +1014,13 @@ export class Committee {
     }
 
     const del = this.seats.find((d) => d.id === seatId)
-    this.addConferenceEntry('point_proposed', message('domain_log_point', { name: del?.name ?? seatId, type: point.type }), {
-      seatId
-    })
+    this.addConferenceEntry(
+      'point_proposed',
+      message('domain_log_point', { name: del?.name ?? seatId, type: point.type }),
+      {
+        seatId
+      }
+    )
     this.touch()
     return id
   }
@@ -889,10 +1074,23 @@ export class Committee {
     this.activeCaucus = { motionId, type: caucusType, totalSec, elapsedSec: 0, paused: false }
 
     const eventType = caucusType === 'individual' ? 'individual_speech_started' : 'caucus_started'
-    this.addConferenceEntry(eventType, message('domain_log_caucus_started', { type: caucusType, topic: topic ?? '', hasTopic: topic ? 'yes' : 'no' }), { motionId })
+    this.addConferenceEntry(
+      eventType,
+      message('domain_log_caucus_started', {
+        type: caucusType,
+        topic: topic ?? '',
+        hasTopic: topic ? 'yes' : 'no'
+      }),
+      { motionId }
+    )
     this.addConferenceEntry(
       'phase_changed',
-      message('domain_log_phase', { phase: caucusType === 'moderated_debate' || caucusType === 'unmoderated_debate' ? caucusType : 'caucus' })
+      message('domain_log_phase', {
+        phase:
+          caucusType === 'moderated_debate' || caucusType === 'unmoderated_debate'
+            ? caucusType
+            : 'caucus'
+      })
     )
     this.touch()
   }
@@ -940,9 +1138,7 @@ export class Committee {
     if (!this.caucusSetup) return
     this.caucusSetup = {
       ...this.caucusSetup,
-      speakerSeatIds: this.caucusSetup.speakerSeatIds.filter(
-        (id) => id !== seatId
-      )
+      speakerSeatIds: this.caucusSetup.speakerSeatIds.filter((id) => id !== seatId)
     }
   }
 
@@ -990,7 +1186,11 @@ export class Committee {
     const firstName = caucusSpeakers[0] ? this.getSpeakerSeatName(caucusSpeakers[0]) : ''
     this.addConferenceEntry(
       'caucus_started',
-      message('domain_log_caucus_first', { topic: topic ?? '', hasTopic: topic ? 'yes' : 'no', name: firstName }),
+      message('domain_log_caucus_first', {
+        topic: topic ?? '',
+        hasTopic: topic ? 'yes' : 'no',
+        name: firstName
+      }),
       { motionId }
     )
     this.addConferenceEntry('phase_changed', message('domain_log_phase', { phase: 'caucus' }))
@@ -1023,7 +1223,10 @@ export class Committee {
         }
 
         this.addConferenceEntry('caucus_paused', message('domain_log_caucus_exhausted'))
-        this.addConferenceEntry('phase_changed', message('domain_log_phase', { phase: 'caucus_setup' }))
+        this.addConferenceEntry(
+          'phase_changed',
+          message('domain_log_phase', { phase: 'caucus_setup' })
+        )
       } else {
         this.endCaucus()
       }
@@ -1048,7 +1251,10 @@ export class Committee {
 
       this.activeSpeaker = null
 
-      this.addConferenceEntry('speaker_ready', message('domain_log_speaker_ready_wait', { name: nextName }))
+      this.addConferenceEntry(
+        'speaker_ready',
+        message('domain_log_speaker_ready_wait', { name: nextName })
+      )
     } else {
       this.endCaucus()
     }
@@ -1115,7 +1321,10 @@ export class Committee {
     }
 
     const speakerName = this.getSpeakerSeatName(readySpeaker)
-    this.addConferenceEntry('speaker_started', message('domain_log_speaker_started', { name: speakerName, seconds: perSpeakerSec }))
+    this.addConferenceEntry(
+      'speaker_started',
+      message('domain_log_speaker_started', { name: speakerName, seconds: perSpeakerSec })
+    )
     this.touch()
   }
 
@@ -1182,12 +1391,7 @@ export class Committee {
       message('domain_log_speaker_cancelled', { name: this.getSpeakerSeatName(speaker) })
     )
 
-    this.transitionAfterCaucusSpeakerRemoved(
-      updatedSpeakers,
-      caucus,
-      totalRemaining,
-      perSpeakerSec
-    )
+    this.transitionAfterCaucusSpeakerRemoved(updatedSpeakers, caucus, totalRemaining, perSpeakerSec)
   }
 
   pauseCaucus(): void {
@@ -1206,10 +1410,15 @@ export class Committee {
     const caucusType = this.activeCaucus?.type
     this.phase = 'general_debate'
     this.activeCaucus = null
-    const eventType =
-      caucusType === 'individual' ? 'individual_speech_ended' : 'caucus_ended'
-    this.addConferenceEntry(eventType, message('domain_log_caucus_ended', { type: caucusType ?? '' }))
-    this.addConferenceEntry('phase_changed', message('domain_log_phase', { phase: 'general_debate' }))
+    const eventType = caucusType === 'individual' ? 'individual_speech_ended' : 'caucus_ended'
+    this.addConferenceEntry(
+      eventType,
+      message('domain_log_caucus_ended', { type: caucusType ?? '' })
+    )
+    this.addConferenceEntry(
+      'phase_changed',
+      message('domain_log_phase', { phase: 'general_debate' })
+    )
     this.touch()
   }
 
@@ -1223,18 +1432,50 @@ export class Committee {
     majorityRule: MajorityRule,
     descriptionOverride?: string | EntryMessage
   ): string {
+    const motion = this.motions.find((item) => item.id === targetId)
+    const kind =
+      targetType === 'resolution' || motion?.type === 'substantive_vote' ? 'document' : 'procedural'
+    if (
+      !validateProcedureRules(this.procedureRules, this.participantSeats) ||
+      !calculateQuorum(this.participantSeats, this.procedureRules.quorum).met ||
+      this.votingSessions.some((session) => !session.endedAt)
+    ) {
+      console.warn('VoteStartRejected', {
+        operation: 'startVotingSession',
+        committeeId: this.id,
+        targetId,
+        impact: 'no vote created'
+      })
+      return ''
+    }
+    const rulesSnapshot = createVotingSnapshot(
+      this.procedureRules,
+      this.participantSeats,
+      kind,
+      motion?.type,
+      majorityRule
+    )
+    const presentSeats = rulesSnapshot.seats.filter(
+      (seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights
+    )
+    if (!presentSeats.length) {
+      console.warn('EmptyElectorate', {
+        operation: 'startVotingSession',
+        committeeId: this.id,
+        impact: 'no vote created'
+      })
+      return ''
+    }
     const id = generateId()
-
-    const presentSeats = this.participantSeats
-      .filter((seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights)
-      .sort((a, b) => a.procedure.sortOrder - b.procedure.sortOrder)
     const firstSeatId = presentSeats[0]?.id ?? null
 
     const session: VotingSession = {
       id,
       targetType,
       targetId,
-      majorityRule,
+      majorityRule:
+        rulesSnapshot.threshold.type === 'fixed' ? majorityRule : rulesSnapshot.threshold.type,
+      rulesSnapshot,
       ballots: [],
       startedAt: Date.now(),
       currentSeatId: firstSeatId,
@@ -1244,7 +1485,8 @@ export class Committee {
     this.phase = 'voting'
     this.votingSessions = [...this.votingSessions, session]
 
-    const desc = descriptionOverride ?? message('domain_log_voting_started', { majority: majorityRule })
+    const desc =
+      descriptionOverride ?? message('domain_log_voting_started', { majority: majorityRule })
     this.addConferenceEntry('voting_started', desc)
     this.addConferenceEntry('phase_changed', message('domain_log_phase', { phase: 'voting' }))
     this.touch()
@@ -1256,6 +1498,15 @@ export class Committee {
     if (sessionIdx < 0) return
 
     const session = this.votingSessions[sessionIdx]
+    if (session.endedAt) {
+      console.warn('VoteAlreadyClosed', {
+        operation: 'castVote',
+        committeeId: this.id,
+        sessionId,
+        impact: 'ballot rejected'
+      })
+      return
+    }
     if (session.currentSeatId !== seatId) {
       console.warn(
         `castVote: seat ${seatId} is not the current voter (current=${session.currentSeatId})`
@@ -1277,7 +1528,7 @@ export class Committee {
       ballots = [...session.ballots, newBallot]
     }
 
-    const presentSeats = this.participantSeats
+    const presentSeats = (session.rulesSnapshot?.seats ?? this.participantSeats)
       .filter((seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights)
       .sort((a, b) => a.procedure.sortOrder - b.procedure.sortOrder)
 
@@ -1289,9 +1540,7 @@ export class Committee {
     )
 
     this.votingSessions = this.votingSessions.map((s, i) =>
-      i === sessionIdx
-        ? { ...s, ballots, currentSeatId: nextSeatId, round: nextRound }
-        : s
+      i === sessionIdx ? { ...s, ballots, currentSeatId: nextSeatId, round: nextRound } : s
     )
     this.touch()
   }
@@ -1308,9 +1557,7 @@ export class Committee {
       if (nextSeat) {
         return { nextSeatId: nextSeat.id, nextRound: 1 }
       }
-      const skippedIds = new Set(
-        ballots.filter((b) => b.vote === 'skip').map((b) => b.seatId)
-      )
+      const skippedIds = new Set(ballots.filter((b) => b.vote === 'skip').map((b) => b.seatId))
       if (skippedIds.size > 0) {
         const firstSkipped = presentSeats.find((d) => skippedIds.has(d.id))
         return { nextSeatId: firstSkipped?.id ?? null, nextRound: 2 }
@@ -1335,13 +1582,34 @@ export class Committee {
     if (sessionIdx < 0) return
 
     const session = this.votingSessions[sessionIdx]
+    if (session.endedAt) return
     if (session.currentSeatId !== null) {
       console.warn('closeVotingSession: not all seats have voted yet')
       return
     }
 
-    const { yes, no, abstain } = tallyVotesEngine(session.ballots)
-    const result = determinePassFail(session.ballots, session.majorityRule, this.participantSeats)
+    const snapshot = session.rulesSnapshot
+    if (!snapshot) {
+      console.warn('LegacyVoteMissingSnapshot', {
+        operation: 'closeVotingSession',
+        committeeId: this.id,
+        sessionId,
+        impact: 'restart vote required'
+      })
+      return
+    }
+    const evaluation = evaluateVote(session.ballots, snapshot)
+    if (evaluation.result === 'invalid' || evaluation.result === 'incomplete') {
+      console.warn('VoteNotFinalizable', {
+        operation: 'closeVotingSession',
+        committeeId: this.id,
+        sessionId,
+        evaluation,
+        impact: 'vote stays open'
+      })
+      return
+    }
+    const { yes, no, abstain, result } = evaluation
 
     const now = Date.now()
 
@@ -1373,13 +1641,19 @@ export class Committee {
               newActiveSpeaker = null
               newActiveCaucus = null
               this.addConferenceEntry('meeting_suspended', message('domain_log_suspended'))
-              this.addConferenceEntry('phase_changed', message('domain_log_phase', { phase: 'suspended' }))
+              this.addConferenceEntry(
+                'phase_changed',
+                message('domain_log_phase', { phase: 'suspended' })
+              )
             } else if (motion.type === 'close_meeting') {
               newPhase = 'closed'
               newActiveSpeaker = null
               newActiveCaucus = null
               this.addConferenceEntry('meeting_closed', message('domain_log_closed'))
-              this.addConferenceEntry('phase_changed', message('domain_log_phase', { phase: 'closed' }))
+              this.addConferenceEntry(
+                'phase_changed',
+                message('domain_log_phase', { phase: 'closed' })
+              )
             } else if (motion.type === 'closure_debate') {
               newPhase = 'roll_call'
               newPostRollCallPhase = 'voting'
@@ -1408,8 +1682,18 @@ export class Committee {
                 elapsedSec: 0,
                 paused: false
               }
-              this.addConferenceEntry('caucus_started', message('domain_log_caucus_started', { type: caucusType, topic: topic ?? '', hasTopic: topic ? 'yes' : 'no' }))
-              this.addConferenceEntry('phase_changed', message('domain_log_phase', { phase: caucusType }))
+              this.addConferenceEntry(
+                'caucus_started',
+                message('domain_log_caucus_started', {
+                  type: caucusType,
+                  topic: topic ?? '',
+                  hasTopic: topic ? 'yes' : 'no'
+                })
+              )
+              this.addConferenceEntry(
+                'phase_changed',
+                message('domain_log_phase', { phase: caucusType })
+              )
             } else if (motion.type === 'modify_speaking_time') {
               const newTime = (motion as any).newTimeSec as number
               newDefaultSpeakingTimeSec = newTime
@@ -1426,7 +1710,17 @@ export class Committee {
 
     this.addConferenceEntry(
       'voting_ended',
-      message('domain_log_voting_ended', { yes, no, abstain, result })
+      message('domain_log_voting_ended_with_basis', {
+        yes,
+        no,
+        abstain,
+        result,
+        denominator: evaluation.denominator,
+        required: evaluation.required,
+        vetoNames: evaluation.vetoSeatIds
+          .map((id) => snapshot.seats.find((seat) => seat.id === id)?.name ?? id)
+          .join(', ')
+      })
     )
 
     this.phase = newPhase
@@ -1436,7 +1730,7 @@ export class Committee {
     this.defaultSpeakingTimeSec = newDefaultSpeakingTimeSec
     this.speakerList.entries = newSpeakersList
     this.votingSessions = this.votingSessions.map((s, i) =>
-      i === sessionIdx ? { ...s, endedAt: now, result } : s
+      i === sessionIdx ? { ...s, endedAt: now, result, evaluation } : s
     )
     this.motions = newMotions
     this.touch()
@@ -1472,7 +1766,9 @@ export class Committee {
       createdAt: Date.now()
     }
     this.draftResolutions = [...this.draftResolutions, resolution]
-    this.addConferenceEntry('resolution_introduced', message('domain_log_resolution', { title }), { resolutionId: id })
+    this.addConferenceEntry('resolution_introduced', message('domain_log_resolution', { title }), {
+      resolutionId: id
+    })
     this.touch()
     return id
   }
@@ -1493,7 +1789,10 @@ export class Committee {
   resumeMeeting(): void {
     this.phase = 'pending_speakers_list'
     this.addConferenceEntry('meeting_resumed', message('domain_log_resumed'))
-    this.addConferenceEntry('phase_changed', message('domain_log_phase', { phase: 'pending_speakers_list' }))
+    this.addConferenceEntry(
+      'phase_changed',
+      message('domain_log_phase', { phase: 'pending_speakers_list' })
+    )
     this.touch()
   }
 
@@ -1519,7 +1818,9 @@ export class Committee {
    * ConferenceActionType → ServiceEventType 映射。
    * 每条日志记录自动触发对应的插件服务事件，确保日志和事件通知始终同步。
    */
-  private static readonly CONFERENCE_ACTION_TO_SERVICE_EVENT: Partial<Record<ConferenceActionType, string>> = {
+  private static readonly CONFERENCE_ACTION_TO_SERVICE_EVENT: Partial<
+    Record<ConferenceActionType, string>
+  > = {
     roll_call_completed: 'conference:roll_call_completed',
     speaker_started: 'conference:speaker_started',
     speaker_finished: 'conference:speaker_finished',
@@ -1539,8 +1840,11 @@ export class Committee {
 
   private motionMessage(motion: Motion, outcome: string, name = ''): EntryMessage {
     return message('domain_log_motion', {
-      outcome, name, type: motion.type,
-      topic: motion.type === 'moderated_caucus' || motion.type === 'moderated_debate' ? motion.topic : ''
+      outcome,
+      name,
+      type: motion.type,
+      topic:
+        motion.type === 'moderated_caucus' || motion.type === 'moderated_debate' ? motion.topic : ''
     })
   }
 
@@ -1557,13 +1861,16 @@ export class Committee {
       id: generateId(),
       timestamp: Date.now(),
       actionType,
-      description: typeof description === 'string'
-        ? description
-        : translate(description.messageKey, description.messageValues, 'zh-CN'),
-      ...(typeof description === 'string' ? {} : {
-        messageKey: description.messageKey,
-        messageValues: { ...description.messageValues }
-      }),
+      description:
+        typeof description === 'string'
+          ? description
+          : translate(description.messageKey, description.messageValues, 'zh-CN'),
+      ...(typeof description === 'string'
+        ? {}
+        : {
+            messageKey: description.messageKey,
+            messageValues: { ...description.messageValues }
+          }),
       ...related
     }
     this.minutes = [...this.minutes, entry]
@@ -1580,9 +1887,7 @@ export class Committee {
     const speakerEntry = this.activeSpeaker
       ? this.speakerList.entries.find((s) => s.id === this.activeSpeaker!.entryId)
       : null
-    const speakerSeat = speakerEntry
-      ? this.seats.find((d) => d.id === speakerEntry.seatId)
-      : null
+    const speakerSeat = speakerEntry ? this.seats.find((d) => d.id === speakerEntry.seatId) : null
 
     return {
       conferenceId: this.id,
@@ -1590,13 +1895,17 @@ export class Committee {
       phase: this.phase,
       presentCount: this.getPresentCount(),
       votingCount: this.getVotingCount(),
-      currentSpeaker: this.activeSpeaker && speakerSeat
-        ? {
-            seatId: speakerSeat.id,
-            seatName: speakerSeat.name,
-            remainingTimeSec: Math.max(0, this.activeSpeaker.totalSec - this.activeSpeaker.elapsedSec)
-          }
-        : null,
+      currentSpeaker:
+        this.activeSpeaker && speakerSeat
+          ? {
+              seatId: speakerSeat.id,
+              seatName: speakerSeat.name,
+              remainingTimeSec: Math.max(
+                0,
+                this.activeSpeaker.totalSec - this.activeSpeaker.elapsedSec
+              )
+            }
+          : null,
       activeCaucusType: this.activeCaucus?.type ?? null,
       activeCaucusMotionId: this.activeCaucus?.motionId ?? null
     }
@@ -1648,12 +1957,27 @@ export class Committee {
       dismissedResolvedMotionIds: [...this.dismissedResolvedMotionIds],
       points: this.points.map((point) => ({ ...point })),
       dismissedPointIds: [...this.dismissedPointIds],
-      draftResolutions: this.draftResolutions.map((resolution) => ({ ...resolution, sponsors: [...resolution.sponsors], signatories: [...resolution.signatories] })),
+      draftResolutions: this.draftResolutions.map((resolution) => ({
+        ...resolution,
+        sponsors: [...resolution.sponsors],
+        signatories: [...resolution.signatories]
+      })),
       documentNames: [...this.documentNames],
-      votingSessions: this.votingSessions.map((session) => ({ ...session, ballots: session.ballots.map((ballot) => ({ ...ballot })) })),
+      votingSessions: this.votingSessions.map(cloneVotingSession),
       minutes: this.minutes.map(cloneEntry),
       defaultSpeakingTimeSec: this.defaultSpeakingTimeSec,
       substantiveVotingMajority: this.substantiveVotingMajority,
+      procedureRules: cloneProcedureRules(this.procedureRules),
+      quorumRecord: this.quorumRecord
+        ? {
+            ...this.quorumRecord,
+            rules: {
+              ...this.quorumRecord.rules,
+              threshold: { ...this.quorumRecord.rules.threshold }
+            },
+            evaluation: { ...this.quorumRecord.evaluation }
+          }
+        : undefined,
       caucusSetup: this.caucusSetup,
       postRollCallPhase: this.postRollCallPhase,
       activeCaucus: this.activeCaucus
