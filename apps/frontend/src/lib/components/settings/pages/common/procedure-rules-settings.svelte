@@ -168,12 +168,14 @@
 <form onsubmit={save} class="blur-setting-card rounded-lg px-6 py-4">
   <Field.Group>
     <Field.Set>
-      <Field.Legend>{t('settings_procedure_rules')}</Field.Legend>
+      <Field.Legend class="text-lg font-semibold">{t('settings_procedure_rules')}</Field.Legend>
       <Field.Description>{t('settings_procedure_rules_description')}</Field.Description>
       <Field.Description>{t('settings_rules_snapshot_notice')}</Field.Description>
       <Field.Group>
         <Field.Set>
-          <Field.Legend variant="label">{t('settings_rules_quorum')}</Field.Legend>
+          <Field.Legend variant="label" class="text-lg font-semibold">
+            {t('settings_rules_quorum')}
+          </Field.Legend>
           <Field.Group class="gap-4">
             {@render choice(
               'rules-quorum-basis',
@@ -209,9 +211,10 @@
             </Field.Description>
           </Field.Group>
         </Field.Set>
-        <Field.Separator />
         <Field.Set>
-          <Field.Legend variant="label">{t('settings_rules_procedural')}</Field.Legend>
+          <Field.Legend variant="label" class="text-lg font-semibold">
+            {t('settings_rules_procedural')}
+          </Field.Legend>
           <Field.Description>{t('settings_rules_procedural_hint')}</Field.Description>
           <Field.Group class="gap-4">
             {@render choice(
@@ -249,9 +252,10 @@
             </Field.Description>
           </Field.Group>
         </Field.Set>
-        <Field.Separator />
         <Field.Set>
-          <Field.Legend variant="label">{t('settings_rules_document')}</Field.Legend>
+          <Field.Legend variant="label" class="text-lg font-semibold">
+            {t('settings_rules_document')}
+          </Field.Legend>
           <Field.Group class="gap-4">
             {@render choice(
               'rules-document-basis',
@@ -282,9 +286,10 @@
             </Field.Description>
           </Field.Group>
         </Field.Set>
-        <Field.Separator />
         <Field.Set>
-          <Field.Legend variant="label">{t('settings_rules_veto')}</Field.Legend>
+          <Field.Legend variant="label" class="text-lg font-semibold">
+            {t('settings_rules_veto')}
+          </Field.Legend>
           <Field.Group class="gap-4">
             <Field.Field orientation="horizontal">
               <Checkbox id="rules-veto-enabled" bind:checked={draft.veto.enabled} />

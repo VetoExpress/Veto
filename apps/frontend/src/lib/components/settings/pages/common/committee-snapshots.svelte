@@ -81,7 +81,7 @@
 </script>
 
 <div class="mt-8">
-  <div class="mb-1 text-xl font-bold">{t('settings_snapshots')}</div>
+  <div class="mb-1 text-lg font-semibold">{t('settings_snapshots')}</div>
   <p class="mb-4 text-sm text-muted-foreground">
     {t('settings_snapshots_description')}
   </p>
@@ -117,7 +117,11 @@
             disabled={busy || $restoringCheckpoint || snapshots.length === 0}
           >
             <Select.Trigger aria-label={t('settings_snapshot_select')} class="w-full max-w-96">
-              <Select.Value placeholder={snapshots.length ? t('settings_snapshot_preview') : t('settings_snapshot_empty')} />
+              <Select.Value
+                placeholder={snapshots.length
+                  ? t('settings_snapshot_preview')
+                  : t('settings_snapshot_empty')}
+              />
             </Select.Trigger>
             <Select.Content>
               <Select.Group>
@@ -131,22 +135,36 @@
           {#if preview}
             <div class="flex flex-col gap-2 rounded-md bg-muted p-3 text-sm">
               <p>
-                {t('settings_snapshot_summary', { phase: PHASE_LABELS[preview.data.phase], speakers: preview.data.speakerLists?.entries.length ?? 0, votes: preview.data.votingSessions.length })}
+                {t('settings_snapshot_summary', {
+                  phase: PHASE_LABELS[preview.data.phase],
+                  speakers: preview.data.speakerLists?.entries.length ?? 0,
+                  votes: preview.data.votingSessions.length
+                })}
               </p>
               {#if preview.data.activeSpeaker}
                 <p>
-                  {t('settings_snapshot_speaker_remaining', { seconds: formatNumber(Math.max(
-                    0,
-                    preview.data.activeSpeaker.totalSec - preview.data.activeSpeaker.elapsedSec
-                  ), { minimumFractionDigits: 1, maximumFractionDigits: 1 }) })}
+                  {t('settings_snapshot_speaker_remaining', {
+                    seconds: formatNumber(
+                      Math.max(
+                        0,
+                        preview.data.activeSpeaker.totalSec - preview.data.activeSpeaker.elapsedSec
+                      ),
+                      { minimumFractionDigits: 1, maximumFractionDigits: 1 }
+                    )
+                  })}
                 </p>
               {/if}
               {#if preview.data.activeCaucus}
                 <p>
-                  {t('settings_snapshot_caucus_remaining', { seconds: formatNumber(Math.max(
-                    0,
-                    preview.data.activeCaucus.totalSec - preview.data.activeCaucus.elapsedSec
-                  ), { minimumFractionDigits: 1, maximumFractionDigits: 1 }) })}
+                  {t('settings_snapshot_caucus_remaining', {
+                    seconds: formatNumber(
+                      Math.max(
+                        0,
+                        preview.data.activeCaucus.totalSec - preview.data.activeCaucus.elapsedSec
+                      ),
+                      { minimumFractionDigits: 1, maximumFractionDigits: 1 }
+                    )
+                  })}
                 </p>
               {/if}
               <div>
