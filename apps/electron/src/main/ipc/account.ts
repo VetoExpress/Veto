@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, ipcMain, webContents } from 'electron'
 import { is } from '@electron-toolkit/utils'
 import { AuthError, createAuthClient, type AccountUpdate } from '@vetoexpress/auth'
 import type { AccountResult, AccountSnapshot, AccountTokenResult } from '@vetoexpress/auth/desktop'
@@ -14,16 +14,16 @@ const log = createLogger('IpcAccount')
 let unsubscribeLocale: (() => void) | undefined
 
 function broadcast(snapshot: AccountSnapshot) {
-  for (const window of BrowserWindow.getAllWindows()) {
-    if (window.isDestroyed()) continue
+  for (const contents of webContents.getAllWebContents()) {
+    if (contents.isDestroyed()) continue
     try {
-      if (isAccountOrigin(window.webContents.mainFrame.origin, is.dev)) {
-        window.webContents.send('veto:account:changed', snapshot)
+      if (isAccountOrigin(contents.mainFrame.origin, is.dev)) {
+        contents.send('veto:account:changed', snapshot)
       }
     } catch (error) {
       log.warn(
-        'Failed to broadcast account state; remaining windows will still be notified',
-        { windowId: window.id },
+        'Failed to broadcast account state; remaining renderers will still be notified',
+        { webContentsId: contents.id },
         error
       )
     }

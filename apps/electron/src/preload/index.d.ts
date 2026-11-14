@@ -21,8 +21,10 @@ export interface VetoAPI {
   }
   account: DesktopAccountAPI
   cloudPlatform: {
-    open: () => void
+    open: (path?: string) => void
     close: () => void
+    setVisible: (visible: boolean) => void
+    wheel: (input: { x: number; y: number; deltaX: number; deltaY: number }) => void
     goBack: () => void
     goForward: () => void
     onChanged: (

@@ -4,15 +4,17 @@ import { AuthError } from '@vetoexpress/auth'
 
 vi.mock('../logger')
 
-const { handlers, accountWindow } = vi.hoisted(() => ({
-  accountWindow: {
+const { handlers, accountContents } = vi.hoisted(() => ({
+  accountContents: {
+    id: 1,
     isDestroyed: () => false,
-    webContents: { mainFrame: { origin: 'veto://app' }, send: vi.fn() }
+    mainFrame: { origin: 'veto://app' },
+    send: vi.fn()
   },
   handlers: new Map<string, (event: IpcMainInvokeEvent, ...args: unknown[]) => Promise<unknown>>()
 }))
 vi.mock('electron', () => ({
-  BrowserWindow: { getAllWindows: () => [accountWindow] },
+  webContents: { getAllWebContents: () => [accountContents] },
   ipcMain: {
     handle: (channel: string, handler: typeof handlers extends Map<string, infer T> ? T : never) =>
       handlers.set(channel, handler)
@@ -62,7 +64,7 @@ describe('account IPC', () => {
       error: 'Please enter your email and password'
     })
     await vi.waitFor(() =>
-      expect(accountWindow.webContents.send).toHaveBeenCalledWith('veto:account:changed', snapshot)
+      expect(accountContents.send).toHaveBeenCalledWith('veto:account:changed', snapshot)
     )
     account.login.mockRejectedValueOnce(new AuthError('upstream custom error', 400))
     expect(await login(event('veto://app'), 'test@example.test', 'password')).toMatchObject({

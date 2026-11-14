@@ -7,6 +7,7 @@ import { usePlatformTranslations } from "@/components/i18n-provider"
 import { useCallback, useEffect, useState } from "react"
 import type { JSX } from "react"
 import {
+  Clock3,
   FileText,
   FolderOpen,
   Loader2,
@@ -566,53 +567,60 @@ export default function ConferenceDetailPage(): JSX.Element {
             className="gap-0"
           >
             <TabsList
-              className="grid h-auto w-full grid-cols-4 sm:grid-cols-7"
+              className="grid !h-auto w-full grid-cols-4 items-stretch sm:grid-cols-8"
               aria-label={t("platform_conference_workspace")}
             >
               <TabsTrigger
                 value="readiness"
-                className="min-h-11 min-w-0 py-2 text-xs sm:text-sm"
+                className="!h-full min-h-11 min-w-0 py-2 text-xs sm:text-sm"
               >
                 {t("platform_readiness")}
               </TabsTrigger>
               <TabsTrigger
                 value="settings"
-                className="min-h-11 min-w-0 py-2 text-xs sm:text-sm"
+                className="!h-full min-h-11 min-w-0 py-2 text-xs sm:text-sm"
               >
                 <Settings2 className="hidden sm:block" aria-hidden="true" />
                 {t("platform_conference_settings")}
               </TabsTrigger>
               <TabsTrigger
+                value="timeline"
+                className="!h-full min-h-11 min-w-0 py-2 text-xs sm:text-sm"
+              >
+                <Clock3 className="hidden sm:block" aria-hidden="true" />
+                {t("platform_simulation_timeline")}
+              </TabsTrigger>
+              <TabsTrigger
                 value="seats"
-                className="min-h-11 min-w-0 py-2 text-xs sm:text-sm"
+                className="!h-full min-h-11 min-w-0 py-2 text-xs sm:text-sm"
               >
                 <Users className="hidden sm:block" aria-hidden="true" />
                 {t("platform_seat_overview")}
               </TabsTrigger>
               <TabsTrigger
                 value="news"
-                className="min-h-11 min-w-0 py-2 text-xs sm:text-sm"
+                className="!h-full min-h-11 min-w-0 py-2 text-xs sm:text-sm"
               >
                 <Newspaper className="hidden sm:block" aria-hidden="true" />
                 {t("platform_news")}
               </TabsTrigger>
               <TabsTrigger
                 value="directives"
-                className="min-h-11 min-w-0 py-2 text-xs sm:text-sm"
+                className="!h-full min-h-11 min-w-0 py-2 text-xs sm:text-sm"
               >
                 <ScrollText className="hidden sm:block" aria-hidden="true" />
                 {t("platform_directives")}
               </TabsTrigger>
               <TabsTrigger
                 value="situations"
-                className="min-h-11 min-w-0 py-2 text-xs sm:text-sm"
+                className="!h-full min-h-11 min-w-0 py-2 text-xs sm:text-sm"
               >
                 <Radio className="hidden sm:block" aria-hidden="true" />
                 {t("platform_situations")}
               </TabsTrigger>
               <TabsTrigger
                 value="files"
-                className="min-h-11 min-w-0 py-2 text-xs sm:text-sm"
+                className="!h-full min-h-11 min-w-0 py-2 text-xs sm:text-sm"
               >
                 <FolderOpen className="hidden sm:block" aria-hidden="true" />
                 {t("platform_files")}
@@ -628,96 +636,63 @@ export default function ConferenceDetailPage(): JSX.Element {
                 />
               </TabsContent>
               <TabsContent value="settings">
-                {conference.lifecycle !== "closed" && token ? (
-                  <div className="mb-8 space-y-4">
-                    <div>
-                      <h2 className="text-xl font-semibold">
-                        {t("platform_simulation_timeline")}
-                      </h2>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {conference.lifecycle === "draft"
-                          ? t("platform_draft_activation_hint")
-                          : t("platform_active_timeline_hint")}
+                <div className="space-y-8">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">
+                        {t("platform_basic_information")}
+                      </CardTitle>
+                      <p className="text-sm leading-6 text-muted-foreground">
+                        {t("platform_basic_information_intro")}
                       </p>
-                    </div>
-                    <ConferenceSituationWorkspace
-                      token={token}
-                      conference={conference}
-                      hasUnsavedStructure={
-                        JSON.stringify(structure) !==
-                        JSON.stringify({
-                          roleTemplates: conference.roleTemplates,
-                          committees: conference.committees,
-                        })
-                      }
-                      settingsOnly
-                      onConferenceChange={receiveConference}
-                      onError={handleError}
-                    />
-                  </div>
-                ) : null}
-                <div className="grid min-w-0 gap-8 lg:grid-cols-[18rem_minmax(0,1fr)] lg:items-start">
-                  <div className="flex min-w-0 flex-col gap-8">
-                    <Card className="bg-muted/30 shadow-none ring-0 lg:sticky lg:top-6">
-                      <CardHeader>
-                        <CardTitle className="text-lg">
-                          {t("platform_basic_information")}
-                        </CardTitle>
-                        <p className="text-sm leading-6 text-muted-foreground">
-                          {t("platform_basic_information_intro")}
-                        </p>
-                      </CardHeader>
-                      <CardContent className="flex flex-col gap-5">
-                        <div className="flex flex-col gap-2">
-                          <Label htmlFor="conference-name">
-                            {t("platform_conference_name")}
-                          </Label>
-                          <Input
-                            id="conference-name"
-                            value={name}
-                            maxLength={120}
-                            disabled={
-                              Boolean(saving) ||
-                              conference.lifecycle === "closed"
-                            }
-                            onChange={(event) => setName(event.target.value)}
-                          />
-                        </div>
-                        <div className="flex flex-col gap-2">
-                          <Label htmlFor="conference-description">
-                            {t("platform_conference_description")}
-                          </Label>
-                          <textarea
-                            id="conference-description"
-                            value={description}
-                            maxLength={4000}
-                            disabled={
-                              Boolean(saving) ||
-                              conference.lifecycle === "closed"
-                            }
-                            className={textareaClassName}
-                            onChange={(event) =>
-                              setDescription(event.target.value)
-                            }
-                          />
-                        </div>
-                        <div className="flex flex-col gap-2">
-                          <Label htmlFor="conference-organizer">
-                            {t("platform_organizer")}
-                          </Label>
-                          <Input
-                            id="conference-organizer"
-                            value={organizer}
-                            maxLength={120}
-                            disabled={
-                              Boolean(saving) ||
-                              conference.lifecycle === "closed"
-                            }
-                            onChange={(event) =>
-                              setOrganizer(event.target.value)
-                            }
-                          />
-                        </div>
+                    </CardHeader>
+                    <CardContent className="grid min-w-0 gap-x-6 gap-y-5 md:grid-cols-2">
+                      <div className="flex flex-col gap-2">
+                        <Label htmlFor="conference-name">
+                          {t("platform_conference_name")}
+                        </Label>
+                        <Input
+                          id="conference-name"
+                          value={name}
+                          maxLength={120}
+                          disabled={
+                            Boolean(saving) || conference.lifecycle === "closed"
+                          }
+                          onChange={(event) => setName(event.target.value)}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <Label htmlFor="conference-organizer">
+                          {t("platform_organizer")}
+                        </Label>
+                        <Input
+                          id="conference-organizer"
+                          value={organizer}
+                          maxLength={120}
+                          disabled={
+                            Boolean(saving) || conference.lifecycle === "closed"
+                          }
+                          onChange={(event) => setOrganizer(event.target.value)}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2 md:col-span-2">
+                        <Label htmlFor="conference-description">
+                          {t("platform_conference_description")}
+                        </Label>
+                        <textarea
+                          id="conference-description"
+                          value={description}
+                          maxLength={4000}
+                          disabled={
+                            Boolean(saving) || conference.lifecycle === "closed"
+                          }
+                          className={textareaClassName}
+                          onChange={(event) =>
+                            setDescription(event.target.value)
+                          }
+                        />
+                      </div>
+                      <div className="md:col-span-2">
                         <ConferenceScheduleFields
                           startsAt={startsAt}
                           endsAt={endsAt}
@@ -729,15 +704,16 @@ export default function ConferenceDetailPage(): JSX.Element {
                             Boolean(conference.filesExpiredAt)
                           }
                         />
-                        {conference.filesExpiredAt ? (
-                          <p className="text-sm text-muted-foreground">
-                            {t("platform_cleanup_locked")}
-                          </p>
-                        ) : null}
+                      </div>
+                      {conference.filesExpiredAt ? (
+                        <p className="text-sm text-muted-foreground md:col-span-2">
+                          {t("platform_cleanup_locked")}
+                        </p>
+                      ) : null}
+                      <div className="flex justify-end md:col-span-2">
                         <Button
                           type="button"
                           size="lg"
-                          className="w-full"
                           disabled={
                             Boolean(saving) || conference.lifecycle === "closed"
                           }
@@ -753,19 +729,9 @@ export default function ConferenceDetailPage(): JSX.Element {
                           )}
                           {t("platform_save_basic_information")}
                         </Button>
-                      </CardContent>
-                    </Card>
-                    {token ? (
-                      <ConferenceCloseCard
-                        token={token}
-                        conferenceId={conference.id}
-                        lifecycle={conference.lifecycle}
-                        version={conference.version}
-                        onConferenceChange={receiveConference}
-                        onError={handleError}
-                      />
-                    ) : null}
-                  </div>
+                      </div>
+                    </CardContent>
+                  </Card>
 
                   <section
                     className="min-w-0"
@@ -821,7 +787,43 @@ export default function ConferenceDetailPage(): JSX.Element {
                       </div>
                     ) : null}
                   </section>
+
+                  {token ? (
+                    <ConferenceCloseCard
+                      token={token}
+                      conferenceId={conference.id}
+                      lifecycle={conference.lifecycle}
+                      version={conference.version}
+                      onConferenceChange={receiveConference}
+                      onError={handleError}
+                    />
+                  ) : null}
                 </div>
+              </TabsContent>
+
+              <TabsContent value="timeline">
+                {conference.lifecycle === "closed" ? (
+                  <Card>
+                    <CardContent className="py-10 text-center text-muted-foreground">
+                      {t("platform_closed_timeline_readonly")}
+                    </CardContent>
+                  </Card>
+                ) : token ? (
+                  <ConferenceSituationWorkspace
+                    token={token}
+                    conference={conference}
+                    hasUnsavedStructure={
+                      JSON.stringify(structure) !==
+                      JSON.stringify({
+                        roleTemplates: conference.roleTemplates,
+                        committees: conference.committees,
+                      })
+                    }
+                    settingsOnly
+                    onConferenceChange={receiveConference}
+                    onError={handleError}
+                  />
+                ) : null}
               </TabsContent>
 
               <TabsContent value="seats">

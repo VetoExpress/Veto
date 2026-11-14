@@ -7,7 +7,6 @@ import {
 
 import type { ReactNode } from "react"
 import { useEffect, useState } from "react"
-import { createPortal } from "react-dom"
 import { ArrowLeft, Loader2, LogOut } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -103,8 +102,7 @@ export function PlatformShell({
   const { user } = usePlatformUser(token, signOut)
   const subtitle = usePlatformSubtitle(token, signOut)
   const onAccountPage = pathname === "/account"
-  const { isAppEntry, isDesktop, isEmbedded, titlebarActions } =
-    useAppEnvironment()
+  const { isAppEntry, isDesktop, isEmbedded } = useAppEnvironment()
   const brand = (
     <div className="flex min-w-0 items-center gap-3">
       {backHref ? (
@@ -195,9 +193,7 @@ export function PlatformShell({
 
   return (
     <div className="platform-shell relative flex min-h-svh flex-col overflow-clip bg-background">
-      {isEmbedded ? null : isDesktop ? (
-        titlebarActions && createPortal(accountActions, titlebarActions)
-      ) : (
+      {isEmbedded ? null : (
         <header className="relative z-10 flex h-20 shrink-0 items-center justify-between border-b bg-background/85 px-4 backdrop-blur-md sm:px-8 lg:px-12">
           <div className="flex w-full min-w-0 items-center justify-between gap-4">
             {brand}

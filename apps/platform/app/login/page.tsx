@@ -49,7 +49,7 @@ const RESEND_COOLDOWN_SECONDS = 60
 export default function Page() {
   const { t, locale } = usePlatformTranslations()
 
-  const { isDesktop } = useAppEnvironment()
+  const { isDesktop, isEmbedded } = useAppEnvironment()
   const [tab, setTab] = useState<AuthTab>("login")
   const [resettingPassword, setResettingPassword] = useState(false)
   const [resetEmail, setResetEmail] = useState("")
@@ -81,7 +81,9 @@ export default function Page() {
       </a>
 
       <div className="absolute top-6 right-6 z-20 flex items-center gap-2">
-        <LanguageSwitcher className="h-10 rounded-full" />
+        {!(isDesktop && isEmbedded) && (
+          <LanguageSwitcher className="h-10 rounded-full" />
+        )}
         {!isDesktop && (
           <ThemeToggler className="flex size-10 cursor-pointer items-center justify-center rounded-full border bg-card/80 shadow-sm backdrop-blur [&_svg]:size-5" />
         )}

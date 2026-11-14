@@ -1,7 +1,8 @@
 import { get, writable } from 'svelte/store'
 import { t } from '$lib/i18n'
 import { accountStore } from '../app/account-store'
-import { listAccountConferences, platformConferenceUrl, type PlatformConference } from '$lib/classes/clients/account-conference-client'
+import { listAccountConferences, platformConferencePath, type PlatformConference } from '$lib/classes/clients/account-conference-client'
+import { cloudPlatformView } from '../app/cloud-platform-view.svelte'
 import { lastOpenedConferenceId } from './conference-store'
 
 export const platformConferences = writable<{ conferences: PlatformConference[]; loading: boolean; error: string }>({ conferences: [], loading: false, error: '' })
@@ -24,7 +25,7 @@ export async function refreshPlatformConferences(): Promise<void> {
 
 export function openPlatformConference(conference: PlatformConference): void {
   lastOpenedConferenceId.set(conference.id)
-  window.location.replace(platformConferenceUrl(conference.id))
+  cloudPlatformView.open(platformConferencePath(conference.id))
 }
 
 export function watchPlatformConferences(): () => void {

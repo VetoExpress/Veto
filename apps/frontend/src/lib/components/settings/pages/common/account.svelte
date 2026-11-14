@@ -11,6 +11,7 @@
   import * as Alert from '$lib/components/ui/alert'
   import { Switch } from '$lib/components/ui/switch'
   import { conferenceSync } from '$lib/classes/stores/conference/conference-sync-store'
+  import { cloudPlatformView } from '$lib/classes/stores/app/cloud-platform-view.svelte'
 
   let email = $state('')
   let password = $state('')
@@ -23,7 +24,7 @@
     }
   }
   function openPlatform() {
-    window.location.replace('https://platform.miaoyww.top/login?from=app')
+    cloudPlatformView.open('/login')
   }
 </script>
 

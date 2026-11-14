@@ -17,10 +17,9 @@
   import StepSeats from './step-seats.svelte'
   import { getWizardSteps } from './steps'
   import { createConferenceDialogOpen } from '$lib/classes/stores/app/global-ui-store'
+  import { cloudPlatformView } from '$lib/classes/stores/app/cloud-platform-view.svelte'
 
   let { open = $bindable(false) }: { open: boolean } = $props()
-
-  const cloudPlatformUrl = 'https://platform.miaoyww.top/?from=app'
 
   let contentEl = $state<HTMLDivElement | undefined>(undefined)
   let currentStepId = $state<string>('mode')
@@ -86,7 +85,9 @@
         focusFirstInvalid()
         return
       }
-      window.location.replace(cloudPlatformUrl)
+      wizard.reset()
+      createConferenceDialogOpen.set(false)
+      cloudPlatformView.open()
       return
     }
     if (isLastStep) return

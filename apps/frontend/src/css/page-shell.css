@@ -1,6 +1,5 @@
 :root {
-  --app-page-max-width: 80rem;
-  --app-page-padding: clamp(1rem, 3vw, 2.5rem);
+  --app-page-padding: 2.25rem;
   --app-page-gap: 2rem;
   --app-page-title-size: 1.5rem;
   --app-page-background: var(--background);
@@ -15,8 +14,8 @@
   display: flex;
   width: 100%;
   min-width: 0;
-  max-width: var(--app-page-max-width);
-  margin-inline: auto;
+  max-width: none;
+  margin-inline: 0;
   flex-direction: column;
   gap: var(--app-page-gap);
   padding: var(--app-page-padding);

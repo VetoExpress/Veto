@@ -8,6 +8,7 @@
   import favicon from '$lib/assets/favicon.png'
   import { VETO_NAME } from '$lib/classes/const'
   import { isElectron } from '$lib/classes/utils/runtime'
+  import { cloudPlatformView } from '$lib/classes/stores/app/cloud-platform-view.svelte'
   import {
     currentCommittee,
     currentConferenceRecord
@@ -74,7 +75,7 @@
           </DropdownMenu.Item>
         {/if}
         <DropdownMenu.Item
-          onclick={() => window.location.replace('https://platform.miaoyww.top/?from=app')}
+          onclick={() => cloudPlatformView.open()}
           class="gap-2 p-2"
         >
           <LayoutGrid size={16} />

@@ -62,6 +62,6 @@ export async function listAccountConferences(email: string): Promise<PlatformCon
   return conferences
 }
 
-export function platformConferenceUrl(id: string): string {
-  return `https://platform.miaoyww.top/conferences/${encodeURIComponent(id)}?from=app`
+export function platformConferencePath(id: string): string {
+  return `/conferences/${encodeURIComponent(id)}`
 }

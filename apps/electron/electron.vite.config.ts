@@ -14,5 +14,7 @@ export default defineConfig({
       __VETO_USAGE_INGEST_KEY__: JSON.stringify(usageIngestKey)
     }
   },
-  preload: {}
+  preload: {
+    build: { externalizeDeps: { exclude: ['@electron-toolkit/preload'] } }
+  }
 })

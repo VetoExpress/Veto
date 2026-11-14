@@ -44,8 +44,11 @@ const veto = {
     }
   } satisfies DesktopAccountAPI,
   cloudPlatform: {
-    open: () => ipcRenderer.send('cloud-platform:open'),
+    open: (path?: string) => ipcRenderer.send('cloud-platform:open', path),
     close: () => ipcRenderer.send('cloud-platform:close'),
+    setVisible: (visible: boolean) => ipcRenderer.send('cloud-platform:set-visible', visible),
+    wheel: (input: { x: number; y: number; deltaX: number; deltaY: number }) =>
+      ipcRenderer.send('cloud-platform:wheel', input),
     goBack: () => ipcRenderer.send('cloud-platform:back'),
     goForward: () => ipcRenderer.send('cloud-platform:forward'),
     onChanged: (

@@ -25,12 +25,38 @@ type CloudPlatformState = {
   canGoForward: boolean
 }
 
+type CloudPlatformWheel = {
+  x?: unknown
+  y?: unknown
+  deltaX?: unknown
+  deltaY?: unknown
+}
+
+function finiteNumber(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0
+}
+
 let cloudPlatformView: WebContentsView | null = null
 let cloudPlatformWindow: BrowserWindow | null = null
 let localeHeadersRegistered = false
 
-function cloudPlatformUrl(): string {
-  return `${CLOUD_PLATFORM_ORIGIN}/?from=app&embedded=1&lang=${encodeURIComponent(getLocale())}`
+function cloudPlatformPath(input?: unknown): string {
+  if (typeof input !== 'string' || !input || input.length > 2048) return '/'
+  try {
+    const url = new URL(input, CLOUD_PLATFORM_ORIGIN)
+    if (url.origin !== CLOUD_PLATFORM_ORIGIN) return '/'
+    return `${url.pathname}${url.search}${url.hash}`
+  } catch {
+    return '/'
+  }
+}
+
+function cloudPlatformUrl(path?: unknown): string {
+  const url = new URL(cloudPlatformPath(path), CLOUD_PLATFORM_ORIGIN)
+  url.searchParams.set('from', 'app')
+  url.searchParams.set('embedded', '1')
+  url.searchParams.set('lang', getLocale())
+  return url.toString()
 }
 
 function registerLocaleRequestHeaders(session: Session): void {
@@ -96,10 +122,19 @@ function closeCloudPlatform(): void {
   cloudPlatformWindow = null
 }
 
-function openCloudPlatform(win: BrowserWindow): void {
+function openCloudPlatform(win: BrowserWindow, path?: unknown): void {
+  const targetUrl = cloudPlatformUrl(path)
   if (cloudPlatformView) {
     updateCloudPlatformBounds()
     cloudPlatformView.webContents.focus()
+    if (cloudPlatformView.webContents.getURL() !== targetUrl) {
+      void cloudPlatformView.webContents.loadURL(targetUrl).catch((error: unknown) => {
+        log.error('Failed to navigate embedded cloud platform', {
+          errorType: error instanceof Error ? error.name : typeof error,
+          message: error instanceof Error ? error.message : String(error)
+        })
+      })
+    }
     publishCloudPlatformState()
     return
   }
@@ -108,6 +143,7 @@ function openCloudPlatform(win: BrowserWindow): void {
   const view = new WebContentsView({
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
+      sandbox: false,
       spellcheck: false
     }
   })
@@ -133,7 +169,7 @@ function openCloudPlatform(win: BrowserWindow): void {
   view.webContents.on('did-navigate', publish)
   view.webContents.on('did-navigate-in-page', publish)
   view.webContents.on('did-finish-load', publish)
-  void view.webContents.loadURL(cloudPlatformUrl()).catch((error: unknown) => {
+  void view.webContents.loadURL(targetUrl).catch((error: unknown) => {
     log.error('Failed to load embedded cloud platform', {
       errorType: error instanceof Error ? error.name : typeof error,
       message: error instanceof Error ? error.message : String(error)
@@ -164,13 +200,43 @@ export function registerWindowIpc(): void {
     BrowserWindow.fromWebContents(event.sender)?.loadURL(getAppUrl(is.dev))
   })
 
-  ipcMain.on('cloud-platform:open', (event) => {
+  ipcMain.on('cloud-platform:open', (event, path) => {
     const win = BrowserWindow.fromWebContents(event.sender)
-    if (win) openCloudPlatform(win)
+    if (win) openCloudPlatform(win, path)
   })
 
   ipcMain.on('cloud-platform:close', (event) => {
     if (BrowserWindow.fromWebContents(event.sender) === cloudPlatformWindow) closeCloudPlatform()
+  })
+
+  ipcMain.on('cloud-platform:set-visible', (event, visible) => {
+    if (BrowserWindow.fromWebContents(event.sender) !== cloudPlatformWindow) return
+    cloudPlatformView?.setVisible(visible === true)
+    if (visible === true) cloudPlatformView?.webContents.focus()
+  })
+
+  ipcMain.on('cloud-platform:wheel', (event, input?: CloudPlatformWheel) => {
+    if (BrowserWindow.fromWebContents(event.sender) !== cloudPlatformWindow) return
+    if (!cloudPlatformView || !input) return
+    const bounds = cloudPlatformView.getBounds()
+    const x = Math.min(Math.max(finiteNumber(input.x) - bounds.x, 0), Math.max(0, bounds.width - 1))
+    const y = Math.min(
+      Math.max(finiteNumber(input.y) - bounds.y, 0),
+      Math.max(0, bounds.height - 1)
+    )
+    const deltaX = finiteNumber(input.deltaX)
+    const deltaY = finiteNumber(input.deltaY)
+    cloudPlatformView.webContents.sendInputEvent({
+      type: 'mouseWheel',
+      x,
+      y,
+      deltaX,
+      deltaY,
+      wheelTicksX: deltaX / 100,
+      wheelTicksY: deltaY / 100,
+      canScroll: true,
+      hasPreciseScrollingDeltas: true
+    })
   })
 
   ipcMain.on('cloud-platform:back', (event) => {

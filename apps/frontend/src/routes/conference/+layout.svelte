@@ -14,6 +14,7 @@
   import TitleBar from '$lib/components/app-sidebar/title-bar.svelte'
   import StatusBar from '$lib/components/app-sidebar/status-bar.svelte'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
+  import CloudPlatformOverlayGuard from '$lib/components/app-sidebar/cloud-platform-overlay-guard.svelte'
 
   let { children } = $props()
 
@@ -41,6 +42,7 @@
 
 <TimerDialog bind:open={$timerDialogOpen} />
 <JoinConferenceDialog bind:open={$joinConferenceDialogOpen} />
+<CloudPlatformOverlayGuard />
 
 <div class="flex h-svh flex-col overflow-hidden">
   <TitleBar class="app-toolbar-header">
@@ -49,7 +51,7 @@
 
   <main class="app-page-scroll flex min-h-0 flex-1 flex-col">
     <ScrollArea class="min-h-0 flex-1">
-      {@render children()} 
+      {@render children()}
     </ScrollArea>
   </main>
   <StatusBar />
@@ -62,9 +64,6 @@
   }
 
   :global(.app-toolbar-header) {
-    padding-inline-start: max(
-      var(--app-page-padding),
-      calc((100% - var(--app-page-max-width)) / 2 + var(--app-page-padding))
-    );
+    padding-inline-start: var(--app-page-padding);
   }
 </style>
