@@ -28,6 +28,7 @@ const { handlers, runtime, window, view } = vi.hoisted(() => {
     runtime: { dev: true },
     window: {
       loadURL: vi.fn().mockResolvedValue(undefined),
+      focus: vi.fn(),
       on: vi.fn(),
       removeListener: vi.fn(),
       getContentBounds: vi.fn(() => ({ width: 1200, height: 720 })),
@@ -138,18 +139,16 @@ describe('从云平台返回桌面应用', () => {
   it('forwards renderer wheel coordinates into the embedded view', () => {
     const sender = { id: 'main-window' }
     handlers.get('cloud-platform:open')!({ sender })
-    handlers.get('cloud-platform:wheel')!(
-      { sender },
-      { x: 500, y: 200, deltaX: 0, deltaY: 120 }
-    )
+    handlers.get('cloud-platform:wheel')!({ sender }, { x: 500, y: 200, deltaX: 0, deltaY: 120 })
+    expect(window.focus).toHaveBeenCalled()
     expect(view.webContents.sendInputEvent).toHaveBeenCalledWith({
       type: 'mouseWheel',
       x: 500,
       y: 152,
-      deltaX: 0,
-      deltaY: 120,
-      wheelTicksX: 0,
-      wheelTicksY: 1.2,
+      deltaX: -0,
+      deltaY: -120,
+      wheelTicksX: -0,
+      wheelTicksY: -1.2,
       canScroll: true,
       hasPreciseScrollingDeltas: true
     })

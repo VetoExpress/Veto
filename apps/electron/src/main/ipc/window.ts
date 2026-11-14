@@ -224,8 +224,9 @@ export function registerWindowIpc(): void {
       Math.max(finiteNumber(input.y) - bounds.y, 0),
       Math.max(0, bounds.height - 1)
     )
-    const deltaX = finiteNumber(input.deltaX)
-    const deltaY = finiteNumber(input.deltaY)
+    const deltaX = -finiteNumber(input.deltaX)
+    const deltaY = -finiteNumber(input.deltaY)
+    cloudPlatformWindow?.focus()
     cloudPlatformView.webContents.sendInputEvent({
       type: 'mouseWheel',
       x,
