@@ -119,7 +119,7 @@
         path: committeeRoute,
         label: t('procedure_overview'),
         icon: LayoutDashboard,
-        visible: true
+        visible: isCloudSession
       },
       {
         path: `${committeeRoute}/chair`,

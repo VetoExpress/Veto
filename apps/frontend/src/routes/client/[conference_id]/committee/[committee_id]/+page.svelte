@@ -1,6 +1,7 @@
 <script lang="ts">
   import { untrack } from 'svelte'
   import { page } from '$app/stores'
+  import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
   import { Activity, ArrowUpRight, Clock3, Newspaper, RefreshCw } from '@lucide/svelte'
   import DOMPurify from 'dompurify'
@@ -50,6 +51,17 @@
   )
   const canViewSituation = $derived(!!token && cloudSession.hasCapability('view_situation'))
   const canViewNews = $derived(!!token && cloudSession.hasCapability('view_news'))
+
+  $effect(() => {
+    if (!conference || conference.source === 'cloud') return
+    void goto(
+      resolve('/client/[conference_id]/committee/[committee_id]/chair', {
+        conference_id: conferenceId,
+        committee_id: committeeId
+      }),
+      { replaceState: true }
+    )
+  })
 
   let timeline = $state<CloudTimeline | null>(null)
   let timelineTimezone = $state('Asia/Shanghai')

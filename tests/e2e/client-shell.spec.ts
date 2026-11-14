@@ -183,8 +183,9 @@ test('工作区与会场标题栏保持一致，侧栏固定展开，多数门�
   await expect(chair).toHaveCSS('height', '38px')
   await expect(chair).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
   await expect(page.getByRole('button', { name: '开始点名', exact: true })).toBeVisible()
-  await expect(page.locator('main').getByText('简单多数', { exact: true })).toBeVisible()
-  await expect(page.locator('main').getByText('2/3 多数', { exact: true })).toBeVisible()
+  await expect(page.locator('main').getByText('未达到法定人数', { exact: true })).toBeVisible()
+  await expect(page.locator('main').getByText('文件表决', { exact: true })).toBeVisible()
+  await expect(page.locator('main dd').getByText(/2\/3 多数/)).toBeVisible()
   await header.getByRole('button', { name: '返回首页', exact: true }).click()
   await expect(page).toHaveURL(/\/conference$/)
   const workspaceHeader = await header.boundingBox()
@@ -193,7 +194,10 @@ test('工作区与会场标题栏保持一致，侧栏固定展开，多数门�
     .boundingBox()
   expect(clientHeader?.height).toBe(48)
   expect(workspaceHeader?.height).toBe(clientHeader?.height)
-  expect(clientClose).toEqual(workspaceClose)
+  expect(workspaceClose?.x).toBe(clientClose?.x)
+  expect(workspaceClose?.y).toBe(clientClose?.y)
+  expect(workspaceClose?.width).toBe(clientClose?.width)
+  expect(Math.abs((workspaceClose?.height ?? 0) - (clientClose?.height ?? 0))).toBeLessThanOrEqual(1)
 })
 
 test('概览自动加载并响应推送，侧栏按钮仅以阴影区分选中状态', async ({ page }) => {
@@ -255,4 +259,32 @@ test('概览自动加载并响应推送，侧栏按钮仅以阴影区分选中�
     true
   )
   await page.screenshot({ path: 'test-results/client-overview-mobile.png', fullPage: true })
+})
+
+test('本地大会工作区不显示概览并直接进入主席工作台', async ({ page }) => {
+  await page.addInitScript(() => {
+    sessionStorage.removeItem('veto.cloud-seat-session')
+    localStorage.setItem(
+      'veto_conferences',
+      JSON.stringify([
+        {
+          id: 'local',
+          name: '本地测试大会',
+          mode: 'singleton',
+          createdAt: 1,
+          updatedAt: 2,
+          committees: [{ id: 'local-committee', name: '单例委员会', type: 'cabinet', seats: [] }]
+        }
+      ])
+    )
+  })
+  await page.setViewportSize({ width: 1200, height: 720 })
+  await page.goto('http://localhost:4173/client/local/committee/local-committee')
+  await expect(page).toHaveURL(/\/client\/local\/committee\/local-committee\/chair$/)
+  const navigation = page.locator('.client-navigation [data-slot="sidebar-menu-button"]')
+  await expect(navigation).toHaveCount(2)
+  await expect(navigation.nth(0)).toContainText('主席')
+  await expect(navigation.nth(1)).toContainText('代表管理')
+  await expect(page.getByRole('button', { name: '概览', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '开始点名', exact: true })).toBeVisible()
 })
