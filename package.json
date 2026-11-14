@@ -7,7 +7,7 @@
   "repository": "https://github.com/Miaoyww/Veto",
   "packageManager": "pnpm@11.20.0",
   "scripts": {
-    "dev": "pnpm i18n:compile && node scripts/dev.mjs",
+    "dev": "node scripts/dev.mjs",
     "i18n:compile": "pnpm --filter @vetoexpress/frontend i18n:compile",
     "dev:electron": "pnpm --filter \"@vetoexpress/electron\" dev",
     "dev:frontend": "pnpm --filter \"@vetoexpress/frontend\" dev",
