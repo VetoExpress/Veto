@@ -4,7 +4,6 @@
   import * as ToggleGroup from '$lib/components/ui/toggle-group'
   import type { ConferenceCreateMode } from '$lib/classes/stores/runes/create-conference-event-wizard.svelte'
   import { wizard } from '$lib/classes/stores/runes/create-conference-event-wizard.svelte'
-  import { Button } from '$lib/components/ui/button'
 
   function isCreateMode(value: string): value is ConferenceCreateMode {
     return value === 'conference' || value === 'singleton'
@@ -13,6 +12,7 @@
   function handleModeChange(value: string): void {
     if (isCreateMode(value)) wizard.setMode(value)
   }
+
   const showModeError = $derived(wizard.attempted && wizard.mode === null)
 </script>
 
@@ -23,14 +23,6 @@
       <span class="text-destructive">*</span>
     </Field.FieldTitle>
     <Field.FieldDescription>{t('procedure_choose_how_to_organize_the_conference_then_enter_its_details')}</Field.FieldDescription>
-    <Field.FieldDescription>
-      {t('procedure_visit')}<Button
-        variant="link"
-        onclick={() => window.location.replace('https://platform.miaoyww.top/?from=app')}
-      >
-        {t('procedure_veto_platform')}
-      </Button>{t('procedure_to_create_a_conference')}
-    </Field.FieldDescription>
 
     <ToggleGroup.Root
       type="single"
@@ -42,7 +34,6 @@
       <ToggleGroup.Item
         value="conference"
         class="h-auto min-w-0 flex-1 flex-col items-start gap-2 rounded-xl border p-4 text-left"
-        disabled
       >
         <span class="text-sm font-medium">{t('procedure_conference_mode')}</span>
         <span class="text-sm font-normal text-muted-foreground">

@@ -2,15 +2,22 @@ import { test, expect } from '@playwright/test'
 
 const base = 'http://localhost:4173'
 
-test('App language switch preserves the document and an unfinished conference draft', async ({ page }) => {
+test('App language switch preserves the document and an unfinished conference draft', async ({
+  page
+}) => {
   await page.addInitScript(() => {
     localStorage.setItem('veto-locale', 'zh-CN')
     Object.assign(window, { documentIdentity: crypto.randomUUID() })
   })
   await page.goto(`${base}/conference`)
-  const identity = await page.evaluate(() => (window as unknown as { documentIdentity: string }).documentIdentity)
-  await page.getByRole('button', { name: '创建大会', exact: true }).first().click()
-  await page.getByRole('radio', { name: /单例模式/ }).click()
+  const identity = await page.evaluate(
+    () => (window as unknown as { documentIdentity: string }).documentIdentity
+  )
+  await page
+    .getByRole('button', { name: /创建大会/ })
+    .first()
+    .click()
+  await page.getByRole('radio', { name: /本地大会/ }).click()
   await page.getByRole('button', { name: '下一步', exact: true }).click()
   await page.locator('#event-name').fill('保留这份草稿 / keep this draft')
 
@@ -21,7 +28,9 @@ test('App language switch preserves the document and an unfinished conference dr
   await expect(page.locator('html')).toHaveAttribute('lang', 'en-US')
   await expect(page.getByRole('button', { name: 'Next', exact: true })).toBeVisible()
   await expect(page.locator('#event-name')).toHaveValue('保留这份草稿 / keep this draft')
-  expect(await page.evaluate(() => (window as unknown as { documentIdentity: string }).documentIdentity)).toBe(identity)
+  expect(
+    await page.evaluate(() => (window as unknown as { documentIdentity: string }).documentIdentity)
+  ).toBe(identity)
 
   await page.evaluate(() => {
     localStorage.setItem('veto-locale', 'zh-CN')
@@ -39,7 +48,9 @@ test('settings switch language instantly and persist the preference', async ({ p
   await page.getByRole('button', { name: '设置', exact: true }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'English', exact: true }).click()
   await expect(page.locator('html')).toHaveAttribute('lang', 'en-US')
-  await expect(page.getByRole('dialog').getByText('Interface language', { exact: true })).toBeVisible()
+  await expect(
+    page.getByRole('dialog').getByText('Interface language', { exact: true })
+  ).toBeVisible()
   await page.reload()
   await expect(page.locator('html')).toHaveAttribute('lang', 'en-US')
   await page.getByRole('button', { name: 'Settings', exact: true }).click()

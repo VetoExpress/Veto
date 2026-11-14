@@ -223,9 +223,10 @@ export class ConferenceCreateWizard {
   }
 
   isStepValidById(
-    stepId: 'mode' | 'event' | 'meeting' | 'roles' | 'seats' | 'review'
+    stepId: 'mode' | 'event' | 'meeting' | 'roles' | 'seats' | 'review' | 'platform'
   ): boolean {
     if (stepId === 'mode') return this.modeValid
+    if (stepId === 'platform') return true
     if (stepId === 'event') return this.eventValid
     if (stepId === 'meeting') return this.committeeValid
     if (stepId === 'roles') return this.roleValid

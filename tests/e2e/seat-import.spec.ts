@@ -28,12 +28,18 @@ async function importFile(page: Page, card: Locator, target: string, seat: strin
 }
 
 test('platform：两个会场分别导入，折叠后导入自动展开且保留原席位', async ({ page }) => {
+  await page
+    .context()
+    .addCookies([{ name: 'veto-locale', value: 'zh-CN', url: 'http://localhost:4174' }])
   await page.addInitScript(() => localStorage.setItem('veto_token', 'test-owner-token'))
   await page.route('**/v1/auth/me', (route) =>
     route.fulfill({ json: { ok: true, user: { name: '测试组织者', email: 'test@example.test' } } })
   )
   await page.goto('http://localhost:4174/conferences/new')
   await page.locator('#event-name').fill('导入测试大会')
+  await page.getByRole('button', { name: '下一步', exact: true }).click()
+  await page.getByLabel('开始时间').fill('2026-11-20T09:00')
+  await page.getByLabel('结束时间').fill('2026-11-20T10:00')
   await page.getByRole('button', { name: '下一步', exact: true }).click()
   await page.getByLabel('会场名称').first().fill('第一会场')
   await page.getByRole('button', { name: '添加会场', exact: true }).click()
@@ -70,9 +76,13 @@ test('platform：两个会场分别导入，折叠后导入自动展开且保留
 })
 
 test('App：单例会场卡片支持文本、文件导入和折叠，保留投票权', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('veto-locale', 'zh-CN'))
   await page.goto('http://localhost:4173/conference')
-  await page.getByRole('button', { name: '创建大会', exact: true }).first().click()
-  await page.getByRole('radio', { name: /单例模式/ }).click()
+  await page
+    .getByRole('button', { name: /创建大会/ })
+    .first()
+    .click()
+  await page.getByRole('radio', { name: /本地大会/ }).click()
   await page.getByRole('button', { name: '下一步', exact: true }).click()
   await page.locator('#event-name').fill('单例导入测试')
   await page.getByRole('button', { name: '下一步', exact: true }).click()

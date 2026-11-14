@@ -14,12 +14,13 @@
   import StepMeetings from './step-meetings.svelte'
   import StepMode from './step-mode.svelte'
   import StepReview from './step-review.svelte'
-  import StepRoles from './step-roles.svelte'
   import StepSeats from './step-seats.svelte'
   import { getWizardSteps } from './steps'
   import { createConferenceDialogOpen } from '$lib/classes/stores/app/global-ui-store'
 
   let { open = $bindable(false) }: { open: boolean } = $props()
+
+  const cloudPlatformUrl = 'https://platform.miaoyww.top/?from=app'
 
   let contentEl = $state<HTMLDivElement | undefined>(undefined)
   let currentStepId = $state<string>('mode')
@@ -47,10 +48,10 @@
     })
   })
 
-  // 单例模式没有角色步骤
+  // 云端大会只保留模式选择与进入平台
   $effect(() => {
-    if (wizard.mode === 'singleton' && currentStepId === 'roles') {
-      currentStepId = 'seats'
+    if (wizard.mode === 'conference' && currentStepId !== 'mode' && currentStepId !== 'platform') {
+      currentStepId = 'mode'
     }
   })
 
@@ -79,6 +80,15 @@
   }
 
   function handleNext(): void {
+    if (wizard.mode === 'conference') {
+      if (!wizard.modeValid) {
+        wizard.attempted = true
+        focusFirstInvalid()
+        return
+      }
+      window.location.replace(cloudPlatformUrl)
+      return
+    }
     if (isLastStep) return
     tryAdvance(Math.min(currentIndex + 1, visibleSteps.length - 1))
   }
@@ -119,9 +129,13 @@
         <div class="min-w-0">
           <Dialog.Title>{t('procedure_create_conference')}</Dialog.Title>
           <Dialog.Description>
-            {wizard.mode === 'singleton'
-              ? t('procedure_configure_one_independently_chaired_meeting_and_its_seats')
-              : t('procedure_configure_the_conference_committees_roles_capabilities_and_seats')}
+            {#if wizard.mode === 'conference'}
+              {t('procedure_click_next_to_open_the_veto_platform')}
+            {:else if wizard.mode === 'singleton'}
+              {t('procedure_configure_one_independently_chaired_meeting_and_its_seats')}
+            {:else}
+              {t('procedure_configure_the_conference_committees_roles_capabilities_and_seats')}
+            {/if}
           </Dialog.Description>
         </div>
 
@@ -152,12 +166,19 @@
           <StepInfo />
         {:else if currentStep?.id === 'meeting'}
           <StepMeetings />
-        {:else if currentStep?.id === 'roles'}
-          <StepRoles />
         {:else if currentStep?.id === 'seats'}
           <StepSeats />
         {:else if currentStep?.id === 'review'}
           <StepReview />
+        {:else if currentStep?.id === 'platform'}
+          <div class="flex min-h-40 flex-col items-center justify-center gap-2 text-center">
+            <h2 class="text-base font-semibold">
+              {t('procedure_create_conference_on_the_veto_platform')}
+            </h2>
+            <p class="text-sm text-muted-foreground">
+              {t('procedure_click_next_to_open_the_veto_platform')}
+            </p>
+          </div>
         {/if}
       </div>
     </div>
@@ -174,7 +195,7 @@
         <ArrowLeft data-icon="inline-start" />
         {t('procedure_previous')}
       </Button>
-      {#if !isLastStep}
+      {#if !isLastStep || wizard.mode === 'conference'}
         <Button disabled={wizard.creating} onclick={handleNext}>
           {t('procedure_next')}
           <ArrowRight data-icon="inline-end" />

@@ -64,7 +64,7 @@
   "platform_capabilities": "权限",
   "platform_select_capability": "请至少勾选一项权限",
   "platform_unnamed_conference": "未命名大会",
-  "platform_creation_mode": "创建模式",
+  "platform_creation_mode": "选择模式",
   "platform_conference_mode": "大会模式",
   "platform_committee": "委员会",
   "platform_role_template": "角色模板",
