@@ -203,6 +203,7 @@ function toConferenceDTO(membership: CloudMembership): ConferenceDTO {
         ? {
             attendance: 'absent',
             hasVotingRights: true,
+            hasVetoPower: false,
             sortOrder: 0
           }
         : undefined
@@ -309,6 +310,7 @@ export function applyCloudChairProjection(projection: CloudChairCommittee): void
           ? {
               attendance: 'absent',
               hasVotingRights: seat.hasVotingRights,
+                hasVetoPower: seat.hasVetoPower ?? false,
               sortOrder
             }
           : undefined

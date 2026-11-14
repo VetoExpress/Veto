@@ -102,6 +102,7 @@ export function CommitteeForm({
           shortName: seat.shortName,
           roleTemplateId: roleReferenceForImportedName(seat.roleName ?? ""),
           hasVotingRights: seat.hasVotingRights ?? true,
+          hasVetoPower: seat.hasVetoPower ?? false,
         })),
       ],
     })
@@ -218,6 +219,7 @@ export function CommitteeForm({
                       shortName: "",
                       roleTemplateId: "",
                       hasVotingRights: true,
+                      hasVetoPower: false,
                     },
                   ],
                 })

@@ -311,6 +311,7 @@ export function createConference(
     procedure: {
       attendance: 'absent',
       hasVotingRights: participant.hasVotingRights ?? true,
+      hasVetoPower: false,
       sortOrder
     }
   }))
@@ -496,7 +497,37 @@ export function setSeatVotingRights(seatId: string, hasVotingRights: boolean): v
   const seat = engine.getSeat(seatId)
   if (!seat?.procedure) return
   engine.updateSeat(seatId, {
-    procedure: { ...seat.procedure, hasVotingRights }
+      procedure: {
+        ...seat.procedure,
+        hasVotingRights,
+        hasVetoPower: hasVotingRights ? seat.procedure.hasVetoPower : false
+      }
+  })
+  const vetoSeatIds = engine.participantSeats
+    .filter((item) => item.procedure.hasVetoPower)
+    .map((item) => item.id)
+  engine.setProcedureRules({
+    ...engine.procedureRules,
+    veto: { enabled: vetoSeatIds.length > 0, seatIds: vetoSeatIds }
+  })
+  syncEngine(engine)
+}
+
+export function setSeatVetoPower(seatId: string, hasVetoPower: boolean): void {
+  const engine = getCurrentEngine()
+  if (!engine) return
+  const seat = engine.getSeat(seatId)
+  if (!seat?.procedure) return
+  const nextVetoPower = Boolean(seat.procedure.hasVotingRights) && hasVetoPower
+  engine.updateSeat(seatId, {
+    procedure: { ...seat.procedure, hasVetoPower: nextVetoPower }
+  })
+  const seatIds = engine.participantSeats
+    .filter((item) => item.procedure.hasVetoPower)
+    .map((item) => item.id)
+  engine.setProcedureRules({
+    ...engine.procedureRules,
+    veto: { enabled: seatIds.length > 0, seatIds }
   })
   syncEngine(engine)
 }

@@ -145,7 +145,10 @@
   }
 
   function matchedRoleName(row: ImportedSeat): string {
-    if (isSingleton) return row.hasVotingRights === false ? t('procedure_no_voting_rights') : t('procedure_has_voting_rights_2')
+    if (isSingleton) {
+      const voting = row.hasVotingRights === false ? t('procedure_no_voting_rights') : t('procedure_has_voting_rights_2')
+      return row.hasVetoPower ? `${voting} · ${t('procedure_veto_rights')}` : voting
+    }
 
     const roleId = roleIdForType(row.roleName ?? '', targetCommitteeId)
     return roleId ? wizard.roleName(roleId) : row.roleName ? t('procedure_unmatched_role') : t('procedure_match_automatically')
@@ -160,12 +163,14 @@
           ? {
               name: row.name,
               shortName: row.shortName,
-              hasVotingRights: row.hasVotingRights ?? true
+              hasVotingRights: row.hasVotingRights ?? true,
+              hasVetoPower: row.hasVetoPower ?? false
             }
           : {
               name: row.name,
               shortName: row.shortName,
-              roleId: roleIdForType(row.roleName ?? '', targetCommitteeId)
+              roleId: roleIdForType(row.roleName ?? '', targetCommitteeId),
+              hasVetoPower: row.hasVetoPower ?? false
             }
       )
     )
@@ -260,9 +265,9 @@
                   class={cn(
                     'grid items-center gap-2',
                     isSingleton
-                      ? 'md:grid-cols-[minmax(0,1fr)_minmax(0,12rem)_9rem_2.5rem]'
+                      ? 'md:grid-cols-[minmax(0,1fr)_minmax(0,12rem)_9rem_9rem_2.5rem]'
                       : committee.type === 'cabinet'
-                        ? 'md:grid-cols-[minmax(0,1fr)_minmax(0,12rem)_15rem_2.5rem]'
+                        ? 'md:grid-cols-[minmax(0,1fr)_minmax(0,12rem)_15rem_9rem_2.5rem]'
                         : 'md:grid-cols-[minmax(0,1fr)_15rem_2.5rem]'
                   )}
                 >
@@ -283,8 +288,25 @@
                     <label
                       class="flex items-center justify-center gap-2 rounded-md border px-2 py-2 text-xs text-muted-foreground"
                     >
-                      <Checkbox bind:checked={seat.hasVotingRights} aria-label={t('procedure_voting_rights')} />
+                      <Checkbox
+                        checked={seat.hasVotingRights ?? true}
+                        aria-label={t('procedure_voting_rights')}
+                        onCheckedChange={(checked) =>
+                          wizard.setSeatVotingRights(committee.id, seat.id, checked)}
+                      />
                       {t('procedure_voting_rights')}
+                    </label>
+                    <label
+                      class="flex items-center justify-center gap-2 rounded-md border px-2 py-2 text-xs text-muted-foreground"
+                    >
+                      <Checkbox
+                        checked={seat.hasVetoPower ?? false}
+                        disabled={!seat.hasVotingRights}
+                        aria-label={t('procedure_veto_rights')}
+                        onCheckedChange={(checked) =>
+                          wizard.setSeatVetoPower(committee.id, seat.id, checked)}
+                      />
+                      {t('procedure_veto_rights')}
                     </label>
                   {:else}
                     <Select.Select type="single" bind:value={seat.roleId}>
@@ -299,6 +321,19 @@
                         {/each}
                       </Select.SelectContent>
                     </Select.Select>
+                    {#if committee.type === 'cabinet'}
+                      <label
+                        class="flex items-center justify-center gap-2 rounded-md border px-2 py-2 text-xs text-muted-foreground"
+                      >
+                        <Checkbox
+                          checked={seat.hasVetoPower ?? false}
+                          aria-label={t('procedure_veto_rights')}
+                          onCheckedChange={(checked) =>
+                            wizard.setSeatVetoPower(committee.id, seat.id, checked)}
+                        />
+                        {t('procedure_veto_rights')}
+                      </label>
+                    {/if}
                   {/if}
                   <Button
                     variant="ghost"
@@ -355,6 +390,7 @@
                 <th class="px-3 py-2 font-medium">{t('procedure_column_a')}</th>
                 <th class="px-3 py-2 font-medium">{t('procedure_column_b_optional')}</th>
                 <th class="px-3 py-2 font-medium">{t('procedure_column_c_optional')}</th>
+                <th class="px-3 py-2 font-medium">{t('procedure_column_d_optional')}</th>
               </tr>
             </thead>
             <tbody>
@@ -364,6 +400,7 @@
                 <td class="px-3 py-2">
                   {isSingleton ? t('procedure_voting_rights_optional_yes_by_default') : t('procedure_seat_type_role_name_optional')}
                 </td>
+                <td class="px-3 py-2">{t('procedure_veto_rights_optional')}</td>
               </tr>
             </tbody>
           </table>
@@ -455,7 +492,7 @@
             <th class="px-3 py-2 font-medium">{t('procedure_seat_name')}</th>
             <th class="px-3 py-2 font-medium">{t('procedure_seat_abbreviation')}</th>
             <th class="px-3 py-2 font-medium">{isSingleton ? t('procedure_input_value') : t('procedure_seat_type')}</th>
-            <th class="px-3 py-2 font-medium">{isSingleton ? t('procedure_voting_rights') : t('procedure_matched_role')}</th>
+            <th class="px-3 py-2 font-medium">{isSingleton ? t('procedure_veto_rights') : t('procedure_matched_role')}</th>
           </tr>
         </thead>
         <tbody>
@@ -467,10 +504,16 @@
                 {isSingleton
                   ? row.hasVotingRights === false
                     ? t('procedure_no')
-                    : ''
+                    : t('procedure_yes')
                   : row.roleName || t('procedure_match_automatically')}
               </td>
-              <td class="px-3 py-2 text-muted-foreground">{matchedRoleName(row)}</td>
+              <td class="px-3 py-2 text-muted-foreground">
+                {isSingleton
+                  ? row.hasVetoPower
+                    ? t('procedure_yes')
+                    : t('procedure_no')
+                  : matchedRoleName(row)}
+              </td>
             </tr>
           {/each}
         </tbody>

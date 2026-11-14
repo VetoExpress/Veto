@@ -1,4 +1,8 @@
-import type { CommitteeInput, RoleTemplateInput } from "@/lib/conference-client"
+import type {
+  CommitteeInput,
+  ProcedureRulesInput,
+  RoleTemplateInput,
+} from "@/lib/conference-client"
 
 export function createClientId(prefix: string): string {
   return `${prefix}-${crypto.randomUUID()}`
@@ -32,5 +36,25 @@ export function createCommittee(): CommitteeInput {
     type: "cabinet",
     seats: [],
     agenda: [],
+    procedureRules: defaultProcedureRules(),
+  }
+}
+
+export function defaultProcedureRules(): ProcedureRulesInput {
+  return {
+    quorum: {
+      denominator: "all_participants",
+      threshold: { type: "simple_majority" },
+    },
+    proceduralVote: {
+      denominator: "present_voting_eligible",
+      threshold: null,
+      overrides: {},
+    },
+    documentVote: {
+      denominator: "present_voting_eligible",
+      ratio: "two_thirds",
+    },
+    veto: { enabled: false, seatIds: [] },
   }
 }

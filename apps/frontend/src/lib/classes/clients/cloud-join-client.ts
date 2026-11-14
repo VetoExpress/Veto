@@ -75,6 +75,7 @@ export interface CloudChairSeat {
   roleTemplateId: string
   roleName: string
   hasVotingRights: boolean
+  hasVetoPower?: boolean
   user: CloudChairUser | null
 }
 

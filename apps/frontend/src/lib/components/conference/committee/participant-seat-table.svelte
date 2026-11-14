@@ -6,7 +6,8 @@
   import { removeSeat, updateSeat } from '$lib/classes/stores/delegate/delegate-store'
   import {
     changeSeatAttendance,
-    setSeatVotingRights
+    setSeatVotingRights,
+    setSeatVetoPower
   } from '$lib/classes/stores/conference/conference-store'
   import { Badge } from '$lib/components/ui/badge'
   import { Button } from '$lib/components/ui/button'
@@ -91,6 +92,7 @@
         <th class="px-4 py-3 text-left font-medium">{t('procedure_abbreviation')}</th>
         <th class="w-36 px-4 py-3 text-center font-medium">{t('procedure_attendance')}</th>
         <th class="w-24 px-4 py-3 text-center font-medium">{t('procedure_voting_rights')}</th>
+        <th class="w-24 px-4 py-3 text-center font-medium">{t('procedure_veto_rights')}</th>
         <th class="px-4 py-3 text-right font-medium">{t('procedure_actions')}</th>
       </tr>
     </thead>
@@ -158,6 +160,17 @@
                   {t('procedure_absent')}
                 </ToggleGroup.Item>
               </ToggleGroup.Root>
+            </div>
+          </td>
+          <td class="px-4 py-3">
+            <div class="flex justify-center">
+              <Switch
+                checked={seat.procedure.hasVetoPower ?? false}
+                disabled={!seat.procedure.hasVotingRights}
+                onCheckedChange={(hasVetoPower: boolean) => setSeatVetoPower(seat.id, hasVetoPower)}
+                title={t('procedure_veto_rights')}
+                aria-label={t('procedure_set_veto_rights_for_value', { value1: seat.name })}
+              />
             </div>
           </td>
           <td class="px-4 py-3">

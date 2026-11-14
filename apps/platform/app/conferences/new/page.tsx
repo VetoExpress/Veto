@@ -24,6 +24,7 @@ import type { ImportedSeat } from "@vetoexpress/utils/seat-import"
 import { PlatformLoading, PlatformShell } from "@/components/platform-shell"
 import { CapabilityPicker } from "@/components/capability-picker"
 import { SeatImportDialog } from "@/components/seat-import-dialog"
+import { CommitteeProcedureRules } from "@/components/committee-procedure-rules"
 import { Badge } from "@/components/ui/badge"
 import { Button, buttonVariants } from "@/components/ui/button"
 import {
@@ -53,6 +54,7 @@ import {
   createClientId,
   roleAllowedInCommittee,
   roleReference,
+  defaultProcedureRules,
 } from "@/lib/conference-structure"
 import { ConferenceScheduleFields } from "@/components/conference-schedule-fields"
 import {
@@ -197,6 +199,7 @@ const initialStructure: ConferenceStructure = {
       type: "cabinet",
       seats: [],
       agenda: [],
+      procedureRules: defaultProcedureRules(),
     },
   ],
 }
@@ -226,6 +229,9 @@ export default function NewConferencePage() {
   const [attempted, setAttempted] = useState(false)
   const [collapsedCommittees, setCollapsedCommittees] = useState<
     Record<string, boolean>
+  >({})
+  const [committeeTabs, setCommitteeTabs] = useState<
+    Record<string, "details" | "rules">
   >({})
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
@@ -362,6 +368,7 @@ export default function NewConferencePage() {
           shortName: "",
           roleTemplateId: defaultRole ? roleReference(defaultRole) : "",
           hasVotingRights: true,
+          hasVetoPower: false,
         },
       ],
     })
@@ -422,6 +429,7 @@ export default function NewConferencePage() {
           shortName: row.shortName,
           roleTemplateId: importedRoleReference(committee, row.roleName ?? ""),
           hasVotingRights: row.hasVotingRights ?? true,
+          hasVetoPower: row.hasVetoPower ?? false,
         })),
       ],
     })
@@ -461,7 +469,19 @@ export default function NewConferencePage() {
           ...seat,
           name: seat.name.trim(),
           shortName: seat.shortName?.trim() || undefined,
+          hasVetoPower: seat.hasVotingRights && seat.hasVetoPower,
         })),
+        procedureRules: {
+          ...committee.procedureRules,
+          veto: {
+            enabled: committee.seats.some(
+              (seat) => seat.hasVotingRights && seat.hasVetoPower
+            ),
+            seatIds: committee.seats
+              .filter((seat) => seat.hasVotingRights && seat.hasVetoPower)
+              .map((seat) => seat.id ?? seat.clientId ?? ""),
+          },
+        },
       })),
     }
     const payload = JSON.stringify(input)
@@ -726,6 +746,56 @@ export default function NewConferencePage() {
                             </Button>
                           </div>
                         </div>
+                        <div className="mt-4 flex gap-1 border-b">
+                          <button
+                            type="button"
+                            className={cn(
+                              "border-b-2 px-3 py-2 text-sm",
+                              (committeeTabs[reference] ?? "details") ===
+                                "details"
+                                ? "border-primary font-medium"
+                                : "border-transparent text-muted-foreground"
+                            )}
+                            onClick={() =>
+                              setCommitteeTabs((current) => ({
+                                ...current,
+                                [reference]: "details",
+                              }))
+                            }
+                          >
+                            {t("platform_meeting_details")}
+                          </button>
+                          <button
+                            type="button"
+                            className={cn(
+                              "border-b-2 px-3 py-2 text-sm",
+                              committeeTabs[reference] === "rules"
+                                ? "border-primary font-medium"
+                                : "border-transparent text-muted-foreground"
+                            )}
+                            onClick={() =>
+                              setCommitteeTabs((current) => ({
+                                ...current,
+                                [reference]: "rules",
+                              }))
+                            }
+                          >
+                            {t("platform_procedure_rules")}
+                          </button>
+                        </div>
+                        {committeeTabs[reference] === "rules" ? (
+                          <div className="mt-4">
+                            <CommitteeProcedureRules
+                              value={committee.procedureRules}
+                              disabled={isSaving}
+                              onChange={(procedureRules) =>
+                                updateCommittee(committeeIndex, {
+                                  procedureRules,
+                                })
+                              }
+                            />
+                          </div>
+                        ) : null}
                       </article>
                     )
                   })}
@@ -745,6 +815,7 @@ export default function NewConferencePage() {
                             type: "cabinet",
                             seats: [],
                             agenda: [],
+                            procedureRules: defaultProcedureRules(),
                           },
                         ],
                       }))
@@ -922,7 +993,7 @@ export default function NewConferencePage() {
                                     key={seatRef}
                                     className="flex flex-col gap-1"
                                   >
-                                    <div className="grid items-center gap-2 md:grid-cols-[minmax(0,1fr)_minmax(0,12rem)_15rem_2.5rem]">
+                                    <div className="grid items-center gap-2 md:grid-cols-[minmax(0,1fr)_minmax(0,12rem)_15rem_9rem_2.5rem]">
                                       <Input
                                         value={seat.name}
                                         disabled={isSaving}
@@ -1004,6 +1075,31 @@ export default function NewConferencePage() {
                                           ))}
                                         </SelectContent>
                                       </Select>
+                                      {committee.type === "cabinet" ? (
+                                        <label className="flex h-9 items-center justify-center gap-2 rounded-md border px-2 text-xs text-muted-foreground">
+                                          <input
+                                            type="checkbox"
+                                            checked={Boolean(seat.hasVetoPower)}
+                                            disabled={
+                                              isSaving || !seat.hasVotingRights
+                                            }
+                                            aria-label={t(
+                                              "platform_veto_rights"
+                                            )}
+                                            onChange={(event) =>
+                                              updateSeat(
+                                                committeeIndex,
+                                                seatIndex,
+                                                {
+                                                  hasVetoPower:
+                                                    event.target.checked,
+                                                }
+                                              )
+                                            }
+                                          />
+                                          {t("platform_veto_rights")}
+                                        </label>
+                                      ) : null}
                                       <Button
                                         type="button"
                                         variant="ghost"

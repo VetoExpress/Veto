@@ -53,6 +53,7 @@ export function CommitteeSeatTable({
   const [editShortName, setEditShortName] = useState("")
   const [editRole, setEditRole] = useState("")
   const [editVotingRights, setEditVotingRights] = useState(true)
+  const [editVetoPower, setEditVetoPower] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState("")
 
   const allowedRoles = roles.filter((role) =>
@@ -66,6 +67,7 @@ export function CommitteeSeatTable({
     setEditShortName(seat.shortName ?? "")
     setEditRole(seat.roleTemplateId)
     setEditVotingRights(seat.hasVotingRights)
+    setEditVetoPower(Boolean(seat.hasVetoPower))
   }
 
   function cancelEditing(): void {
@@ -74,6 +76,7 @@ export function CommitteeSeatTable({
     setEditShortName("")
     setEditRole("")
     setEditVotingRights(true)
+    setEditVetoPower(false)
   }
 
   function saveSeat(index: number): void {
@@ -86,6 +89,8 @@ export function CommitteeSeatTable({
       shortName: editShortName.trim() || undefined,
       roleTemplateId: editRole,
       hasVotingRights: editVotingRights,
+      hasVetoPower:
+        committeeType === "cabinet" && editVotingRights && editVetoPower,
     }
     onChange(next)
     cancelEditing()
@@ -168,6 +173,9 @@ export function CommitteeSeatTable({
               {t("platform_voting_rights")}
             </th>
             <th className="px-4 py-3 text-left font-medium">
+              {t("platform_veto_rights")}
+            </th>
+            <th className="px-4 py-3 text-left font-medium">
               {t("platform_access_key")}
             </th>
             <th className="px-4 py-3 text-center font-medium">
@@ -243,9 +251,10 @@ export function CommitteeSeatTable({
                         type="checkbox"
                         checked={editVotingRights}
                         disabled={disabled}
-                        onChange={(event) =>
+                        onChange={(event) => {
                           setEditVotingRights(event.target.checked)
-                        }
+                          if (!event.target.checked) setEditVetoPower(false)
+                        }}
                       />
                       {t("platform_has_voting_rights")}
                     </label>
@@ -253,6 +262,33 @@ export function CommitteeSeatTable({
                     t("platform_yes")
                   ) : (
                     t("platform_no")
+                  )}
+                </td>
+                <td className="px-4 py-3">
+                  {isEditing ? (
+                    committeeType === "cabinet" ? (
+                      <label className="flex h-9 items-center gap-2 whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          checked={editVetoPower}
+                          disabled={disabled || !editVotingRights}
+                          onChange={(event) =>
+                            setEditVetoPower(event.target.checked)
+                          }
+                        />
+                        {t("platform_veto_rights")}
+                      </label>
+                    ) : (
+                      "—"
+                    )
+                  ) : committeeType === "cabinet" ? (
+                    seat.hasVetoPower ? (
+                      t("platform_yes")
+                    ) : (
+                      t("platform_no")
+                    )
+                  ) : (
+                    "—"
                   )}
                 </td>
                 <td className="px-4 py-3">
@@ -347,7 +383,7 @@ export function CommitteeSeatTable({
           {seats.length === 0 ? (
             <tr>
               <td
-                colSpan={6}
+                colSpan={7}
                 className="px-4 py-10 text-center text-muted-foreground"
               >
                 {t("platform_no_seats")}

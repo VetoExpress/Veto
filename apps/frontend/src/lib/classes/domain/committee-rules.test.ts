@@ -98,6 +98,19 @@ describe('committee rule integration', () => {
     expect(restored.votingSessions[0].rulesSnapshot?.vetoSeatIds).toEqual([ids[4]])
   })
 
+  it('keeps seat veto flags synchronized with the committee rule snapshot', () => {
+    const { c, ids } = committee(2)
+    expect(c.getSeat(ids[1])?.procedure?.hasVetoPower).toBe(false)
+
+    const rules = defaultProcedureRules()
+    rules.veto = { enabled: true, seatIds: [ids[1]] }
+    expect(c.setProcedureRules(rules)).toBe(true)
+    expect(c.getSeat(ids[1])?.procedure?.hasVetoPower).toBe(true)
+
+    expect(c.setProcedureRules(defaultProcedureRules())).toBe(true)
+    expect(c.getSeat(ids[1])?.procedure?.hasVetoPower).toBe(false)
+  })
+
   it('preserves legacy majority configuration and completed outcomes', () => {
     const { c } = committee()
     const data = c.toJSON()

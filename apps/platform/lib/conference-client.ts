@@ -27,6 +27,28 @@ export type Capability = (typeof CAPABILITIES)[number]
 export type CommitteeType = "cabinet" | "mpc" | "ipc"
 export type SystemRoleCode = "staff" | "mpc_press" | "ipc"
 
+export type ProcedureThresholdInput =
+  | { type: "simple_majority" }
+  | { type: "two_thirds" }
+  | { type: "fixed"; value: number }
+
+export interface ProcedureRulesInput {
+  quorum: {
+    denominator: "all_participants" | "voting_eligible"
+    threshold: ProcedureThresholdInput
+  }
+  proceduralVote: {
+    denominator: "present_participants" | "present_voting_eligible"
+    threshold: ProcedureThresholdInput | null
+    overrides: Record<string, ProcedureThresholdInput>
+  }
+  documentVote: {
+    denominator: "present_voting_eligible" | "yes_no"
+    ratio: "simple_majority" | "two_thirds"
+  }
+  veto: { enabled: boolean; seatIds: string[] }
+}
+
 export const CAPABILITY_LABELS: Record<Capability, string> = {
   view_conference: message("platform_capability_view_conference"),
   view_news: message("platform_capability_view_news"),
@@ -132,6 +154,7 @@ export interface SeatInput {
   shortName?: string
   roleTemplateId: string
   hasVotingRights: boolean
+  hasVetoPower: boolean
   inviteCode?: string
   inviteActive?: boolean
 }
@@ -150,6 +173,7 @@ export interface CommitteeInput {
   type: CommitteeType
   seats: SeatInput[]
   agenda: AgendaItemInput[]
+  procedureRules: ProcedureRulesInput
 }
 
 export interface Conference extends ConferenceSummary {

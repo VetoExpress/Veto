@@ -7,6 +7,7 @@ export interface ImportedSeat {
   shortName: string
   roleName?: string
   hasVotingRights?: boolean
+  hasVetoPower?: boolean
 }
 
 export type SeatImportErrorCode =
@@ -29,21 +30,25 @@ export interface SeatWorkbook {
 
 const TEXT_SEPARATOR = /[,，;；|]/
 const NO_VOTING_RIGHTS = /^(否|无|没有|false|0)$/i
+const NO_VETO_POWER = /^(否|无|没有|false|0)$/i
 
 function toImportedSeat(row: readonly unknown[], mode: SeatImportMode): ImportedSeat {
   const name = String(row[0] ?? '').trim()
   const shortName = String(row[1] ?? '').trim()
   const thirdColumn = String(row[2] ?? '').trim()
+  const fourthColumn = String(row[3] ?? '').trim()
+  const hasVetoPower = Boolean(fourthColumn) && !NO_VETO_POWER.test(fourthColumn)
 
   if (mode === 'singleton') {
     return {
       name,
       shortName,
-      hasVotingRights: !NO_VOTING_RIGHTS.test(thirdColumn)
+      hasVotingRights: !NO_VOTING_RIGHTS.test(thirdColumn),
+      hasVetoPower
     }
   }
 
-  return { name, shortName, roleName: thirdColumn }
+  return { name, shortName, roleName: thirdColumn, hasVetoPower }
 }
 
 function hasContent(seat: ImportedSeat): boolean {

@@ -4,6 +4,7 @@
 import { get } from 'svelte/store'
 import type { Committee, Conference } from '$lib/classes/types/conference'
 import type { RoleTemplate } from '$lib/classes/types/event'
+import type { ProcedureRulesConfig } from '$lib/classes/types/procedure-rules'
 import type { Capability, Seat, SeatAccess, SeatGroup, SeatGroupType } from '$lib/classes/types/delegate'
 import { conferences, createConference, saveConferencesNow, getConferenceById } from './conference-store'
 import { generateInviteCode } from '$lib/classes/services/seat-access'
@@ -12,7 +13,15 @@ export interface CommitteeDraft {
   id: string
   name: string
   type: SeatGroupType
-  seats: Array<{ name: string; shortName?: string; roleId?: string; hasVotingRights?: boolean }>
+  seats: Array<{
+    id: string
+    name: string
+    shortName?: string
+    roleId?: string
+    hasVotingRights?: boolean
+    hasVetoPower?: boolean
+  }>
+  procedureRules: ProcedureRulesConfig
   agenda?: Array<{ title: string; description?: string }>
 }
 
@@ -33,11 +42,29 @@ function capabilityOverrides(capabilities: Capability[]): Seat['capabilityOverri
   return Object.fromEntries(capabilities.map((capability) => [capability, true]))
 }
 
+function mapProcedureRulesToCreatedSeats(
+  rules: ProcedureRulesConfig,
+  draftSeats: CommitteeDraft['seats'],
+  seats: Seat[]
+): ProcedureRulesConfig {
+  const vetoSeatIds = seats.flatMap((seat, index) => {
+    const draftSeat = draftSeats[index]
+    return draftSeat?.hasVetoPower || rules.veto.seatIds.includes(draftSeat?.id ?? '')
+      ? [seat.id]
+      : []
+  })
+  return {
+    ...rules,
+    veto: { enabled: vetoSeatIds.length > 0, seatIds: vetoSeatIds }
+  }
+}
+
 function createCommittee(
   id: string,
   name: string,
   seats: Seat[],
-  agenda: Array<{ title: string; description?: string }> = []
+  agenda: Array<{ title: string; description?: string }> = [],
+  procedureRules?: ProcedureRulesConfig
 ): Committee {
   return {
     id,
@@ -59,6 +86,7 @@ function createCommittee(
     documentNames: [],
     votingSessions: [],
     minutes: [],
+    ...(procedureRules ? { procedureRules } : {}),
     defaultSpeakingTimeSec: 120,
     activeCaucus: null,
     activeSpeaker: null
@@ -97,10 +125,17 @@ export async function createConferenceFromDraft(input: CreateConferenceInput): P
       procedure: {
         attendance: 'absent',
         hasVotingRights: draftSeat.hasVotingRights ?? true,
+        hasVetoPower: draftSeat.hasVetoPower ?? false,
         sortOrder
       }
     }))
-    const singletonCommittee = createCommittee(draft.id, draft.name.trim(), seats, draft.agenda ?? [])
+    const singletonCommittee = createCommittee(
+      draft.id,
+      draft.name.trim(),
+      seats,
+      draft.agenda ?? [],
+      mapProcedureRulesToCreatedSeats(draft.procedureRules, draft.seats, seats)
+    )
 
     const conferenceId = createConference(name, singletonCommittee.name, [], [], {
       id: createId(),
@@ -177,7 +212,8 @@ export async function createConferenceFromDraft(input: CreateConferenceInput): P
           draft.type === 'cabinet'
             ? {
                 attendance: 'absent',
-                hasVotingRights: true,
+                hasVotingRights: draftSeat.hasVotingRights ?? true,
+                hasVetoPower: draftSeat.hasVetoPower ?? false,
                 sortOrder
               }
             : undefined
@@ -185,7 +221,15 @@ export async function createConferenceFromDraft(input: CreateConferenceInput): P
       seatAccesses.push({ seatId: seat.id, inviteCode: generateInviteCode(existingKeys) })
       return seat
     })
-    committees.push(createCommittee(draft.id, draft.name.trim(), seats))
+    committees.push(
+      createCommittee(
+        draft.id,
+        draft.name.trim(),
+        seats,
+        [],
+        mapProcedureRulesToCreatedSeats(draft.procedureRules, draft.seats, seats)
+      )
+    )
   }
 
   const conferenceId = createConference(name, committees[0].name, [], [], {

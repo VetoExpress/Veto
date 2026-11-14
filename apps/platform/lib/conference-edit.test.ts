@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { mergeConferenceEdit, type ConferenceEdit } from "./conference-edit"
+import { defaultProcedureRules } from "./conference-structure"
 
 const base: ConferenceEdit = {
   name: "大会",
@@ -36,6 +37,7 @@ describe("大会并发编辑", () => {
             type: "cabinet" as const,
             seats: [],
             agenda: [],
+            procedureRules: defaultProcedureRules(),
           },
         ],
       },
@@ -52,6 +54,7 @@ describe("大会并发编辑", () => {
             type: "cabinet" as const,
             seats: [],
             agenda: [],
+            procedureRules: defaultProcedureRules(),
           },
         ],
       },

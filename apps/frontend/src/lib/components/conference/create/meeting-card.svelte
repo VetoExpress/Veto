@@ -52,6 +52,11 @@
                 {t('procedure_voting_rights')}
               </Badge>
             {/if}
+            {#if committee.type === 'cabinet' && seat.hasVetoPower}
+              <Badge variant="secondary" class="bg-amber-500 text-white dark:bg-amber-600">
+                {t('procedure_veto_rights')}
+              </Badge>
+            {/if}
           </li>
         {/each}
       </ul>

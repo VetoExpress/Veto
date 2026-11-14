@@ -259,6 +259,17 @@ export class Committee {
       return false
     }
     this.procedureRules = cloneProcedureRules(config)
+    this.seats = this.seats.map((seat) =>
+      seat.procedure
+        ? {
+            ...seat,
+            procedure: {
+              ...seat.procedure,
+              hasVetoPower: config.veto.enabled && config.veto.seatIds.includes(seat.id)
+            }
+          }
+        : seat
+    )
     this.addConferenceEntry('phase_changed', message('domain_rules_saved'))
     this.touch()
     return true
@@ -330,7 +341,19 @@ export class Committee {
         rules: { ...data.quorumRecord.rules, threshold: { ...data.quorumRecord.rules.threshold } },
         evaluation: { ...data.quorumRecord.evaluation }
       }
-    if (data.seats != null) this.seats = data.seats.map(cloneSeat)
+    if (data.seats != null) {
+      this.seats = data.seats.map((seat) => ({
+        ...cloneSeat(seat),
+        procedure: seat.procedure
+          ? {
+              ...seat.procedure,
+              hasVetoPower:
+                seat.procedure.hasVetoPower ??
+                Boolean(data.procedureRules?.veto.enabled && data.procedureRules.veto.seatIds.includes(seat.id))
+            }
+          : undefined
+      }))
+    }
     if (data.agenda != null) this.agenda = data.agenda.map((item) => ({ ...item }))
     if (data.phase != null) this.phase = data.phase
     if (data.motions != null)
@@ -2053,7 +2076,9 @@ export class Committee {
       capabilityOverrides,
       role,
       roleId,
-      procedure
+      procedure: procedure
+        ? { ...procedure, hasVetoPower: procedure.hasVetoPower ?? false }
+        : undefined
     }
     this.seats = [...this.seats, seat]
     this.addConferenceEntry('phase_changed', message('domain_log_seat_created', { name }))
@@ -2089,6 +2114,13 @@ export class Committee {
       }
       return next
     })
+    const vetoSeatIds = this.participantSeats
+      .filter((seat) => seat.procedure.hasVetoPower)
+      .map((seat) => seat.id)
+    this.procedureRules = {
+      ...this.procedureRules,
+      veto: { enabled: vetoSeatIds.length > 0, seatIds: vetoSeatIds }
+    }
     this.touch()
   }
 

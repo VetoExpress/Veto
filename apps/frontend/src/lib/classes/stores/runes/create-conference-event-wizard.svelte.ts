@@ -8,6 +8,8 @@
 import type { Capability, SeatGroupType } from '../../types/delegate'
 import { t } from '$lib/i18n'
 import type { RoleTemplate } from '../../types/event'
+import type { ProcedureRulesConfig } from '../../types/procedure-rules'
+import { defaultProcedureRules } from '../../utils/committee/procedure-rules'
 import { createConferenceFromDraft } from '../conference/conference-event-store'
 
 export interface SeatDraft {
@@ -16,6 +18,7 @@ export interface SeatDraft {
   shortName: string
   roleId?: string
   hasVotingRights?: boolean
+  hasVetoPower?: boolean
 }
 
 export interface AgendaItemDraft {
@@ -29,6 +32,7 @@ export interface CommitteeDraft {
   name: string
   type: SeatGroupType
   seats: SeatDraft[]
+  procedureRules: ProcedureRulesConfig
   agenda?: AgendaItemDraft[]
 }
 
@@ -39,11 +43,24 @@ const IPC_ROLE_NAME = 'IPC'
 const STAFF_ROLE_NAME = 'Staff'
 
 function newSeat(roleId?: string): SeatDraft {
-  return { id: crypto.randomUUID(), name: '', shortName: '', roleId, hasVotingRights: true }
+  return {
+    id: crypto.randomUUID(),
+    name: '',
+    shortName: '',
+    roleId,
+    hasVotingRights: true,
+    hasVetoPower: false
+  }
 }
 
 function newCommittee(): CommitteeDraft {
-  return { id: crypto.randomUUID(), name: '', type: 'cabinet', seats: [] }
+  return {
+    id: crypto.randomUUID(),
+    name: '',
+    type: 'cabinet',
+    seats: [],
+    procedureRules: defaultProcedureRules()
+  }
 }
 
 /** 向导默认预置的五个角色模板（随 reset 每次重新生成 id） */
@@ -330,7 +347,13 @@ export class ConferenceCreateWizard {
   /** 将外部导入的席位追加到指定委员会。 */
   addImportedSeats(
     committeeId: string,
-    seats: Array<{ name: string; shortName?: string; roleId?: string; hasVotingRights?: boolean }>
+    seats: Array<{
+      name: string
+      shortName?: string
+      roleId?: string
+      hasVotingRights?: boolean
+      hasVetoPower?: boolean
+    }>
   ): void {
     this.committees = this.committees.map((committee) => {
       if (committee.id !== committeeId) return committee
@@ -345,17 +368,102 @@ export class ConferenceCreateWizard {
             name: seat.name,
             shortName: seat.shortName ?? '',
             roleId: this.mode === 'singleton' ? undefined : (seat.roleId ?? fallbackRoleId),
-            hasVotingRights: seat.hasVotingRights ?? true
+            hasVotingRights: seat.hasVotingRights ?? true,
+            hasVetoPower: seat.hasVetoPower ?? false
           }))
         ]
       }
     })
+    this.syncCommitteeVeto(committeeId)
+  }
+
+  setSeatVotingRights(committeeId: string, seatId: string, hasVotingRights: boolean): void {
+    this.committees = this.committees.map((committee) => {
+      if (committee.id !== committeeId) return committee
+      return {
+        ...committee,
+        seats: committee.seats.map((seat) =>
+          seat.id === seatId
+            ? { ...seat, hasVotingRights, hasVetoPower: hasVotingRights ? seat.hasVetoPower : false }
+            : seat
+        )
+      }
+    })
+    this.syncCommitteeVeto(committeeId)
+  }
+
+  setSeatVetoPower(committeeId: string, seatId: string, hasVetoPower: boolean): void {
+    this.committees = this.committees.map((committee) => {
+      if (committee.id !== committeeId) return committee
+      return {
+        ...committee,
+        seats: committee.seats.map((seat) =>
+          seat.id === seatId
+            ? { ...seat, hasVetoPower: Boolean(seat.hasVotingRights) && hasVetoPower }
+            : seat
+        )
+      }
+    })
+    this.syncCommitteeVeto(committeeId)
+  }
+
+  setCommitteeProcedureRules(committeeId: string, config: ProcedureRulesConfig): boolean {
+    let updated = false
+    this.committees = this.committees.map((committee) => {
+      if (committee.id !== committeeId) return committee
+      updated = true
+      return {
+        ...committee,
+        procedureRules: {
+          ...config,
+          veto: {
+            enabled: committee.seats.some((seat) => seat.hasVetoPower),
+            seatIds: committee.seats.filter((seat) => seat.hasVetoPower).map((seat) => seat.id)
+          }
+        }
+      }
+    })
+    return updated
+  }
+
+  procedureSeats(committeeId: string): import('../../types/delegate').Seat[] {
+    const committee = this.committees.find((item) => item.id === committeeId)
+    if (!committee) return []
+    return committee.seats.map((seat, sortOrder) => ({
+      id: seat.id,
+      name: seat.name,
+      shortName: seat.shortName || undefined,
+      seatGroupId: committee.id,
+      capabilityOverrides: {},
+      roleId: seat.roleId,
+      procedure: {
+        attendance: 'absent',
+        hasVotingRights: seat.hasVotingRights ?? true,
+        hasVetoPower: seat.hasVetoPower ?? false,
+        sortOrder
+      }
+    }))
   }
 
   removeSeat(committeeId: string, seatId: string): void {
     this.committees = this.committees.map((committee) => {
       if (committee.id !== committeeId) return committee
       return { ...committee, seats: committee.seats.filter((seat) => seat.id !== seatId) }
+    })
+    this.syncCommitteeVeto(committeeId)
+  }
+
+  private syncCommitteeVeto(committeeId: string): void {
+    this.committees = this.committees.map((committee) => {
+      if (committee.id !== committeeId) return committee
+      const seatIds = committee.seats.filter((seat) => seat.hasVetoPower).map((seat) => seat.id)
+      return {
+        ...committee,
+        procedureRules: {
+          ...committee.procedureRules,
+          veto: { enabled: seatIds.length > 0, seatIds }
+        }
+      }
     })
   }
 

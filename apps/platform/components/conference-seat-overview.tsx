@@ -420,6 +420,9 @@ export function ConferenceSeatOverview({
                       {t("platform_voting_rights")}
                     </th>
                     <th className="px-4 py-3 text-left font-medium">
+                      {t("platform_veto_rights")}
+                    </th>
+                    <th className="px-4 py-3 text-left font-medium">
                       {t("platform_claimant_troubleshooting")}
                     </th>
                     <th className="px-4 py-3 text-left font-medium">
@@ -454,6 +457,11 @@ export function ConferenceSeatOverview({
                         </td>
                         <td className="px-4 py-3">
                           {row.seat.hasVotingRights
+                            ? t("platform_yes")
+                            : t("platform_no")}
+                        </td>
+                        <td className="px-4 py-3">
+                          {row.seat.hasVetoPower
                             ? t("platform_yes")
                             : t("platform_no")}
                         </td>

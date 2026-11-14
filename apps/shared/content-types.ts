@@ -105,6 +105,8 @@ export interface ProceduralSeatProfile {
   shortName?: string
   flagUrl?: string
   hasVotingRights: boolean
+  /** Static veto eligibility; omitted by older Cloud Service projections. */
+  hasVetoPower?: boolean
   sortOrder: number
 }
 

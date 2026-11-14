@@ -18,10 +18,11 @@
     initialRules: ProcedureRulesConfig
     seats: Seat[]
     onSave: (config: ProcedureRulesConfig) => boolean
+    vetoMode?: 'rules' | 'seat'
   }
   type Option = { value: string; label: MessageKey }
 
-  let { initialRules, seats, onSave }: Props = $props()
+  let { initialRules, seats, onSave, vetoMode = 'rules' }: Props = $props()
   // The parent keys this form by committee; store updates must not replace an open draft.
   let draft = $state<ProcedureRulesConfig>(
     untrack(() => structuredClone($state.snapshot(initialRules)))
@@ -286,11 +287,12 @@
             </Field.Description>
           </Field.Group>
         </Field.Set>
-        <Field.Set>
-          <Field.Legend variant="label" class="text-lg font-semibold">
-            {t('settings_rules_veto')}
-          </Field.Legend>
-          <Field.Group class="gap-4">
+        {#if vetoMode === 'rules'}
+          <Field.Set>
+            <Field.Legend variant="label" class="text-lg font-semibold">
+              {t('settings_rules_veto')}
+            </Field.Legend>
+            <Field.Group class="gap-4">
             <Field.Field orientation="horizontal">
               <Checkbox id="rules-veto-enabled" bind:checked={draft.veto.enabled} />
               <Field.Label for="rules-veto-enabled">{t('settings_rules_veto_enabled')}</Field.Label>
@@ -345,8 +347,28 @@
                 </Button>
               {/if}
             </Field.Field>
-          </Field.Group>
-        </Field.Set>
+            </Field.Group>
+          </Field.Set>
+        {:else}
+          <Field.Set>
+            <Field.Legend variant="label" class="text-lg font-semibold">
+              {t('settings_rules_veto')}
+            </Field.Legend>
+            <Field.Description>{t('settings_rules_veto_seat_assignment_hint')}</Field.Description>
+            <Field.Description>
+              {#if eligibleSeats.some((seat) => seat.procedure.hasVetoPower)}
+                {t('settings_rules_veto_assigned_seats', {
+                  seats: eligibleSeats
+                    .filter((seat) => seat.procedure.hasVetoPower)
+                    .map((seat) => seat.name)
+                    .join('、')
+                })}
+              {:else}
+                {t('settings_rules_veto_no_assigned_seats')}
+              {/if}
+            </Field.Description>
+          </Field.Set>
+        {/if}
       </Field.Group>
     </Field.Set>
     {#if !valid}

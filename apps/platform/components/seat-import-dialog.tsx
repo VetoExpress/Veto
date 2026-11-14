@@ -219,6 +219,9 @@ export function SeatImportDialog({
                           <th className="px-3 py-2 font-medium">
                             {t("platform_column_c")}
                           </th>
+                          <th className="px-3 py-2 font-medium">
+                            {t("platform_column_d")}
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
@@ -245,6 +248,7 @@ export function SeatImportDialog({
                     {t("platform_text_import_format")}
                   </code>
                   <p>{t("platform_text_optional_fields_hint")}</p>
+                  <p>{t("platform_text_veto_field_hint")}</p>
                   <p>{t("platform_text_delimiters_hint")}</p>
                 </div>
               )}
@@ -378,6 +382,9 @@ export function SeatImportDialog({
                       <th className="px-3 py-2 font-medium">
                         {t("platform_matched_role")}
                       </th>
+                      <th className="px-3 py-2 font-medium">
+                        {t("platform_veto_rights")}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -395,6 +402,11 @@ export function SeatImportDialog({
                           "unmatched"
                             ? t("platform_unmatched_role")
                             : roleLabel(row.roleName ?? "", activeTarget)}
+                        </td>
+                        <td className="px-3 py-2">
+                          {row.hasVetoPower
+                            ? t("platform_yes")
+                            : t("platform_no")}
                         </td>
                       </tr>
                     ))}

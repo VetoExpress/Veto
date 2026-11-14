@@ -59,6 +59,8 @@ export interface SeatProcedure {
   flagUrl?: string
   attendance: Attendance
   hasVotingRights: boolean
+  /** Static veto eligibility; missing on legacy saved conferences. */
+  hasVetoPower?: boolean
   sortOrder: number
 }
 

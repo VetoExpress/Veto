@@ -6,7 +6,9 @@
   import * as Field from '$lib/components/ui/field'
   import { Input } from '$lib/components/ui/input'
   import * as Select from '$lib/components/ui/select'
+  import * as Tabs from '$lib/components/ui/tabs'
   import { wizard } from '$lib/classes/stores/runes/create-conference-event-wizard.svelte'
+  import ProcedureRulesSettings from '$lib/components/settings/pages/common/procedure-rules-settings.svelte'
 
   const typeLabels: Record<SeatGroupType, string> = $derived({
     cabinet: t('procedure_cabinet'),
@@ -16,6 +18,7 @@
 
   const isSingleton = $derived(wizard.mode === 'singleton')
   const showNoCommittees = $derived(wizard.attempted && wizard.committees.length === 0)
+  let activeTabs = $state<Record<string, string>>({})
 </script>
 
 <section class="flex flex-col gap-4">
@@ -79,6 +82,26 @@
           </div>
         {/if}
       </div>
+      <Tabs.Root
+        value={activeTabs[committee.id] ?? 'details'}
+        onValueChange={(value) => (activeTabs[committee.id] = value)}
+        class="mt-4"
+      >
+        <Tabs.List>
+          <Tabs.Trigger value="details">{t('procedure_meeting_details')}</Tabs.Trigger>
+          <Tabs.Trigger value="rules">{t('settings_procedure_rules')}</Tabs.Trigger>
+        </Tabs.List>
+        <Tabs.Content value="rules" class="mt-4">
+          {#key `${committee.id}:${JSON.stringify(committee.procedureRules)}`}
+            <ProcedureRulesSettings
+              initialRules={committee.procedureRules}
+              seats={wizard.procedureSeats(committee.id)}
+              vetoMode="seat"
+              onSave={(config) => wizard.setCommitteeProcedureRules(committee.id, config)}
+            />
+          {/key}
+        </Tabs.Content>
+      </Tabs.Root>
     </article>
   {/each}
 
