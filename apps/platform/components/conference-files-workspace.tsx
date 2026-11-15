@@ -16,6 +16,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   ConferenceApiError,
   downloadOrganizerFile,
   listOrganizerFiles,
@@ -204,19 +211,28 @@ export function ConferenceFilesWorkspace({
           >
             {t("platform_file_type")}
           </label>
-          <select
-            id="organizer-file-type"
+          <Select
             value={selectedType}
-            onChange={(event) => setSelectedType(event.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+            items={[
+              { value: "", label: t("platform_all_types") },
+              ...fileTypes.map((type) => ({ value: type, label: type })),
+            ]}
+            onValueChange={(next) => {
+              if (next !== null) setSelectedType(next)
+            }}
           >
-            <option value="">{t("platform_all_types")}</option>
-            {fileTypes.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger id="organizer-file-type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">{t("platform_all_types")}</SelectItem>
+              {fileTypes.map((type) => (
+                <SelectItem key={type} value={type}>
+                  {type}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button
             variant="outline"
             disabled={loading}

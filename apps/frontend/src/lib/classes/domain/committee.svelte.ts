@@ -28,7 +28,9 @@ import type {
   CaucusType,
   ProposerPosition,
   MajorityRule,
-  VoteTargetType
+  VoteTargetType,
+  RollCallNextPhase,
+  RollCallReason
 } from '$lib/classes/types/committee'
 import {
   isParticipantSeat,
@@ -58,7 +60,6 @@ import {
   cloneVotingSnapshot,
   evaluateVote
 } from '$lib/classes/utils/committee/procedure-rules'
-import { canTransition } from '$lib/classes/utils/committee/phase'
 import { calcMaxSpeakers } from '$lib/classes/utils/committee/caucus'
 
 // ---- 工具函数 ----------------------------------------------------------
@@ -287,7 +288,7 @@ export class Committee {
   activeCaucus: CommitteeDTO['activeCaucus'] = $state(null)
   yieldPending: YieldPendingState | null = $state(null)
   caucusSetup: CommitteeDTO['caucusSetup'] = $state(null)
-  postRollCallPhase: CommitteeDTO['postRollCallPhase'] = $state(undefined)
+  rollCallState: CommitteeDTO['rollCallState'] = $state(undefined)
   /** 主发言名单是否曾被填充过（用于判断清空后是否需要重新动议） */
   speakersListHasBeenPopulated: boolean = $state(false)
 
@@ -349,7 +350,10 @@ export class Committee {
               ...seat.procedure,
               hasVetoPower:
                 seat.procedure.hasVetoPower ??
-                Boolean(data.procedureRules?.veto.enabled && data.procedureRules.veto.seatIds.includes(seat.id))
+                Boolean(
+                  data.procedureRules?.veto.enabled &&
+                  data.procedureRules.veto.seatIds.includes(seat.id)
+                )
             }
           : undefined
       }))
@@ -409,8 +413,22 @@ export class Committee {
     if (data.activeSpeaker != null) this.activeSpeaker = data.activeSpeaker
     if (data.yieldPending != null) this.yieldPending = data.yieldPending
     if (data.caucusSetup != null) this.caucusSetup = data.caucusSetup
-    if (data.postRollCallPhase === 'pending_speakers_list' || data.postRollCallPhase === 'voting')
-      this.postRollCallPhase = data.postRollCallPhase
+    if (data.rollCallState) {
+      this.rollCallState = {
+        reason: data.rollCallState.reason,
+        nextPhase: data.rollCallState.nextPhase
+      }
+    } else if (
+      data.postRollCallPhase === 'pending_speakers_list' ||
+      data.postRollCallPhase === 'voting'
+    ) {
+      // Older snapshots only recorded the destination phase. Preserve that
+      // continuation while giving the restored state an explicit reason.
+      this.rollCallState = {
+        reason: data.postRollCallPhase === 'voting' ? 'before_voting' : 'initial',
+        nextPhase: data.postRollCallPhase
+      }
+    }
   }
 
   // ================================================================
@@ -444,6 +462,31 @@ export class Committee {
   // ================================================================
   //  点名
   // ================================================================
+
+  /**
+   * Start a fresh attendance confirmation and remember the valid next step.
+   * All entry points that need a new roll call use this method so an old
+   * attendance result cannot silently become the electorate for a later vote.
+   */
+  beginRollCall(reason: RollCallReason, nextPhase: RollCallNextPhase): void {
+    this.quorumRecord = undefined
+    this.rollCallState = { reason, nextPhase }
+    this.seats = this.seats.map((seat) =>
+      seat.procedure ? { ...seat, procedure: { ...seat.procedure, attendance: 'absent' } } : seat
+    )
+    this.phase = 'roll_call'
+    this.addConferenceEntry(
+      'phase_changed',
+      reason === 'before_voting'
+        ? message('domain_log_before_vote')
+        : message('domain_log_phase', { phase: 'roll_call' })
+    )
+    this.touch()
+  }
+
+  startInitialRollCall(): void {
+    this.beginRollCall('initial', 'pending_speakers_list')
+  }
 
   setAttendance(seatId: string, attendance: Attendance): void {
     this.seats = this.seats.map((seat) =>
@@ -490,8 +533,8 @@ export class Committee {
     const absentNames = absentSeats.map((seat) => seat.shortName ?? seat.name).join('、')
 
     const observerCount = presentCount - votingCount
-    const nextPhase = this.postRollCallPhase ?? 'pending_speakers_list'
-    this.postRollCallPhase = undefined
+    const nextPhase = this.rollCallState?.nextPhase ?? 'pending_speakers_list'
+    this.rollCallState = undefined
     this.addConferenceEntry(
       'roll_call_completed',
       message('domain_log_roll_call', {
@@ -518,14 +561,8 @@ export class Committee {
   }
 
   resetRollCall(): void {
-    this.quorumRecord = undefined
     this.addConferenceEntry('roll_call_reset', message('domain_log_roll_call_reset'))
-    this.addConferenceEntry('phase_changed', message('domain_log_phase', { phase: 'roll_call' }))
-    this.phase = 'roll_call'
-    this.seats = this.seats.map((seat) =>
-      seat.procedure ? { ...seat, procedure: { ...seat.procedure, attendance: 'absent' } } : seat
-    )
-    this.touch()
+    this.beginRollCall('manual_restart', this.rollCallState?.nextPhase ?? 'pending_speakers_list')
   }
 
   // ================================================================
@@ -838,6 +875,17 @@ export class Committee {
     const motion = this.motions.find((m) => m.id === motionId)
     if (!motion) return
 
+    if (motion.type === 'substantive_vote' && this.phase !== 'voting') {
+      console.warn('MotionApprovalRejected', {
+        operation: 'approveMotion',
+        committeeId: this.id,
+        motionId,
+        reason: 'substantive vote requires voting phase',
+        impact: 'motion remains pending'
+      })
+      return
+    }
+
     this.motions = this.motions.map((m) =>
       m.id === motionId ? { ...m, status: 'approved' as const } : m
     )
@@ -967,10 +1015,7 @@ export class Committee {
       this.activeCaucus = null
       this.addConferenceEntry('caucus_ended', message('domain_log_debate_ended'))
     }
-    this.phase = 'roll_call'
-    this.postRollCallPhase = 'voting'
-    this.addConferenceEntry('phase_changed', message('domain_log_before_vote'))
-    this.touch()
+    this.beginRollCall('before_voting', 'voting')
   }
 
   private executeSubstantiveVote(motion: Motion): void {
@@ -1459,6 +1504,7 @@ export class Committee {
     const kind =
       targetType === 'resolution' || motion?.type === 'substantive_vote' ? 'document' : 'procedural'
     if (
+      this.phase !== 'voting' ||
       !validateProcedureRules(this.procedureRules, this.participantSeats) ||
       !calculateQuorum(this.participantSeats, this.procedureRules.quorum).met ||
       this.votingSessions.some((session) => !session.endedAt)
@@ -1638,11 +1684,13 @@ export class Committee {
 
     let newMotions = this.motions
     let newPhase = this.phase
-    let newPostRollCallPhase = this.postRollCallPhase
+    let newRollCallState = this.rollCallState
     let newActiveSpeaker = this.activeSpeaker
     let newActiveCaucus = this.activeCaucus
     let newDefaultSpeakingTimeSec = this.defaultSpeakingTimeSec
     let newSpeakersList = this.speakerList.entries
+    let newSeats = this.seats
+    let newQuorumRecord = this.quorumRecord
 
     if (session.targetType === 'motion') {
       const motion = this.motions.find((m) => m.id === session.targetId)
@@ -1679,7 +1727,13 @@ export class Committee {
               )
             } else if (motion.type === 'closure_debate') {
               newPhase = 'roll_call'
-              newPostRollCallPhase = 'voting'
+              newRollCallState = { reason: 'before_voting', nextPhase: 'voting' }
+              newQuorumRecord = undefined
+              newSeats = this.seats.map((seat) =>
+                seat.procedure
+                  ? { ...seat, procedure: { ...seat.procedure, attendance: 'absent' } }
+                  : seat
+              )
               newActiveSpeaker = null
               newActiveCaucus = null
               this.addConferenceEntry('phase_changed', message('domain_log_before_vote'))
@@ -1747,11 +1801,13 @@ export class Committee {
     )
 
     this.phase = newPhase
-    this.postRollCallPhase = newPostRollCallPhase
+    this.rollCallState = newRollCallState
+    this.quorumRecord = newQuorumRecord
     this.activeSpeaker = newActiveSpeaker
     this.activeCaucus = newActiveCaucus
     this.defaultSpeakingTimeSec = newDefaultSpeakingTimeSec
     this.speakerList.entries = newSpeakersList
+    this.seats = newSeats
     this.votingSessions = this.votingSessions.map((s, i) =>
       i === sessionIdx ? { ...s, endedAt: now, result, evaluation } : s
     )
@@ -1810,13 +1866,12 @@ export class Committee {
   }
 
   resumeMeeting(): void {
-    this.phase = 'pending_speakers_list'
+    if (this.phase !== 'suspended' && this.phase !== 'closed') return
     this.addConferenceEntry('meeting_resumed', message('domain_log_resumed'))
-    this.addConferenceEntry(
-      'phase_changed',
-      message('domain_log_phase', { phase: 'pending_speakers_list' })
+    this.beginRollCall(
+      this.phase === 'suspended' ? 'resume_after_suspension' : 'manual_restart',
+      'pending_speakers_list'
     )
-    this.touch()
   }
 
   closeMeeting(): void {
@@ -1825,11 +1880,6 @@ export class Committee {
     this.activeCaucus = null
     this.addConferenceEntry('meeting_closed', message('domain_log_closed'))
     this.addConferenceEntry('phase_changed', message('domain_log_phase', { phase: 'closed' }))
-    this.touch()
-  }
-
-  setPhase(phase: ConferencePhase): void {
-    this.phase = phase
     this.touch()
   }
 
@@ -2002,7 +2052,7 @@ export class Committee {
           }
         : undefined,
       caucusSetup: this.caucusSetup,
-      postRollCallPhase: this.postRollCallPhase,
+      rollCallState: this.rollCallState,
       activeCaucus: this.activeCaucus
         ? {
             ...this.activeCaucus,

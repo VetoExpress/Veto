@@ -106,41 +106,50 @@ describe('Committee domain aggregate', () => {
       topic: 'Climate security'
     },
     { motionType: 'unmoderated_debate', caucusType: 'unmoderated_debate' }
-  ] as const)('starts $motionType as a countdown-only debate', ({ motionType, caucusType, ...params }) => {
-    const committee = new Committee({ phase: 'general_debate' })
-    const seatId = committee.addSeat('Delegate', 'group-1')
-    const motionId = committee.proposeMotion({
-      type: motionType,
-      proposedBySeatId: seatId,
-      durationSec: 600,
-      ...params
-    } as any)
+  ] as const)(
+    'starts $motionType as a countdown-only debate',
+    ({ motionType, caucusType, ...params }) => {
+      const committee = new Committee({ phase: 'general_debate' })
+      const seatId = committee.addSeat('Delegate', 'group-1')
+      const motionId = committee.proposeMotion({
+        type: motionType,
+        proposedBySeatId: seatId,
+        durationSec: 600,
+        ...params
+      } as any)
 
-    committee.approveMotion(motionId)
+      committee.approveMotion(motionId)
 
-    expect(committee.phase).toBe('caucus')
-    expect(committee.activeCaucus).toMatchObject({
-      motionId,
-      type: caucusType,
-      totalSec: 600,
-      elapsedSec: 0,
-      paused: false
-    })
-    expect(committee.activeCaucus?.caucusSpeakers).toBeUndefined()
-    if ('topic' in params) {
-      expect(committee.motions.at(-1)).toMatchObject({ topic: params.topic })
-      expect(committee.minutes.at(-2)?.description).toContain(params.topic)
+      expect(committee.phase).toBe('caucus')
+      expect(committee.activeCaucus).toMatchObject({
+        motionId,
+        type: caucusType,
+        totalSec: 600,
+        elapsedSec: 0,
+        paused: false
+      })
+      expect(committee.activeCaucus?.caucusSpeakers).toBeUndefined()
+      if ('topic' in params) {
+        expect(committee.motions.at(-1)).toMatchObject({ topic: params.topic })
+        expect(committee.minutes.at(-2)?.description).toContain(params.topic)
+      }
     }
-  })
+  )
 
   it('uses the configured majority for substantive voting and preserves it after reload', () => {
     const committee = new Committee({ phase: 'general_debate' })
     const seatIds = Array.from({ length: 5 }, (_, sortOrder) =>
-      committee.addSeat(`Delegate ${sortOrder}`, 'group-1', undefined, {}, {
-        attendance: 'present',
-        hasVotingRights: true,
-        sortOrder
-      })
+      committee.addSeat(
+        `Delegate ${sortOrder}`,
+        'group-1',
+        undefined,
+        {},
+        {
+          attendance: 'present',
+          hasVotingRights: true,
+          sortOrder
+        }
+      )
     )
 
     const legacyData = committee.toJSON()
@@ -155,6 +164,7 @@ describe('Committee domain aggregate', () => {
       proposedBySeatId: seatIds[0],
       documentName: 'Draft 1.1'
     } as any)
+    restored.phase = 'voting'
     restored.approveMotion(motionId)
 
     const session = restored.votingSessions.at(-1)!
@@ -166,6 +176,25 @@ describe('Committee domain aggregate', () => {
     expect(restored.votingSessions.at(-1)?.result).toBe('passed')
   })
 
+  it('keeps a substantive vote pending outside the voting phase', () => {
+    const committee = new Committee({ phase: 'general_debate' })
+    const seatId = committee.addSeat('Delegate', 'group-1', undefined, {}, {
+      attendance: 'present',
+      hasVotingRights: true,
+      sortOrder: 0
+    })
+    const motionId = committee.proposeMotion({
+      type: 'substantive_vote',
+      proposedBySeatId: seatId,
+      documentName: 'Draft 1.1'
+    } as any)
+
+    committee.approveMotion(motionId)
+
+    expect(committee.motions.at(-1)?.status).toBe('pending')
+    expect(committee.votingSessions).toHaveLength(0)
+  })
+
   it('resets a closed meeting to the motion-ready phase when resumed', () => {
     const committee = new Committee({ phase: 'general_debate' })
 
@@ -174,8 +203,45 @@ describe('Committee domain aggregate', () => {
 
     committee.resumeMeeting()
 
-    expect(committee.phase).toBe('pending_speakers_list')
+    expect(committee.phase).toBe('roll_call')
+    expect(committee.rollCallState).toEqual({
+      reason: 'manual_restart',
+      nextPhase: 'pending_speakers_list'
+    })
     expect(committee.minutes.at(-2)?.actionType).toBe('meeting_resumed')
-    expect(committee.minutes.at(-1)?.description).toBe('进入阶段: 等待开启主发言名单')
+    expect(committee.minutes.at(-1)?.description).toBe('进入阶段: 点名')
+  })
+
+  it('starts a fresh roll call before voting when debate is closed', () => {
+    const committee = new Committee({ phase: 'general_debate' })
+    const seatIds = Array.from({ length: 3 }, (_, sortOrder) =>
+      committee.addSeat(
+        `Delegate ${sortOrder}`,
+        'group-1',
+        undefined,
+        {},
+        {
+          attendance: 'present',
+          hasVotingRights: true,
+          sortOrder
+        }
+      )
+    )
+    const motionId = committee.proposeMotion({
+      type: 'closure_debate',
+      proposedBySeatId: seatIds[0]
+    })
+
+    committee.approveMotion(motionId)
+
+    expect(committee.phase).toBe('roll_call')
+    expect(committee.rollCallState).toEqual({ reason: 'before_voting', nextPhase: 'voting' })
+    expect(committee.participantSeats.every((seat) => seat.procedure.attendance === 'absent')).toBe(
+      true
+    )
+
+    seatIds.forEach((seatId) => committee.setAttendance(seatId, 'present'))
+    expect(committee.completeRollCall()).toBe(true)
+    expect(committee.phase).toBe('voting')
   })
 })

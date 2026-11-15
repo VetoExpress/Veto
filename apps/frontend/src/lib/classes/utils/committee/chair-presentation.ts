@@ -1,13 +1,16 @@
-import type { Committee } from '$lib/classes/types/committee'
+import type { Committee, RollCallReason } from '$lib/classes/types/committee'
 import type { ParticipantSeat } from '$lib/classes/types/delegate'
 import { PHASE_LABELS } from './phase'
 import { t } from '$lib/i18n'
 
-type ChairCommitteeState = Pick<Committee, 'phase' | 'activeSpeaker' | 'activeCaucus'>
+type ChairCommitteeState = Pick<
+  Committee,
+  'phase' | 'activeSpeaker' | 'activeCaucus' | 'rollCallState'
+>
 
 export type ChairScreen =
   | { kind: 'preamble' }
-  | { kind: 'roll_call' }
+  | { kind: 'roll_call'; reason: RollCallReason }
   | { kind: 'pending_speakers_list' }
   | { kind: 'general_debate' }
   | { kind: 'caucus_setup' }
@@ -71,7 +74,7 @@ function getChairScreen(committee: ChairCommitteeState): ChairScreen {
     case 'preamble':
       return { kind: 'preamble' }
     case 'roll_call':
-      return { kind: 'roll_call' }
+      return { kind: 'roll_call', reason: committee.rollCallState?.reason ?? 'initial' }
     case 'pending_speakers_list':
       return { kind: 'pending_speakers_list' }
     case 'general_debate':

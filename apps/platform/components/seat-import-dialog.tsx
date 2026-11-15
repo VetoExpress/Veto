@@ -15,6 +15,13 @@ import {
 
 import { Button } from "@/components/ui/button"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -315,21 +322,32 @@ export function SeatImportDialog({
                   {t("platform_sheet_header_hint")}
                 </DialogDescription>
               </DialogHeader>
-              <select
-                className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              <Select
                 value={selectedSheet}
-                aria-label={t("platform_worksheet")}
-                onChange={(event) => {
-                  setSelectedSheet(event.target.value)
+                items={workbook?.sheetNames.map((sheet) => ({
+                  value: sheet,
+                  label: sheet,
+                }))}
+                onValueChange={(next) => {
+                  if (next === null) return
+                  setSelectedSheet(next)
                   setError("")
                 }}
               >
-                {workbook?.sheetNames.map((sheet) => (
-                  <option key={sheet} value={sheet}>
-                    {sheet}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger
+                  className="h-9 w-full"
+                  aria-label={t("platform_worksheet")}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {workbook?.sheetNames.map((sheet) => (
+                    <SelectItem key={sheet} value={sheet}>
+                      {sheet}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               {error ? (
                 <p role="alert" className="text-sm text-destructive">
                   {error.startsWith("platform_") ? t(error) : error}

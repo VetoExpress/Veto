@@ -230,9 +230,6 @@ export default function NewConferencePage() {
   const [collapsedCommittees, setCollapsedCommittees] = useState<
     Record<string, boolean>
   >({})
-  const [committeeTabs, setCommitteeTabs] = useState<
-    Record<string, "details" | "rules">
-  >({})
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [organizer, setOrganizer] = useState("")
@@ -746,56 +743,17 @@ export default function NewConferencePage() {
                             </Button>
                           </div>
                         </div>
-                        <div className="mt-4 flex gap-1 border-b">
-                          <button
-                            type="button"
-                            className={cn(
-                              "border-b-2 px-3 py-2 text-sm",
-                              (committeeTabs[reference] ?? "details") ===
-                                "details"
-                                ? "border-primary font-medium"
-                                : "border-transparent text-muted-foreground"
-                            )}
-                            onClick={() =>
-                              setCommitteeTabs((current) => ({
-                                ...current,
-                                [reference]: "details",
-                              }))
+                        <div className="mt-4">
+                          <CommitteeProcedureRules
+                            value={committee.procedureRules}
+                            disabled={isSaving}
+                            onChange={(procedureRules) =>
+                              updateCommittee(committeeIndex, {
+                                procedureRules,
+                              })
                             }
-                          >
-                            {t("platform_meeting_details")}
-                          </button>
-                          <button
-                            type="button"
-                            className={cn(
-                              "border-b-2 px-3 py-2 text-sm",
-                              committeeTabs[reference] === "rules"
-                                ? "border-primary font-medium"
-                                : "border-transparent text-muted-foreground"
-                            )}
-                            onClick={() =>
-                              setCommitteeTabs((current) => ({
-                                ...current,
-                                [reference]: "rules",
-                              }))
-                            }
-                          >
-                            {t("platform_procedure_rules")}
-                          </button>
+                          />
                         </div>
-                        {committeeTabs[reference] === "rules" ? (
-                          <div className="mt-4">
-                            <CommitteeProcedureRules
-                              value={committee.procedureRules}
-                              disabled={isSaving}
-                              onChange={(procedureRules) =>
-                                updateCommittee(committeeIndex, {
-                                  procedureRules,
-                                })
-                              }
-                            />
-                          </div>
-                        ) : null}
                       </article>
                     )
                   })}

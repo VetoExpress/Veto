@@ -26,11 +26,11 @@ function committee(n = 5) {
 describe('committee rule integration', () => {
   it('blocks quorum failure, retains pending vote transition, and permits later completion', () => {
     const { c, ids } = committee()
-    c.postRollCallPhase = 'voting'
+    c.rollCallState = { reason: 'before_voting', nextPhase: 'voting' }
     ids.slice(2).forEach((id) => c.setAttendance(id, 'absent'))
     expect(c.completeRollCall()).toBe(false)
     expect(c.phase).toBe('roll_call')
-    expect(c.postRollCallPhase).toBe('voting')
+    expect(c.rollCallState).toEqual({ reason: 'before_voting', nextPhase: 'voting' })
     expect(c.quorumRecord?.evaluation).toMatchObject({ required: 3, present: 2, met: false })
     c.setAttendance(ids[2], 'present')
     expect(c.completeRollCall()).toBe(true)
@@ -60,6 +60,7 @@ describe('committee rule integration', () => {
 
   it('freezes rules, names, electorate and vetoes across edits and restart', () => {
     const { c, ids } = committee()
+    c.phase = 'voting'
     const rules = defaultProcedureRules()
     rules.documentVote.denominator = 'yes_no'
     rules.veto = { enabled: true, seatIds: [ids[4]] }
@@ -113,6 +114,7 @@ describe('committee rule integration', () => {
 
   it('preserves legacy majority configuration and completed outcomes', () => {
     const { c } = committee()
+    c.phase = 'voting'
     const data = c.toJSON()
     delete data.procedureRules
     data.substantiveVotingMajority = 'simple_majority'
@@ -141,6 +143,7 @@ describe('committee rule integration', () => {
     expect(empty.startVotingSession('resolution', 'draft', 'two_thirds')).toBe('')
     expect(empty.votingSessions).toHaveLength(0)
     const { c } = committee()
+    c.phase = 'voting'
     expect(c.startVotingSession('resolution', 'first', 'two_thirds')).not.toBe('')
     expect(c.startVotingSession('resolution', 'second', 'two_thirds')).toBe('')
     expect(c.votingSessions).toHaveLength(1)

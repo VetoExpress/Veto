@@ -10,6 +10,7 @@
   import CaucusCountdownView from '$lib/components/conference/speakers/caucus-countdown-view.svelte'
   import VotingView from '$lib/components/conference/voting/voting-view.svelte'
   import type { ChairScreen } from '$lib/classes/utils/committee/chair-presentation'
+  import type { RollCallReason } from '$lib/classes/types/committee'
 
   let {
     screen,
@@ -18,27 +19,56 @@
     screen: ChairScreen
     onStartRollCall: () => void
   } = $props()
+
+  function rollCallSubtitle(reason: RollCallReason): string {
+    switch (reason) {
+      case 'resume_after_suspension':
+        return t('procedure_roll_call_resume_after_suspension')
+      case 'before_voting':
+        return t('procedure_roll_call_before_voting')
+      case 'manual_restart':
+        return t('procedure_roll_call_manual_restart')
+      default:
+        return t('procedure_roll_call_is_open_on_a_separate_page')
+    }
+  }
+
+  function rollCallAction(reason: RollCallReason): string {
+    return reason === 'initial'
+      ? t('procedure_open_roll_call')
+      : t('procedure_start_roll_call_again')
+  }
 </script>
 
 <div class="flex min-h-0 flex-1 overflow-hidden p-6">
   {#if screen.kind === 'preamble'}
-    <PlaceholderPage title={t('procedure_preparation')} subtitle={t('procedure_all_participants_are_ready_start_roll_call')} icon={Users}>
+    <PlaceholderPage
+      title={t('procedure_preparation')}
+      subtitle={t('procedure_all_participants_are_ready_start_roll_call')}
+      icon={Users}
+    >
       <Button size="lg" class="gap-2 bg-indigo-600 hover:bg-indigo-700" onclick={onStartRollCall}>
         <Play size={18} />
         {t('procedure_start_roll_call')}
       </Button>
     </PlaceholderPage>
   {:else if screen.kind === 'roll_call'}
-    <PlaceholderPage title={t('procedure_roll_call_in_progress')} subtitle={t('procedure_roll_call_is_open_on_a_separate_page')} icon={Users}>
+    <PlaceholderPage
+      title={t('procedure_roll_call_in_progress')}
+      subtitle={rollCallSubtitle(screen.reason)}
+      icon={Users}
+    >
       <Button size="lg" class="gap-2 bg-indigo-600 hover:bg-indigo-700" onclick={onStartRollCall}>
         <Play size={18} />
-        {t('procedure_open_roll_call')}
+        {rollCallAction(screen.reason)}
       </Button>
     </PlaceholderPage>
   {:else if screen.kind === 'pending_speakers_list'}
     <PlaceholderPage
       title={t('procedure_waiting_to_open_the_speakers_list')}
-      subtitle={t('procedure_roll_call_is_complete_a_delegate_must_move_to_open_the_speakers_list_to_begin_general_')}
+      subtitle={t(
+        'procedure_roll_call_is_complete_a_delegate_must_move_to_open_the_speakers_list_to_begin_general_'
+      )}
       icon={Users}
     />
   {:else if screen.kind === 'general_debate'}
@@ -62,10 +92,22 @@
       <VotingView />
     </ScrollArea>
   {:else if screen.kind === 'suspended'}
-    <PlaceholderPage title={t('procedure_meeting_suspended')} subtitle={t('procedure_select_resume_meeting_to_continue')} icon={Gavel} />
+    <PlaceholderPage
+      title={t('procedure_meeting_suspended')}
+      subtitle={t('procedure_select_resume_meeting_to_continue')}
+      icon={Gavel}
+    />
   {:else if screen.kind === 'closed'}
-    <PlaceholderPage title={t('procedure_meeting_closed')} subtitle={t('procedure_select_resume_meeting_to_reset_the_procedure')} icon={Gavel} />
+    <PlaceholderPage
+      title={t('procedure_meeting_closed')}
+      subtitle={t('procedure_select_resume_meeting_to_reset_the_procedure')}
+      icon={Gavel}
+    />
   {:else}
-    <PlaceholderPage title={t('procedure_invalid_meeting_state')} subtitle={screen.message} icon={AlertTriangle} />
+    <PlaceholderPage
+      title={t('procedure_invalid_meeting_state')}
+      subtitle={screen.message}
+      icon={AlertTriangle}
+    />
   {/if}
 </div>

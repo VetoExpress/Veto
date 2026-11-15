@@ -147,6 +147,7 @@ describe('committee localization', () => {
   it('projects machine voting enums and locale without changing timers or procedure state', () => {
     vi.useFakeTimers()
     const committee = new Committee({ phase: 'general_debate' })
+    committee.phase = 'voting'
     committee.addSeat(
       '中国',
       'group',

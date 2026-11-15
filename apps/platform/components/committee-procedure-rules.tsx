@@ -1,6 +1,15 @@
 "use client"
 
+import { useId } from "react"
 import { usePlatformTranslations } from "@/components/i18n-provider"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import type {
   ProcedureRulesInput,
   ProcedureThresholdInput,
@@ -12,8 +21,49 @@ interface CommitteeProcedureRulesProps {
   onChange: (value: ProcedureRulesInput) => void
 }
 
-const selectClassName =
+const inputClassName =
   "h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+
+function RuleSelect<Value extends string>({
+  label,
+  value,
+  items,
+  disabled,
+  onValueChange,
+}: {
+  label: string
+  value: Value
+  items: { value: Value; label: string }[]
+  disabled: boolean
+  onValueChange: (value: Value) => void
+}) {
+  const id = useId()
+
+  return (
+    <div className="flex min-w-0 flex-col gap-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      <Select
+        value={value}
+        items={items}
+        disabled={disabled}
+        onValueChange={(next) => {
+          if (next !== null) onValueChange(next)
+        }}
+      >
+        <SelectTrigger id={id} className="h-9 w-full min-w-0">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {items.map((item) => (
+            <SelectItem key={item.value} value={item.value}>
+              {item.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  )
+}
 
 function thresholdValue(value: ProcedureThresholdInput): string {
   return value.type === "fixed" ? "fixed" : value.type
@@ -60,47 +110,41 @@ export function CommitteeProcedureRules({
         <legend className="px-1 text-sm font-semibold">
           {t("platform_rules_quorum")}
         </legend>
-        <label className="flex flex-col gap-1.5 text-sm">
-          {t("platform_rules_denominator")}
-          <select
-            className={selectClassName}
-            disabled={disabled}
-            value={value.quorum.denominator}
-            onChange={(event) =>
-              patchQuorum({
-                denominator: event.target
-                  .value as ProcedureRulesInput["quorum"]["denominator"],
-              })
-            }
-          >
-            <option value="all_participants">
-              {t("platform_rules_all_participants")}
-            </option>
-            <option value="voting_eligible">
-              {t("platform_rules_voting_eligible")}
-            </option>
-          </select>
-        </label>
-        <label className="flex flex-col gap-1.5 text-sm">
-          {t("platform_rules_threshold")}
-          <select
-            className={selectClassName}
-            disabled={disabled}
-            value={thresholdValue(value.quorum.threshold)}
-            onChange={(event) =>
-              patchQuorum({ threshold: thresholdFromValue(event.target.value) })
-            }
-          >
-            <option value="simple_majority">
-              {t("platform_rules_simple_majority")}
-            </option>
-            <option value="two_thirds">{t("platform_rules_two_thirds")}</option>
-            <option value="fixed">{t("platform_rules_fixed")}</option>
-          </select>
-        </label>
+        <RuleSelect
+          label={t("platform_rules_denominator")}
+          disabled={disabled}
+          value={value.quorum.denominator}
+          items={[
+            {
+              value: "all_participants",
+              label: t("platform_rules_all_participants"),
+            },
+            {
+              value: "voting_eligible",
+              label: t("platform_rules_voting_eligible"),
+            },
+          ]}
+          onValueChange={(denominator) => patchQuorum({ denominator })}
+        />
+        <RuleSelect
+          label={t("platform_rules_threshold")}
+          disabled={disabled}
+          value={thresholdValue(value.quorum.threshold)}
+          items={[
+            {
+              value: "simple_majority",
+              label: t("platform_rules_simple_majority"),
+            },
+            { value: "two_thirds", label: t("platform_rules_two_thirds") },
+            { value: "fixed", label: t("platform_rules_fixed") },
+          ]}
+          onValueChange={(next) =>
+            patchQuorum({ threshold: thresholdFromValue(next) })
+          }
+        />
         {value.quorum.threshold.type === "fixed" ? (
           <input
-            className={selectClassName}
+            className={inputClassName}
             type="number"
             min={1}
             step={1}
@@ -123,59 +167,48 @@ export function CommitteeProcedureRules({
         <legend className="px-1 text-sm font-semibold">
           {t("platform_rules_procedural")}
         </legend>
-        <label className="flex flex-col gap-1.5 text-sm">
-          {t("platform_rules_denominator")}
-          <select
-            className={selectClassName}
-            disabled={disabled}
-            value={value.proceduralVote.denominator}
-            onChange={(event) =>
-              patchProcedural({
-                denominator: event.target
-                  .value as ProcedureRulesInput["proceduralVote"]["denominator"],
-              })
-            }
-          >
-            <option value="present_participants">
-              {t("platform_rules_present_participants")}
-            </option>
-            <option value="present_voting_eligible">
-              {t("platform_rules_present_voting_eligible")}
-            </option>
-          </select>
-        </label>
-        <label className="flex flex-col gap-1.5 text-sm">
-          {t("platform_rules_threshold")}
-          <select
-            className={selectClassName}
-            disabled={disabled}
-            value={
-              value.proceduralVote.threshold
-                ? thresholdValue(value.proceduralVote.threshold)
-                : "default"
-            }
-            onChange={(event) =>
-              patchProcedural({
-                threshold:
-                  event.target.value === "default"
-                    ? null
-                    : thresholdFromValue(event.target.value),
-              })
-            }
-          >
-            <option value="default">
-              {t("platform_rules_motion_defaults")}
-            </option>
-            <option value="simple_majority">
-              {t("platform_rules_simple_majority")}
-            </option>
-            <option value="two_thirds">{t("platform_rules_two_thirds")}</option>
-            <option value="fixed">{t("platform_rules_fixed")}</option>
-          </select>
-        </label>
+        <RuleSelect
+          label={t("platform_rules_denominator")}
+          disabled={disabled}
+          value={value.proceduralVote.denominator}
+          items={[
+            {
+              value: "present_participants",
+              label: t("platform_rules_present_participants"),
+            },
+            {
+              value: "present_voting_eligible",
+              label: t("platform_rules_present_voting_eligible"),
+            },
+          ]}
+          onValueChange={(denominator) => patchProcedural({ denominator })}
+        />
+        <RuleSelect
+          label={t("platform_rules_threshold")}
+          disabled={disabled}
+          value={
+            value.proceduralVote.threshold
+              ? thresholdValue(value.proceduralVote.threshold)
+              : "default"
+          }
+          items={[
+            { value: "default", label: t("platform_rules_motion_defaults") },
+            {
+              value: "simple_majority",
+              label: t("platform_rules_simple_majority"),
+            },
+            { value: "two_thirds", label: t("platform_rules_two_thirds") },
+            { value: "fixed", label: t("platform_rules_fixed") },
+          ]}
+          onValueChange={(next) =>
+            patchProcedural({
+              threshold: next === "default" ? null : thresholdFromValue(next),
+            })
+          }
+        />
         {value.proceduralVote.threshold?.type === "fixed" ? (
           <input
-            className={selectClassName}
+            className={inputClassName}
             type="number"
             min={1}
             step={1}
@@ -198,44 +231,32 @@ export function CommitteeProcedureRules({
         <legend className="px-1 text-sm font-semibold">
           {t("platform_rules_document")}
         </legend>
-        <label className="flex flex-col gap-1.5 text-sm">
-          {t("platform_rules_denominator")}
-          <select
-            className={selectClassName}
-            disabled={disabled}
-            value={value.documentVote.denominator}
-            onChange={(event) =>
-              patchDocument({
-                denominator: event.target
-                  .value as ProcedureRulesInput["documentVote"]["denominator"],
-              })
-            }
-          >
-            <option value="present_voting_eligible">
-              {t("platform_rules_present_voting_eligible")}
-            </option>
-            <option value="yes_no">{t("platform_rules_yes_no")}</option>
-          </select>
-        </label>
-        <label className="flex flex-col gap-1.5 text-sm">
-          {t("platform_rules_threshold")}
-          <select
-            className={selectClassName}
-            disabled={disabled}
-            value={value.documentVote.ratio}
-            onChange={(event) =>
-              patchDocument({
-                ratio: event.target
-                  .value as ProcedureRulesInput["documentVote"]["ratio"],
-              })
-            }
-          >
-            <option value="simple_majority">
-              {t("platform_rules_simple_majority")}
-            </option>
-            <option value="two_thirds">{t("platform_rules_two_thirds")}</option>
-          </select>
-        </label>
+        <RuleSelect
+          label={t("platform_rules_denominator")}
+          disabled={disabled}
+          value={value.documentVote.denominator}
+          items={[
+            {
+              value: "present_voting_eligible",
+              label: t("platform_rules_present_voting_eligible"),
+            },
+            { value: "yes_no", label: t("platform_rules_yes_no") },
+          ]}
+          onValueChange={(denominator) => patchDocument({ denominator })}
+        />
+        <RuleSelect
+          label={t("platform_rules_threshold")}
+          disabled={disabled}
+          value={value.documentVote.ratio}
+          items={[
+            {
+              value: "simple_majority",
+              label: t("platform_rules_simple_majority"),
+            },
+            { value: "two_thirds", label: t("platform_rules_two_thirds") },
+          ]}
+          onValueChange={(ratio) => patchDocument({ ratio })}
+        />
         <p className="text-xs leading-5 text-muted-foreground">
           {t("platform_rules_veto_from_seats")}
         </p>

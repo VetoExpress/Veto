@@ -27,6 +27,16 @@ export type ConferencePhase =
   | 'suspended'
   | 'closed'
 
+export type RollCallNextPhase = 'pending_speakers_list' | 'voting'
+
+export type RollCallReason =
+  'initial' | 'resume_after_suspension' | 'before_voting' | 'manual_restart'
+
+export interface RollCallState {
+  reason: RollCallReason
+  nextPhase: RollCallNextPhase
+}
+
 export interface AgendaItem {
   id: string
   title: string
@@ -312,7 +322,9 @@ export interface Committee {
     remainingSec?: number
   } | null
   /** 点名完成后的目标阶段；辩论结束触发的投票前点名设为 voting。 */
-  postRollCallPhase?: 'pending_speakers_list' | 'voting'
+  rollCallState?: RollCallState
+  /** @deprecated 旧存档字段；读取时迁移到 rollCallState。 */
+  postRollCallPhase?: RollCallNextPhase
   activeCaucus?: {
     motionId: string
     type: CaucusType

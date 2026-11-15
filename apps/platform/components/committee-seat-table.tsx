@@ -8,6 +8,13 @@ import { Check, Copy, Pencil, Trash2, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import type {
   CommitteeType,
   RoleTemplateInput,
@@ -17,9 +24,6 @@ import {
   roleAllowedInCommittee,
   roleReference,
 } from "@/lib/conference-structure"
-
-const selectClassName =
-  "h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
 
 interface CommitteeSeatTableProps {
   seats: SeatInput[]
@@ -97,7 +101,7 @@ export function CommitteeSeatTable({
   }
 
   function handleEditorKeyDown(
-    event: KeyboardEvent<HTMLInputElement | HTMLSelectElement>,
+    event: KeyboardEvent<HTMLInputElement>,
     index: number
   ): void {
     if (event.key === "Enter") {
@@ -222,24 +226,40 @@ export function CommitteeSeatTable({
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">
                   {isEditing ? (
-                    <select
+                    <Select
                       value={editRole}
                       disabled={disabled}
-                      className={selectClassName}
-                      aria-label={t("platform_seat_role")}
-                      onChange={(event) => setEditRole(event.target.value)}
-                      onKeyDown={(event) => handleEditorKeyDown(event, index)}
+                      items={[
+                        { value: "", label: t("platform_select_role") },
+                        ...allowedRoles.map((allowedRole) => ({
+                          value: roleReference(allowedRole),
+                          label: allowedRole.name || t("platform_unnamed_role"),
+                        })),
+                      ]}
+                      onValueChange={(next) => {
+                        if (next !== null) setEditRole(next)
+                      }}
                     >
-                      <option value="">{t("platform_select_role")}</option>
-                      {allowedRoles.map((allowedRole) => (
-                        <option
-                          key={roleReference(allowedRole)}
-                          value={roleReference(allowedRole)}
-                        >
-                          {allowedRole.name || t("platform_unnamed_role")}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger
+                        className="h-9 w-full"
+                        aria-label={t("platform_seat_role")}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">
+                          {t("platform_select_role")}
+                        </SelectItem>
+                        {allowedRoles.map((allowedRole) => (
+                          <SelectItem
+                            key={roleReference(allowedRole)}
+                            value={roleReference(allowedRole)}
+                          >
+                            {allowedRole.name || t("platform_unnamed_role")}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   ) : (
                     role?.name || t("platform_not_selected")
                   )}

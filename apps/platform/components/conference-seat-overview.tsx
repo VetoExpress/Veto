@@ -152,6 +152,11 @@ export function ConferenceSeatOverview({
       ])
     ),
   }
+  const claimFilterItems = {
+    all: t("platform_all_statuses"),
+    unclaimed: t("platform_unclaimed"),
+    claimed: t("platform_claimed"),
+  }
 
   const normalizedQuery = query.trim().toLowerCase()
   const filteredRows =
@@ -250,20 +255,30 @@ export function ConferenceSeatOverview({
         </p>
       )}
       <div className="flex flex-wrap items-center gap-3">
-        <label className="text-sm">
-          {t("platform_claim_status")}
-          <select
-            aria-label={t("platform_claim_status")}
-            className="rounded-md border bg-background p-2"
+        <div className="flex items-center gap-2 text-sm">
+          <label htmlFor="seat-claim-status">
+            {t("platform_claim_status")}
+          </label>
+          <Select
             value={claimFilter}
-            onChange={(event) => setClaimFilter(event.target.value)}
+            items={claimFilterItems}
+            onValueChange={(next) => {
+              if (next !== null) setClaimFilter(next)
+            }}
             disabled={!loaded}
           >
-            <option value="all">{t("platform_all_statuses")}</option>
-            <option value="unclaimed">{t("platform_unclaimed")}</option>
-            <option value="claimed">{t("platform_claimed")}</option>
-          </select>
-        </label>
+            <SelectTrigger id="seat-claim-status">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(claimFilterItems).map(([status, label]) => (
+                <SelectItem key={status} value={status}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <Button
           variant="outline"
           size="sm"

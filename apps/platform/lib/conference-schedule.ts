@@ -5,12 +5,15 @@ export const FILE_RETENTION_MS = 72 * 60 * 60 * 1000
 // The editor uses an explicit UTC+8 timezone, independent of the device timezone.
 export function scheduleInput(value?: string | null): string {
   return value
-    ? new Date(Date.parse(value) + 8 * 3600_000).toISOString().slice(0, 23)
+    ? new Date(Date.parse(value) + 8 * 3600_000).toISOString().slice(0, 16)
     : ""
 }
 
 export function scheduleInstant(value: string): string | null {
-  return value ? new Date(`${value}+08:00`).toISOString() : null
+  if (!value) return null
+  const instant = new Date(`${value}+08:00`)
+  instant.setUTCSeconds(0, 0)
+  return instant.toISOString()
 }
 
 export function scheduleError(
@@ -28,7 +31,9 @@ export function scheduleError(
     (b !== null && !Number.isFinite(b))
   )
     return message("platform_invalid_schedule")
-  return a !== null && b !== null && b <= a
+  return a !== null &&
+    b !== null &&
+    Math.floor(b / 60_000) <= Math.floor(a / 60_000)
     ? message("platform_end_after_start")
     : ""
 }
@@ -46,7 +51,6 @@ export function formatSchedule(
       day: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
-      second: "2-digit",
       hour12: false,
     }).format(new Date(value)) + (locale === "zh-CN" ? "（UTC+8）" : " (UTC+8)")
   )

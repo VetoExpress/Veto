@@ -257,8 +257,6 @@
   "platform_seat_role": "Seat role",
   "platform_not_selected": "Not selected",
   "platform_has_voting_rights": "Can vote",
-  "platform_meeting_details": "Meeting details",
-  "platform_procedure_rules": "Procedure rules",
   "platform_rules_quorum": "Quorum",
   "platform_rules_procedural": "Procedural votes",
   "platform_rules_document": "Document votes",

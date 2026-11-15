@@ -8,7 +8,7 @@
 
   import {
     currentCommittee,
-    setPhase,
+    startInitialRollCall,
     resumeMeeting
   } from '$lib/classes/stores/conference/conference-store'
   import {
@@ -51,14 +51,20 @@
   let pointDialogOpen = $state(false)
   let logDialogOpen = $state(false)
 
-  function startRollCall(): void {
+  function openRollCall(): void {
     if (!conf) return
 
-    setPhase('roll_call')
+    if (conf.phase === 'preamble') startInitialRollCall()
 
     const route =
       `/client/${conferenceId}/committee/${committeeId}/chair/roll-call` as `/client/${string}/committee/${string}/chair/roll-call`
     goto(resolve(route))
+  }
+
+  function resumeAndStartRollCall(): void {
+    if (!conf) return
+    resumeMeeting()
+    openRollCall()
   }
 
   function handlePrimaryAction(): void {
@@ -145,9 +151,14 @@
         {/if}
 
         {#if presentation.canResumeMeeting}
-          <Button size="sm" variant="outline" class="h-8 gap-1.5 text-xs" onclick={resumeMeeting}>
+          <Button
+            size="sm"
+            variant="outline"
+            class="h-8 gap-1.5 text-xs"
+            onclick={resumeAndStartRollCall}
+          >
             <Play size={12} />
-            {t('procedure_resume_meeting')}
+            {t('procedure_resume_and_start_roll_call')}
           </Button>
         {/if}
       {/snippet}
@@ -187,7 +198,7 @@
       </div>
     </dl>
 
-    <ChairPhaseView screen={presentation.screen} onStartRollCall={startRollCall} />
+    <ChairPhaseView screen={presentation.screen} onStartRollCall={openRollCall} />
 
     <!-- Motion Dialog -->
     {#key motionDialogOpen}

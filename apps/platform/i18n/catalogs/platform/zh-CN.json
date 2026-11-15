@@ -257,8 +257,6 @@
   "platform_seat_role": "席位角色",
   "platform_not_selected": "未选择",
   "platform_has_voting_rights": "有投票权",
-  "platform_meeting_details": "会场信息",
-  "platform_procedure_rules": "议事规则",
   "platform_rules_quorum": "法定人数",
   "platform_rules_procedural": "程序性表决",
   "platform_rules_document": "文件表决",

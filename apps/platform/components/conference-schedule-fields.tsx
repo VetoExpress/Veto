@@ -47,7 +47,7 @@ export function ConferenceScheduleFields({
       <Input
         id="conference-starts-at"
         type="datetime-local"
-        step="0.001"
+        step="60"
         value={startsAt}
         required
         aria-invalid={!startsAt || (Boolean(error) && Boolean(endsAt))}
@@ -61,7 +61,7 @@ export function ConferenceScheduleFields({
       <Input
         id="conference-ends-at"
         type="datetime-local"
-        step="0.001"
+        step="60"
         value={endsAt}
         required
         aria-invalid={Boolean(error)}

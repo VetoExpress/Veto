@@ -497,11 +497,11 @@ export function setSeatVotingRights(seatId: string, hasVotingRights: boolean): v
   const seat = engine.getSeat(seatId)
   if (!seat?.procedure) return
   engine.updateSeat(seatId, {
-      procedure: {
-        ...seat.procedure,
-        hasVotingRights,
-        hasVetoPower: hasVotingRights ? seat.procedure.hasVetoPower : false
-      }
+    procedure: {
+      ...seat.procedure,
+      hasVotingRights,
+      hasVetoPower: hasVotingRights ? seat.procedure.hasVetoPower : false
+    }
   })
   const vetoSeatIds = engine.participantSeats
     .filter((item) => item.procedure.hasVetoPower)
@@ -538,6 +538,13 @@ export function completeRollCall(): boolean {
   const completed = engine.completeRollCall()
   syncEngine(engine)
   return completed
+}
+
+export function startInitialRollCall(): void {
+  const engine = getCurrentEngine()
+  if (!engine) return
+  engine.startInitialRollCall()
+  syncEngine(engine)
 }
 
 export function resetRollCall(): void {
@@ -873,13 +880,6 @@ export function closeMeeting(): void {
   const engine = getCurrentEngine()
   if (!engine) return
   engine.closeMeeting()
-  syncEngine(engine)
-}
-
-export function setPhase(phase: ConferencePhase): void {
-  const engine = getCurrentEngine()
-  if (!engine) return
-  engine.setPhase(phase)
   syncEngine(engine)
 }
 

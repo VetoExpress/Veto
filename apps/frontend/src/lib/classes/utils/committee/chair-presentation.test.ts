@@ -3,12 +3,15 @@ import type { Committee } from '$lib/classes/types/committee'
 import { getChairPresentation, getChairRosterEntries } from './chair-presentation'
 
 function committeeState(
-  overrides: Partial<Pick<Committee, 'phase' | 'activeSpeaker' | 'activeCaucus'>> = {}
-): Pick<Committee, 'phase' | 'activeSpeaker' | 'activeCaucus'> {
+  overrides: Partial<
+    Pick<Committee, 'phase' | 'activeSpeaker' | 'activeCaucus' | 'rollCallState'>
+  > = {}
+): Pick<Committee, 'phase' | 'activeSpeaker' | 'activeCaucus' | 'rollCallState'> {
   return {
     phase: 'general_debate',
     activeSpeaker: null,
     activeCaucus: null,
+    rollCallState: undefined,
     ...overrides
   }
 }
