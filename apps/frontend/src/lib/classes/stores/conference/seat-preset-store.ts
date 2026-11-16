@@ -2,7 +2,7 @@
  * seat-preset-store.ts
  * ──────────────────────────────────────────────
  * 席位预设 Store — 从所有已安装插件中收集参会席位预设，
- * 供创建大会对话框使用。
+ * 供创建大会流程使用。
  */
 
 import { writable, get } from 'svelte/store'

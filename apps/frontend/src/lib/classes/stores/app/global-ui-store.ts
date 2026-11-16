@@ -4,8 +4,6 @@ export const settingsDialogOpen = writable(false)
 
 export const joinConferenceDialogOpen = writable(false)
 
-export const createConferenceDialogOpen = writable(false)
-
 export const alertDialogStore = writable<{
   open: boolean
   title: string

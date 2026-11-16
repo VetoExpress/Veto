@@ -30,57 +30,61 @@
 
   {#each wizard.committees as committee (committee.id)}
     {@const showNameError = wizard.attempted && committee.name.trim().length === 0}
-    <article class="rounded-lg border p-4">
-      <div
-        class={isSingleton
-          ? 'grid items-start gap-y-3'
-          : 'grid items-start gap-x-4 gap-y-3 md:grid-cols-[minmax(0,1fr)_11rem_auto]'}
-      >
-        <Field.Field data-invalid={showNameError}>
-          <Field.FieldLabel for={`committee-name-${committee.id}`}>{t('procedure_committee_name')}</Field.FieldLabel>
-          <Input
-            id={`committee-name-${committee.id}`}
-            bind:value={committee.name}
-            aria-invalid={showNameError || undefined}
-            aria-describedby={showNameError ? `committee-name-error-${committee.id}` : undefined}
-          />
-          {#if showNameError}
-            <Field.FieldError id={`committee-name-error-${committee.id}`}>
-              {t('procedure_committee_name_is_required')}
-            </Field.FieldError>
-          {/if}
-        </Field.Field>
-
-        {#if !isSingleton}
-          <Field.Field>
-            <Field.FieldLabel for={`committee-type-${committee.id}`}>{t('procedure_type')}</Field.FieldLabel>
-            <Select.Select type="single" bind:value={committee.type}>
-              <Select.SelectTrigger id={`committee-type-${committee.id}`} class="w-full">
-                {typeLabels[committee.type]}
-              </Select.SelectTrigger>
-              <Select.SelectContent>
-                <Select.SelectItem value="cabinet" label={t('procedure_cabinet')} />
-                <Select.SelectItem value="mpc" label="MPC" />
-                <Select.SelectItem value="ipc" label="IPC" />
-              </Select.SelectContent>
-            </Select.Select>
+    <div class="flex flex-col gap-3">
+      <article class="rounded-lg border p-4">
+        <h2 class="text-sm font-semibold">{t('procedure_meeting_information')}</h2>
+        <div
+          class={isSingleton
+            ? 'mt-3 grid items-start gap-y-3'
+            : 'mt-3 grid items-start gap-x-4 gap-y-3 md:grid-cols-[minmax(0,1fr)_11rem_auto]'}
+        >
+          <Field.Field data-invalid={showNameError}>
+            <Field.FieldLabel for={`committee-name-${committee.id}`}>{t('procedure_committee_name')}</Field.FieldLabel>
+            <Input
+              id={`committee-name-${committee.id}`}
+              bind:value={committee.name}
+              aria-invalid={showNameError || undefined}
+              aria-describedby={showNameError ? `committee-name-error-${committee.id}` : undefined}
+            />
+            {#if showNameError}
+              <Field.FieldError id={`committee-name-error-${committee.id}`}>
+                {t('procedure_committee_name_is_required')}
+              </Field.FieldError>
+            {/if}
           </Field.Field>
-        {/if}
 
-        {#if !isSingleton}
-          <div class="flex items-center justify-end md:pt-6">
-            <Button
-              variant="ghost"
-              size="icon"
-              title={t('procedure_delete_committee')}
-              onclick={() => wizard.removeCommittee(committee.id)}
-            >
-              <Trash2 class="text-destructive" />
-            </Button>
-          </div>
-        {/if}
-      </div>
-      <div class="mt-4">
+          {#if !isSingleton}
+            <Field.Field>
+              <Field.FieldLabel for={`committee-type-${committee.id}`}>{t('procedure_type')}</Field.FieldLabel>
+              <Select.Select type="single" bind:value={committee.type}>
+                <Select.SelectTrigger id={`committee-type-${committee.id}`} class="w-full">
+                  {typeLabels[committee.type]}
+                </Select.SelectTrigger>
+                <Select.SelectContent>
+                  <Select.SelectItem value="cabinet" label={t('procedure_cabinet')} />
+                  <Select.SelectItem value="mpc" label="MPC" />
+                  <Select.SelectItem value="ipc" label="IPC" />
+                </Select.SelectContent>
+              </Select.Select>
+            </Field.Field>
+          {/if}
+
+          {#if !isSingleton}
+            <div class="flex items-center justify-end md:pt-6">
+              <Button
+                variant="ghost"
+                size="icon"
+                title={t('procedure_delete_committee')}
+                onclick={() => wizard.removeCommittee(committee.id)}
+              >
+                <Trash2 class="text-destructive" />
+              </Button>
+            </div>
+          {/if}
+        </div>
+      </article>
+
+      <article class="overflow-clip rounded-lg border">
         {#key `${committee.id}:${JSON.stringify(committee.procedureRules)}`}
           <ProcedureRulesSettings
             initialRules={committee.procedureRules}
@@ -89,8 +93,8 @@
             onSave={(config) => wizard.setCommitteeProcedureRules(committee.id, config)}
           />
         {/key}
-      </div>
-    </article>
+      </article>
+    </div>
   {/each}
 
   {#if !isSingleton}

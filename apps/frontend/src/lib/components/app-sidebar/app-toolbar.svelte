@@ -16,6 +16,10 @@
   let { onOpenDisplay }: { onOpenDisplay: () => void } = $props()
 
   let electronEnvironment = $state(false)
+  const workspaceActive = $derived(
+    !$cloudPlatformView.open &&
+      ($page.url.pathname === '/conference' || $page.url.pathname === '/conference/create')
+  )
 
   onMount(() => {
     electronEnvironment = isElectron()
@@ -58,8 +62,8 @@
       {/if}
       <button
         type="button"
-        class={`nav-tab${!$cloudPlatformView.open && $page.url.pathname === '/conference' ? ' nav-tab-active' : ''}`}
-        aria-current={!$cloudPlatformView.open && $page.url.pathname === '/conference' ? 'page' : undefined}
+        class={`nav-tab${workspaceActive ? ' nav-tab-active' : ''}`}
+        aria-current={workspaceActive ? 'page' : undefined}
         onclick={() => {
           cloudPlatformView.close()
           goto(resolve('/conference'))

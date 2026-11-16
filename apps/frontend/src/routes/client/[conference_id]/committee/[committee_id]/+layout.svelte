@@ -29,10 +29,7 @@
   import { getChairRosterEntries } from '$lib/classes/utils/committee/chair-presentation'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
   import StandaloneTimerCard from '$lib/components/conference/timer/standalone-timer-card.svelte'
-  import {
-    createConferenceDialogOpen,
-    settingsDialogOpen
-  } from '$lib/classes/stores/app/global-ui-store'
+  import { settingsDialogOpen } from '$lib/classes/stores/app/global-ui-store'
   import StatusBar from '$lib/components/app-sidebar/status-bar.svelte'
 
   let { children } = $props()
@@ -278,7 +275,7 @@
           </Sidebar.MenuItem>
 
           <Sidebar.MenuItem>
-            <Sidebar.MenuButton onclick={() => createConferenceDialogOpen.set(true)}>
+            <Sidebar.MenuButton onclick={() => goTo('/conference/create')}>
               <Plus />
               <span>{t('procedure_create_conference')}</span>
             </Sidebar.MenuButton>

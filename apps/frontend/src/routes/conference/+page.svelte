@@ -34,10 +34,7 @@
     lastOpenedConferenceId,
     unloadConference
   } from '$lib/classes/stores/conference/conference-store'
-  import {
-    createConferenceDialogOpen,
-    joinConferenceDialogOpen
-  } from '$lib/classes/stores/app/global-ui-store'
+  import { joinConferenceDialogOpen } from '$lib/classes/stores/app/global-ui-store'
   import { navigateToConference } from '$lib/classes/utils'
   import { authenticateCloudSeat, CloudJoinError } from '$lib/classes/clients/cloud-join-client'
   import {
@@ -81,7 +78,7 @@
   })
 
   function openCreatePage(): void {
-    createConferenceDialogOpen.set(true)
+    void goto(resolve('/conference/create'))
   }
   function resumeConference(): void {
     if (lastOpened) {
