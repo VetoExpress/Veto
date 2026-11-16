@@ -4,9 +4,8 @@
   import { onMount } from 'svelte'
   import { fileNotifications } from '$lib/classes/stores/cloud/file-notification-store.svelte'
   import { Activity, Clock3, Pause, Play, RefreshCw, Send, SkipForward } from '@lucide/svelte'
-  import DOMPurify from 'dompurify'
-  import { marked } from 'marked'
   import { cloudSession } from '$lib/classes/stores/cloud/cloud-session-store.svelte'
+  import MarkdownContent from '$lib/components/conference/common/markdown-content.svelte'
   import {
     CloudSituationError,
     cloudApiBaseUrl,
@@ -99,10 +98,6 @@
       Number.isSafeInteger(timestamp) &&
       new Date(timestamp + 8 * 60 * 60 * 1000).toISOString().slice(0, 16) === value
     )
-  }
-
-  function markdown(value: string): string {
-    return DOMPurify.sanitize(marked.parse(value, { async: false }) as string)
   }
 
   async function load(silent = false): Promise<void> {
@@ -471,9 +466,7 @@
                 </div>
               </Card.Header>
               <Card.Content class="space-y-4">
-                <article class="markdown-body text-sm leading-7">
-                  {@html markdown(item.content)}
-                </article>
+                <MarkdownContent source={item.content} />
                 {#if withdrawingId === item.id}
                   <div class="space-y-2 border-t pt-4">
                     <Label for={`withdraw-${item.id}`}>{t('procedure_withdrawal_reason_required_up_to_500_characters')}</Label>
@@ -516,30 +509,3 @@
   {/if}
 </div>
 
-<style>
-  :global(.markdown-body p) {
-    margin: 0.5rem 0;
-  }
-  :global(.markdown-body ul),
-  :global(.markdown-body ol) {
-    margin: 0.5rem 0;
-    padding-left: 1.5rem;
-  }
-  :global(.markdown-body ul) {
-    list-style: disc;
-  }
-  :global(.markdown-body ol) {
-    list-style: decimal;
-  }
-  :global(.markdown-body h1),
-  :global(.markdown-body h2),
-  :global(.markdown-body h3) {
-    margin: 1rem 0 0.5rem;
-    font-weight: 650;
-  }
-  :global(.markdown-body code) {
-    border-radius: 0.25rem;
-    background: var(--muted);
-    padding: 0.1rem 0.3rem;
-  }
-</style>

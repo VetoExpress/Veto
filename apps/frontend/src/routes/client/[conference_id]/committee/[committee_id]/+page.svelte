@@ -4,8 +4,6 @@
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
   import { Activity, ArrowUpRight, Clock3, Newspaper, RefreshCw } from '@lucide/svelte'
-  import DOMPurify from 'dompurify'
-  import { marked } from 'marked'
   import { t, formatDate } from '$lib/i18n'
   import { cloudSession } from '$lib/classes/stores/cloud/cloud-session-store.svelte'
   import { fileNotifications } from '$lib/classes/stores/cloud/file-notification-store.svelte'
@@ -23,6 +21,7 @@
     renderProcedureMessage,
     type ProcedureMessage
   } from '$lib/components/conference/common/message'
+  import MarkdownContent from '$lib/components/conference/common/markdown-content.svelte'
   import DynamicIsland from '$lib/components/dynamic-island.svelte'
   import { Button } from '$lib/components/ui/button'
   import * as Card from '$lib/components/ui/card'
@@ -91,11 +90,6 @@
           Date.parse(left.publishedAt ?? left.createdAt)
       )
       .slice(0, 5)
-  )
-  const situationHtml = $derived(
-    latestSituation
-      ? DOMPurify.sanitize(marked.parse(latestSituation.content, { async: false }))
-      : ''
   )
 
   async function loadSection<Result>(
@@ -288,9 +282,7 @@
                   <p>{latestSituation.author.committeeName} · {latestSituation.author.seatName}</p>
                 {/if}
               </div>
-              <article class="overview-markdown min-w-0 text-sm leading-7">
-                {@html situationHtml}
-              </article>
+              <MarkdownContent source={latestSituation.content} class="min-w-0" />
             {:else}
               <p class="py-6 text-sm text-muted-foreground">
                 {loading.situations ? t('procedure_loading') : t('procedure_no_situation_updates')}
@@ -370,27 +362,3 @@
   {/if}
 </div>
 
-<style>
-  .overview-markdown {
-    overflow-wrap: anywhere;
-  }
-  .overview-markdown :global(p) {
-    margin-block: 0.5rem;
-  }
-  .overview-markdown :global(ul),
-  .overview-markdown :global(ol) {
-    padding-left: 1.5rem;
-  }
-  .overview-markdown :global(ul) {
-    list-style: disc;
-  }
-  .overview-markdown :global(ol) {
-    list-style: decimal;
-  }
-  .overview-markdown :global(img) {
-    max-width: 100%;
-  }
-  .overview-markdown :global(pre) {
-    overflow-x: auto;
-  }
-</style>
