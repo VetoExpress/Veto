@@ -206,7 +206,7 @@
   {/snippet}
 
   {#snippet sidebar()}
-    <Sidebar.Content>
+    <Sidebar.Content class="committee-sidebar-content">
       {#if inCommittee && (isCloudSession || (activeConference && activeCommittee))}
         <Sidebar.Group class="px-4 py-3">
           <Sidebar.GroupLabel class="h-auto px-3 pb-2 text-[11px] font-normal">
@@ -369,7 +369,11 @@
       </div>
     </div>
   {/if}
-  {@render children()}
+  <main class="app-page-scroll flex min-h-0 flex-1 flex-col">
+    <ScrollArea class="min-h-0 flex-1">
+      {@render children()}
+    </ScrollArea>
+  </main>
 </GlobalSidebar>
 
 <DisplayOnlyDialog bind:open={displayOnlyDialogOpen} />
@@ -393,5 +397,13 @@
   }
   :global(.client-navigation [data-slot='sidebar-menu-button'][data-active='true']) {
     box-shadow: 0 2px 6px color-mix(in srgb, var(--foreground) 12%, transparent);
+  }
+
+  :global(.committee-sidebar-content) {
+    scrollbar-width: none;
+  }
+
+  :global(.committee-sidebar-content::-webkit-scrollbar) {
+    display: none;
   }
 </style>

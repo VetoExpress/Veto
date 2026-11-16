@@ -20,7 +20,9 @@
   } from '$lib/classes/clients/conference-display-client'
 
   let { children } = $props()
-  beforeNavigate((navigation) => { if ($restoringCheckpoint) navigation.cancel() })
+  beforeNavigate((navigation) => {
+    if ($restoringCheckpoint) navigation.cancel()
+  })
 
   const conferenceId = $derived(page.params.conference_id ?? null)
   const committeeId = $derived(page.params.committee_id ?? null)
@@ -53,6 +55,6 @@
   })
 </script>
 
-<div class="min-h-0 flex-1" inert={$restoringCheckpoint}>
+<div class="flex h-full min-h-0 flex-col" inert={$restoringCheckpoint}>
   {@render children()}
 </div>
