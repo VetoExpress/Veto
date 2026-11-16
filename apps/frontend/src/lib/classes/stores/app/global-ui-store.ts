@@ -6,10 +6,6 @@ export const joinConferenceDialogOpen = writable(false)
 
 export const createConferenceDialogOpen = writable(false)
 
-export type SettingsSection = 'general' | 'committee' | 'about' | 'account'
-
-export const activeSettingsSection = writable<SettingsSection | null>(null)
-
 export const alertDialogStore = writable<{
   open: boolean
   title: string

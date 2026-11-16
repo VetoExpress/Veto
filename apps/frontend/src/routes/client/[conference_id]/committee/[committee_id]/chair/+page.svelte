@@ -17,11 +17,6 @@
   } from '$lib/classes/clients/conference-display-client'
 
   import { timerDialogOpen } from '$lib/classes/stores/conference/timer-store'
-  import {
-    activeSettingsSection,
-    settingsDialogOpen
-  } from '$lib/classes/stores/app/global-ui-store'
-
   import ChairPhaseView from '$lib/components/conference/chair/chair-phase-view.svelte'
   import { getChairPresentation } from '$lib/classes/utils/committee/chair-presentation'
   import {
@@ -91,10 +86,8 @@
           variant="outline"
           class="h-8 gap-1.5 text-xs"
           title={t('procedure_meeting_settings')}
-          onclick={() => {
-            activeSettingsSection.set('committee')
-            settingsDialogOpen.set(true)
-          }}
+          onclick={() =>
+            goto(resolve(`/client/${conferenceId}/committee/${committeeId}/chair/settings`))}
         >
           <Settings size={12} />
           {t('procedure_meeting_settings')}

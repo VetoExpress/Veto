@@ -28,6 +28,7 @@
   import { fileNotifications } from '$lib/classes/stores/cloud/file-notification-store.svelte'
   import { getChairRosterEntries } from '$lib/classes/utils/committee/chair-presentation'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
+  import StandaloneTimerCard from '$lib/components/conference/timer/standalone-timer-card.svelte'
   import {
     createConferenceDialogOpen,
     settingsDialogOpen
@@ -209,6 +210,7 @@
     <Sidebar.Content class="committee-sidebar-content">
       {#if inCommittee && (isCloudSession || (activeConference && activeCommittee))}
         <Sidebar.Group class="px-4 py-3">
+          <StandaloneTimerCard />
           <Sidebar.GroupLabel class="h-auto px-3 pb-2 text-[11px] font-normal">
             {t('procedure_committee_workspace')}
           </Sidebar.GroupLabel>

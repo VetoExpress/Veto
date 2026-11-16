@@ -1,8 +1,6 @@
 <script lang="ts">
   import '$units' // 初始化 ModRegistry 基础数据
   import JoinConferenceDialog from '$lib/components/conference/join-conference-dialog.svelte'
-  import TimerDialog from '$lib/components/conference/timer/timer-dialog.svelte'
-  import { timerDialogOpen } from '$lib/classes/stores/conference/timer-store'
   import { dbGetAllPlugins } from '$lib/classes/services/plugin/plugin-db'
   import { injectToRegistry } from '$lib/classes/services/plugin/plugin-registry'
   import { markPluginsReady } from '$lib/classes/services/plugin/mod-registry.svelte'
@@ -40,7 +38,6 @@
   let displayOnlyDialogOpen = $state(false)
 </script>
 
-<TimerDialog bind:open={$timerDialogOpen} />
 <JoinConferenceDialog bind:open={$joinConferenceDialogOpen} />
 <CloudPlatformOverlayGuard />
 

@@ -3,7 +3,7 @@
   import { page } from '$app/stores'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
-  import { Activity, ArrowUpRight, Clock3, Newspaper, RefreshCw } from '@lucide/svelte'
+  import { Activity, ArrowUpRight, Check, Clock3, Copy, Newspaper, RefreshCw } from '@lucide/svelte'
   import { t, formatDate } from '$lib/i18n'
   import { cloudSession } from '$lib/classes/stores/cloud/cloud-session-store.svelte'
   import { fileNotifications } from '$lib/classes/stores/cloud/file-notification-store.svelte'
@@ -22,7 +22,6 @@
     type ProcedureMessage
   } from '$lib/components/conference/common/message'
   import MarkdownContent from '$lib/components/conference/common/markdown-content.svelte'
-  import DynamicIsland from '$lib/components/dynamic-island.svelte'
   import { Button } from '$lib/components/ui/button'
   import * as Card from '$lib/components/ui/card'
 
@@ -65,6 +64,8 @@
   let timeline = $state<CloudTimeline | null>(null)
   let timelineTimezone = $state('Asia/Shanghai')
   let timelineReceivedAt = $state(0)
+  let clockNow = $state(Date.now())
+  let copiedTimeline = $state(false)
   let situations = $state<CloudSituation[]>([])
   let situationTimezone = $state('Asia/Shanghai')
   let news = $state<News[]>([])
@@ -76,6 +77,12 @@
   })
   let errors = $state<Record<Section, ProcedureMessage>>({ timeline: '', situations: '', news: '' })
   const requests: Record<Section, number> = { timeline: 0, situations: 0, news: 0 }
+  const timelineTime = $derived(
+    timeline
+      ? timeline.currentTime +
+          (timeline.paused ? 0 : (clockNow - timelineReceivedAt) * timeline.ratio)
+      : null
+  )
   const latestSituation = $derived(
     [...situations]
       .filter((item) => item.status === 'published')
@@ -202,6 +209,18 @@
       hour12: false
     })
   }
+
+  async function copyTimelineTime(): Promise<void> {
+    if (timelineTime === null) return
+    await navigator.clipboard.writeText(contentTime(timelineTime, timelineTimezone))
+    copiedTimeline = true
+    setTimeout(() => (copiedTimeline = false), 1500)
+  }
+
+  $effect(() => {
+    const interval = window.setInterval(() => (clockNow = Date.now()), 1000)
+    return () => window.clearInterval(interval)
+  })
 </script>
 
 <svelte:head><title>{t('procedure_overview')} · Veto</title></svelte:head>
@@ -239,13 +258,39 @@
           <p class="text-sm text-muted-foreground">{t('procedure_loading')}</p>
         {:else}
           <div class="flex min-w-0 justify-start">
-            <DynamicIsland
-              expanded
-              cloudMode={!!session}
-              cloudTimeline={timeline}
-              cloudTimezone={timelineTimezone}
-              cloudTimelineReceivedAt={timelineReceivedAt}
-            />
+            {#if timeline && timelineTime !== null}
+              <div class="flex min-w-0 flex-wrap items-center gap-2 text-sm">
+                <Clock3 class="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                <span class="truncate text-muted-foreground" title={timeline.name}>
+                  {timeline.name}
+                </span>
+                <span class="whitespace-nowrap font-mono text-lg font-medium tabular-nums">
+                  {contentTime(timelineTime, timelineTimezone)}
+                </span>
+                <span class="whitespace-nowrap text-muted-foreground">
+                  {timeline.paused ? t('components_pause') : `${timeline.ratio}x`}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  class="size-5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                  title={t('components_copy_sim_time')}
+                  aria-label={t('components_copy_sim_time')}
+                  onclick={copyTimelineTime}
+                >
+                  {#if copiedTimeline}
+                    <Check size={11} />
+                  {:else}
+                    <Copy size={11} />
+                  {/if}
+                </Button>
+              </div>
+            {:else}
+              <div class="flex items-center gap-2 text-sm text-muted-foreground">
+                <Clock3 class="size-3.5" aria-hidden="true" />
+                {t('components_no_timeline')}
+              </div>
+            {/if}
           </div>
         {/if}
       </Card.Content>

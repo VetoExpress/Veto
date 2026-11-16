@@ -1,25 +1,21 @@
 <script lang="ts">
   import { t } from '$lib/i18n'
   import { onMount } from 'svelte'
-  import { Settings, Info, X, Map, User, ChevronRight } from '@lucide/svelte'
+  import { Settings, Info, X, User, ChevronRight } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import * as Separator from '$lib/components/ui/separator/index.js'
   import GeneralPage from './pages/common/general.svelte'
   import AboutPage from '../settings/pages/common/about.svelte'
-  import CommitteePage from './pages/common/committee.svelte'
   import AccountPage from './pages/common/account.svelte'
   import * as Avatar from '$lib/components/ui/avatar'
   import { accountStore } from '$lib/classes/stores/app/account-store'
 
   import ScrollArea from '$lib/components/ui/scroll-area/scroll-area.svelte'
   import * as Dialog from '$lib/components/ui/dialog'
-  import {
-    settingsDialogOpen,
-    activeSettingsSection,
-    type SettingsSection
-  } from '$lib/classes/stores/app/global-ui-store'
+  import { settingsDialogOpen } from '$lib/classes/stores/app/global-ui-store'
   const version = `${__APP_VERSION__}-${__APP_BUILD_TIME__}`
 
+  type SettingsSection = 'general' | 'about' | 'account'
   let activeSection = $state<SettingsSection>('general')
 
   interface NavItem {
@@ -29,8 +25,7 @@
   }
 
   const NAV_TOP: NavItem[] = $derived([
-    { key: 'general', label: t('settings_general'), icon: Settings },
-    { key: 'committee', label: t('settings_committee'), icon: Map }
+    { key: 'general', label: t('settings_general'), icon: Settings }
   ])
 
   const NAV_BOTTOM: NavItem[] = $derived([{ key: 'about', label: t('settings_about'), icon: Info }])
@@ -44,16 +39,7 @@
   settingsDialogOpen.subscribe((v) => {
     const wasClosed = !open && v
     open = v
-    if (wasClosed) {
-      // 打开时读取指定的 section，否则默认 general
-      const target = $activeSettingsSection
-      if (target) {
-        activeSection = target
-        activeSettingsSection.set(null)
-      } else {
-        activeSection = 'general'
-      }
-    }
+    if (wasClosed) activeSection = 'general'
   })
 
   function onOpenChange(o: boolean): void {
@@ -163,7 +149,6 @@
             <div class="p-10">
               {#if activeSection === 'general'}<GeneralPage />{/if}
               {#if activeSection === 'account'}<AccountPage />{/if}
-              {#if activeSection === 'committee'}<CommitteePage />{/if}
               {#if activeSection === 'about'}<AboutPage />{/if}
             </div>
           </ScrollArea>

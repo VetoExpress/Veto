@@ -6,7 +6,7 @@
   import * as Alert from '$lib/components/ui/alert'
   import { Button } from '$lib/components/ui/button'
   import { Spinner } from '$lib/components/ui/spinner'
-  import SettingCard from '../../settings-card.svelte'
+  import SettingCard from '$lib/components/settings/settings-card.svelte'
   import {
     createCommitteeCheckpoint,
     restoreCommitteeCheckpoint,
@@ -22,7 +22,7 @@
     type CommitteeCheckpoint
   } from '$lib/classes/services/committee-checkpoints'
   import { PHASE_LABELS } from '$lib/classes/utils/committee/phase'
-  import { settingsDialogOpen, showConfirm } from '$lib/classes/stores/app/global-ui-store'
+  import { showConfirm } from '$lib/classes/stores/app/global-ui-store'
 
   let selected = $state('')
   let busy = $state(false)
@@ -71,7 +71,6 @@
     try {
       await restoreCommitteeCheckpoint(snapshot)
       selected = ''
-      settingsDialogOpen.set(false)
     } catch (caught) {
       error = caught instanceof Error ? caught.message : () => t('settings_restore_failed')
     } finally {

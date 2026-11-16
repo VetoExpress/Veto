@@ -10,6 +10,8 @@
   import MyAlertDialog from '$lib/components/dialog/my-alert-dialog.svelte'
   import SettingsDialog from '$lib/components/settings/settings-dialog.svelte'
   import CreateConferenceDialog from '$lib/components/conference/create/create-conference-dialog.svelte'
+  import TimerDialog from '$lib/components/conference/timer/timer-dialog.svelte'
+  import { timerDialogOpen } from '$lib/classes/stores/conference/timer-store'
 
   import logo from '$lib/assets/logo.svg'
   import '../app.css'
@@ -41,5 +43,6 @@
 <ModeWatcher />
 <MyAlertDialog />
 <SettingsDialog />
+<TimerDialog bind:open={$timerDialogOpen} />
 <CreateConferenceDialog bind:open={$createConferenceDialogOpen} />
 {@render children()}
