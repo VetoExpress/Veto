@@ -27,7 +27,6 @@
 
   import MotionDialog from '$lib/components/conference/motion/motion-dialog.svelte'
   import PointDialog from '$lib/components/conference/point/point-dialog.svelte'
-  import ConferenceLogDialog from '$lib/components/conference/conference-log-dialog.svelte'
 
   import PageTopBar from '$lib/components/conference/common/page-top-bar.svelte'
 
@@ -65,7 +64,6 @@
   const quorum = $derived(conf ? calculateQuorum(conf.participantSeats, rules.quorum) : null)
   let motionDialogOpen = $state(false)
   let pointDialogOpen = $state(false)
-  let logDialogOpen = $state(false)
   let showResetConfirm = $state(false)
 
   function openRollCall(): void {
@@ -159,7 +157,7 @@
           variant="outline"
           class="h-8 gap-1.5 text-xs"
           title={t('procedure_meeting_log')}
-          onclick={() => (logDialogOpen = true)}
+          href={resolve(`/client/${conferenceId}/committee/${committeeId}/chair/log`)}
         >
           <ScrollText size={12} />
           {t('procedure_log')}
@@ -229,9 +227,6 @@
     {#key pointDialogOpen}
       <PointDialog bind:open={pointDialogOpen} />
     {/key}
-
-    <!-- Log Dialog -->
-    <ConferenceLogDialog bind:open={logDialogOpen} minutes={conf?.minutes ?? []} />
   {:else}
     <div class="flex flex-1 items-center justify-center text-muted-foreground">
       <p>{t('procedure_select_or_create_a_conference')}</p>
