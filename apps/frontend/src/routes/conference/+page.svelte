@@ -15,8 +15,7 @@
     LogIn,
     Play,
     Plus,
-    Search,
-    Workflow
+    Search
   } from '@lucide/svelte'
   import type { Conference } from '$lib/classes/types/conference'
   import * as Alert from '$lib/components/ui/alert'
@@ -45,7 +44,9 @@
     type CloudMembership
   } from '$lib/classes/stores/conference/cloud-membership-store'
   import { cloudSession } from '$lib/classes/stores/cloud/cloud-session-store.svelte'
+  import { workflowTips } from './workflow-tips'
 
+  const workflowTip = workflowTips[Math.floor(Math.random() * workflowTips.length)]
   let query = $state('')
   let passwordDialogOpen = $state(false)
   let passwordMembership = $state<CloudMembership | null>(null)
@@ -263,26 +264,18 @@
         </div>
       </section>
       <section
-        class="tip-card flex flex-1 flex-col justify-between gap-2 rounded-2xl p-4"
+        class="tip-card flex flex-1 flex-col gap-2 rounded-2xl p-4"
         aria-labelledby="workflow-tip-heading"
       >
-        <div class="flex items-center justify-between">
-          <span class="eyebrow">
-            {t('procedure_workflow_tip')}
-          </span>
-        </div>
+        <span class="eyebrow">{t('procedure_workflow_tip')}</span>
         <div>
           <h2 id="workflow-tip-heading" class="text-[15px] font-semibold text-foreground">
-            {t('procedure_keep_every_room_in_sync')}
+            {t(`procedure_workflow_tip_${workflowTip}_title`)}
           </h2>
           <p class="mt-1 text-sm leading-relaxed text-muted-foreground">
-            {t('procedure_display_window_tip')}
+            {t(`procedure_workflow_tip_${workflowTip}_body`)}
           </p>
         </div>
-        <span class="text-xs font-semibold text-muted-foreground">
-          {t('procedure_open_display_window')}
-          <ArrowRight class="ml-1 inline size-3.5" />
-        </span>
       </section>
     </div>
   </div>
@@ -499,16 +492,6 @@
   .quick-action-primary small {
     color: inherit;
     opacity: 0.65;
-  }
-  .tip-icon {
-    display: flex;
-    height: 24px;
-    width: 24px;
-    align-items: center;
-    justify-content: center;
-    border-radius: 0.55rem;
-    background: var(--background);
-    color: var(--muted-foreground);
   }
   :global(.search-field) {
     border-color: var(--border);
