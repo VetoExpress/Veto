@@ -235,6 +235,8 @@
   "components_real_time": "Real time · {time}",
   "components_timeline_count": "{count, plural, one {# timeline} other {# timelines}}",
   "components_display_title": "{name} - Conference display",
+  "components_display_enter_fullscreen": "Enter fullscreen",
+  "components_display_exit_fullscreen": "Exit fullscreen",
   "components_yield_floor": "{name} yields the remaining {time} to {kind, select, question {questions} other {comments}}",
   "components_yield_answer": "{name} will use the remaining {time} to answer",
   "components_yield_delegate": "{name} yields the remaining {time} to another delegate",

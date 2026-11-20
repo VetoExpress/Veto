@@ -9,6 +9,7 @@
 
 import { ipcMain, BrowserWindow } from 'electron'
 import { join } from 'path'
+import icon from '../../../resources/icon.png?asset'
 import { getAppUrl } from '../dev-server'
 import { bindWindowTitle } from '../desktop-i18n'
 import { t } from '../i18n'
@@ -52,6 +53,7 @@ export function registerConferenceIpc(displayWindow: DisplayWindowRef): void {
         center: true,
         autoHideMenuBar: true,
         title: label || t('electron_window_display_title'),
+        icon,
         webPreferences: {
           preload: join(__dirname, '../preload/index.js'),
           sandbox: false,

@@ -235,6 +235,8 @@
   "components_real_time": "实时 · {time}",
   "components_timeline_count": "{count} 条时间线",
   "components_display_title": "{name} - 模拟大会",
+  "components_display_enter_fullscreen": "进入全屏",
+  "components_display_exit_fullscreen": "退出全屏",
   "components_yield_floor": "{name} 将剩余 {time} 让渡给{kind, select, question {提问} other {评论}}",
   "components_yield_answer": "{name} 将使用剩余 {time} 回答",
   "components_yield_delegate": "{name} 将剩余 {time} 让渡给另一位代表",

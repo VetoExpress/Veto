@@ -27,8 +27,9 @@
   import { VETO_NAME, ROLL_CALL_MARK_DELAY } from '$lib/classes/const'
   import { globalSettings } from '$lib/classes/stores/app/global-settings.store'
   import { useKeyboardShortcuts } from '$lib/classes/services/hooks/use-keyboard-shortcuts.svelte'
-  import WindowControls from '$lib/components/app-sidebar/window-controls.svelte'
+  import { isElectron } from '$lib/classes/utils/runtime'
 
+  import DisplayTitleBar from './display-title-bar.svelte'
   import RollCallDisplay from './roll-call/index.svelte'
   import GeneralDebateDisplay from './general-debate/index.svelte'
   import MotionDisplay from './motion/index.svelte'
@@ -48,6 +49,7 @@
   let displayData = $state<ConferenceDisplayData | null>(null)
   let connectionStatus = $state<ConnectionStatus>('connecting')
   let isFullScreen = $state(false)
+  const displayTitle = $derived(t('components_display_title', { name: VETO_NAME }))
 
   // 主展示区位置偏移（从全局设置加载，Alt+方向键微调后自动持久化）
   let displayOffsetX = $state(0)
@@ -66,26 +68,6 @@
     isFullScreen: () => isFullScreen,
     toggleFullscreen: toggleDisplayFullscreen
   })
-
-  // ---- 悬停浮现的窗口控件（复用系统 WindowControls，Electron 下渲染按钮） ----
-  let controlsVisible = $state(false)
-  let controlsHideTimer: ReturnType<typeof setTimeout> | null = null
-
-  function showWindowControls(): void {
-    if (controlsHideTimer) {
-      clearTimeout(controlsHideTimer)
-      controlsHideTimer = null
-    }
-    controlsVisible = true
-  }
-
-  function hideWindowControls(): void {
-    if (controlsHideTimer) clearTimeout(controlsHideTimer)
-    controlsHideTimer = setTimeout(() => {
-      controlsVisible = false
-      controlsHideTimer = null
-    }, 400)
-  }
 
   onMount(() => {
     const bridge = getDisplayBridge()
@@ -187,7 +169,6 @@
   onDestroy(() => {
     if (phaseDelayTimer) clearTimeout(phaseDelayTimer)
     if (attendanceTimer) clearTimeout(attendanceTimer)
-    if (controlsHideTimer) clearTimeout(controlsHideTimer)
   })
 
   // ---- 出席状态变更（全屏展示） ----
@@ -238,7 +219,7 @@
 </script>
 
 <svelte:head>
-  <title>{t('components_display_title', { name: VETO_NAME })}</title>
+  <title>{displayTitle}</title>
 </svelte:head>
 
 <style>
@@ -247,56 +228,9 @@
     color: #c8ccd4;
     overflow: hidden;
   }
-
-  /* 悬停浮现的窗口控件：右上角固定热区，控件默认隐藏、悬停淡入 */
-  .display-controls-anchor {
-    position: fixed;
-    top: 0;
-    right: 0;
-    z-index: 50;
-    height: 2.5rem;
-    width: 10rem;
-  }
-
-  .display-controls {
-    display: flex;
-    height: 100%;
-    align-items: center;
-    justify-content: flex-end;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 150ms ease;
-  }
-
-  .display-controls.visible {
-    opacity: 1;
-    pointer-events: auto;
-  }
-
-  /* 投影暗色配色：覆盖 ghost 按钮的语义色（Display 视图整体为固定暗色调） */
-  .display-controls :global(button:not(.close-btn)) {
-    color: rgb(255 255 255 / 0.55);
-  }
-
-  .display-controls :global(button:not(.close-btn):hover) {
-    background-color: rgb(255 255 255 / 0.1);
-    color: rgb(255 255 255 / 0.9);
-  }
 </style>
 
 <div class="flex h-screen w-screen flex-col bg-[#0a0e14] text-[#c8ccd4]">
-  <!-- 悬停浮现的窗口控件 -->
-  <div
-    class="display-controls-anchor"
-    role="presentation"
-    onpointerenter={showWindowControls}
-    onpointerleave={hideWindowControls}
-  >
-    <div class="display-controls no-drag" class:visible={controlsVisible}>
-      <WindowControls />
-    </div>
-  </div>
-
   {#if displayData}
     <!-- 顶部横幅兼作窗口拖拽区 -->
     <div class="drag-region">
@@ -349,5 +283,9 @@
     {/if}
   {:else}
     <ConnectionStatusDisplay status={connectionStatus} />
+  {/if}
+
+  {#if isElectron()}
+    <DisplayTitleBar title={displayTitle} {isFullScreen} />
   {/if}
 </div>
