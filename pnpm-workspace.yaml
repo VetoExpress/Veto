@@ -4,6 +4,8 @@ packages:
   - packages/*
 allowBuilds:
   '@hugeicons/svelte': false
+  '@parcel/watcher': false
+  '@swc/core': false
   electron: true
   electron-winstaller: false
   esbuild: true

@@ -4,9 +4,18 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to rebuild
+        required: true
+        type: string
 
 permissions:
   contents: write
+
+env:
+  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
 
 jobs:
   build:
@@ -25,6 +34,19 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Verify source against release tag
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            exit 1
+          fi
+
+          git fetch --no-tags --depth=1 origin "refs/tags/${RELEASE_TAG}"
+          git diff --exit-code FETCH_HEAD HEAD -- . \
+            ':(exclude).github/workflows/publish.yml' \
+            ':(exclude)pnpm-workspace.yaml'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -159,7 +181,7 @@ jobs:
 
           aws s3 cp \
             release-files/ \
-            "s3://${R2_BUCKET}/veto/releases/${GITHUB_REF_NAME}/" \
+            "s3://${R2_BUCKET}/veto/releases/${RELEASE_TAG}/" \
             --recursive \
             --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
 
@@ -176,9 +198,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ env.RELEASE_TAG }}
 
       - name: Generate release notes from changelog
-        run: node scripts/release-notes.mjs "${{ github.ref_name }}" release-notes.md
+        run: node scripts/release-notes.mjs "$RELEASE_TAG" release-notes.md
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -195,7 +219,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ env.RELEASE_TAG }}
           REPO: ${{ github.repository }}
         run: |
           set -e
@@ -234,7 +258,7 @@ jobs:
       - name: Generate latest.json
         shell: bash
         env:
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ env.RELEASE_TAG }}
           DOWNLOAD_BASE: https://download.miaoyww.top/veto
         run: |
           VERSION="${TAG#v}"
@@ -263,7 +287,7 @@ jobs:
       - name: Generate electron-updater metadata for R2
         shell: bash
         env:
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ env.RELEASE_TAG }}
           DOWNLOAD_BASE: https://download.miaoyww.top/veto
         run: |
           node <<'EOF'
