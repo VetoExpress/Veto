@@ -371,10 +371,15 @@
             <Label class="mb-2 block text-xs text-muted-foreground">
               {t('procedure_motion_type')}
             </Label>
-            <ToggleGroup.Root type="single" bind:value={toggleValue} class="grid grid-cols-4 gap-2">
+            <ToggleGroup.Root
+              type="single"
+              bind:value={toggleValue}
+              spacing={2}
+              class="w-full flex-wrap justify-start"
+            >
               {#each motionTypes as mt (mt)}
                 {@const Icon = MOTION_ICONS[mt] ?? Presentation}
-                <ToggleGroup.Item value={mt}>
+                <ToggleGroup.Item value={mt} class="h-auto min-h-10 px-4 py-2">
                   <Icon size={14} />
                   <span class="text-xs font-medium">{MOTION_LABELS[mt]}</span>
                 </ToggleGroup.Item>
