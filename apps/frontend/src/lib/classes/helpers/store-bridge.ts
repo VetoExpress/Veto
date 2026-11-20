@@ -5,12 +5,11 @@
  * 封装 IPC 调用 + localStorage 同步 + 首次迁移。
  */
 
-type StoreDomain = 'conferences' | 'checkpoints' | 'events' | 'battles' | 'settings' | 'tools'
+type StoreDomain = 'conferences' | 'events' | 'battles' | 'settings' | 'tools'
 
 /** 数据域 → localStorage key 映射 */
 const LS_KEYS: Record<StoreDomain, string> = {
   conferences: 'veto_conferences',
-  checkpoints: 'veto_committee_checkpoints',
   events: 'veto_conference_events',
   battles: 'wars_battles',
   settings: 'veto_global_settings',
@@ -49,7 +48,7 @@ export async function bootstrapStore<T>(domain: StoreDomain, fallback: T): Promi
         }
         return parsed
       } catch (error) {
-        if (domain === 'conferences' || domain === 'checkpoints') throw error
+        if (domain === 'conferences') throw error
         /* 无效 JSON，跳过 */
       }
     }

@@ -19,8 +19,7 @@ import type {
   Motion,
   MotionProposal,
   VoteBallot,
-  ConferenceActionType,
-  ConferencePhase
+  ConferenceActionType
 } from '$lib/classes/types/conference'
 import type {
   PointType,
@@ -43,20 +42,11 @@ import { getDisplayBridge, buildDisplayData } from '$lib/classes/clients/confere
 import { bootstrapStore, saveToStore } from '../../helpers/store-bridge'
 import { generateInviteCode } from '$lib/classes/services/seat-access'
 import { createConferenceSaver } from '$lib/classes/services/conference-save'
-import {
-  makeCheckpoint,
-  saveCheckpoint,
-  restoreCheckpoint,
-  type CommitteeCheckpoint
-} from '$lib/classes/services/committee-checkpoints'
-import { destroyAllTimers } from '$lib/classes/services/timer/timer'
 
 const STORAGE_KEY = 'veto_conferences'
 const STORE_DOMAIN = 'conferences'
 const saver = createConferenceSaver((data) => saveToStore(STORE_DOMAIN, data))
 export const conferenceSaveStatus = saver.status
-export const restoringCheckpoint = writable(false)
-const savedPhases = new Map<string, ConferencePhase>()
 let storageReady = false
 
 // ---- 引擎注册表 ----------------------------------------------------------
@@ -87,11 +77,6 @@ function syncEngine(engine: Committee): void {
   if (!conference || !conference.getCommittee(engine.id)) return
   conference.replaceCommittee(engine)
   conferences.update((list) => [...list])
-  if (storageReady && savedPhases.get(engine.id) !== engine.phase) {
-    savedPhases.set(engine.id, engine.phase)
-    const checkpoint = makeCheckpoint(conference.id, engine, '阶段切换')
-    void saveConferencesNow().then((saved) => saved && saveCheckpoint(checkpoint))
-  }
 }
 
 /** 将当前委员会引擎的变更写回其所属大会。 */
@@ -173,10 +158,7 @@ export async function retryConferenceStorage(): Promise<void> {
     if (!Array.isArray(data)) throw new Error(t('services_conference_corrupt'))
     const restored = data.map((conference) => Conference.fromJSON(conference))
     for (const conference of restored) {
-      for (const committee of conference.committees) {
-        registerEngine(committee)
-        savedPhases.set(committee.id, committee.phase)
-      }
+      for (const committee of conference.committees) registerEngine(committee)
     }
     conferences.set(restored)
     storageReady = true
@@ -186,47 +168,6 @@ export async function retryConferenceStorage(): Promise<void> {
   }
 }
 export const conferencesReady: Promise<void> = retryConferenceStorage()
-
-export async function createCommitteeCheckpoint(label = '手动快照'): Promise<boolean> {
-  const conference = get(currentConferenceRecord)
-  const committee = getCurrentEngine()
-  if (!conference || !committee || !storageReady) return false
-  if (!(await saveConferencesNow())) return false
-  return saveCheckpoint(makeCheckpoint(conference.id, committee, label))
-}
-
-export async function restoreCommitteeCheckpoint(checkpoint: CommitteeCheckpoint): Promise<void> {
-  if (get(restoringCheckpoint)) return
-  const conference = get(currentConferenceRecord)
-  const current = getCurrentEngine()
-  if (!conference || !current || !storageReady) throw new Error(t('services_conference_loading'))
-  const restored = restoreCheckpoint(checkpoint, conference.id, current)
-  restoringCheckpoint.set(true)
-  try {
-    destroyAllTimers()
-    if (current.activeSpeaker) current.activeSpeaker = { ...current.activeSpeaker, paused: true }
-    if (current.activeCaucus) current.activeCaucus = { ...current.activeCaucus, paused: true }
-    if (!(await saveCheckpoint(makeCheckpoint(conference.id, current, '恢复前自动备份'))))
-      throw new Error(t('services_checkpoint_backup_failed'))
-    const data = get(conferences).map((item) => {
-      const json = item.toJSON()
-      return item.id === conference.id
-        ? {
-            ...json,
-            committees: json.committees.map((committee) =>
-              committee.id === restored.id ? restored.toJSON() : committee
-            )
-          }
-        : json
-    })
-    if (!(await saver.save(data))) throw new Error(t('services_checkpoint_restore_failed'))
-    registerEngine(restored)
-    syncEngine(restored)
-    getDisplayBridge().sendUpdate(buildDisplayData(restored))
-  } finally {
-    restoringCheckpoint.set(false)
-  }
-}
 
 /** 当前激活的大会 ID */
 export const currentConferenceId = writable<string | null>(null)
@@ -451,10 +392,7 @@ export function restoreSyncedConference(data: ConferenceDTO): void {
   const restored = Conference.fromJSON(data)
   const existing = getConferenceById(data.id)
   for (const committee of existing?.committees ?? []) unregisterEngine(committee.id)
-  for (const committee of restored.committees) {
-    registerEngine(committee)
-    savedPhases.set(committee.id, committee.phase)
-  }
+  for (const committee of restored.committees) registerEngine(committee)
   conferences.update((list) => [
     ...list.filter((conference) => conference.id !== data.id),
     restored

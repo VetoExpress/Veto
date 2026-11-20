@@ -1,13 +1,11 @@
 <script lang="ts">
   import { page } from '$app/state'
-  import { beforeNavigate } from '$app/navigation'
   import {
     currentCommittee,
     loadConference,
     motionDraft,
     pointDraft,
-    saveConferencesNow,
-    restoringCheckpoint
+    saveConferencesNow
   } from '$lib/classes/stores/conference/conference-store'
   import {
     chairDisplayExtra,
@@ -20,9 +18,6 @@
   } from '$lib/classes/clients/conference-display-client'
 
   let { children } = $props()
-  beforeNavigate((navigation) => {
-    if ($restoringCheckpoint) navigation.cancel()
-  })
 
   const conferenceId = $derived(page.params.conference_id ?? null)
   const committeeId = $derived(page.params.committee_id ?? null)
@@ -55,6 +50,6 @@
   })
 </script>
 
-<div class="flex h-full min-h-0 flex-col" inert={$restoringCheckpoint}>
+<div class="flex h-full min-h-0 flex-col">
   {@render children()}
 </div>

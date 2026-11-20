@@ -7,7 +7,6 @@
   } from '$lib/classes/stores/conference/conference-store'
   import { defaultProcedureRules } from '$lib/classes/utils/committee/procedure-rules'
   import ProcedureRulesSettings from '$lib/components/settings/pages/common/procedure-rules-settings.svelte'
-  import MeetingSnapshots from './meeting-snapshots.svelte'
   import { fly } from 'svelte/transition'
 </script>
 
@@ -32,6 +31,4 @@
         </SettingCard>
       {/if}
   </div>
-
-  <MeetingSnapshots />
 </div>

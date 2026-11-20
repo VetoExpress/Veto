@@ -1,19 +1,8 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect } from '@playwright/test'
 
 const base = 'http://localhost:4173'
 
-async function openCommitteeSettings(page: Page): Promise<void> {
-  await page.getByRole('button', { name: '设置', exact: true }).click()
-  await page.getByRole('dialog').getByRole('button', { name: '会议设置', exact: true }).click()
-}
-
-async function expectSnapshotOptions(page: Page, count: number): Promise<void> {
-  await page.getByLabel('选择会议快照').click()
-  await expect(page.getByRole('option')).toHaveCount(count)
-  await page.keyboard.press('Escape')
-}
-
-test('首次认领席位后进入主席台，保存快照，刷新后仍可预览和恢复', async ({ page }) => {
+test('首次认领席位后进入主席台，刷新后仍保持主席身份', async ({ page }) => {
   // The conference already exists from a different committee identity.
   await page.addInitScript(() => {
     if (localStorage.getItem('veto_conferences')) return
@@ -54,23 +43,6 @@ test('首次认领席位后进入主席台，保存快照，刷新后仍可预�
   await page.getByRole('button', { name: '主席', exact: true }).click()
   await expect(page.getByRole('button', { name: '开始点名', exact: true })).toBeVisible()
 
-  await openCommitteeSettings(page)
-  await page.getByRole('button', { name: '保存当前快照' }).click()
-  await expectSnapshotOptions(page, 1)
-
   await page.reload()
-  await openCommitteeSettings(page)
-  await expectSnapshotOptions(page, 1)
-
-  await page.getByLabel('选择会议快照').click()
-  await page.getByRole('option').first().click()
-  await expect(page.getByText(/发言队列：0 人/)).toBeVisible()
-  await page.screenshot({ path: test.info().outputPath('chair-recovery.png') })
-  await page.getByRole('button', { name: '恢复这份快照' }).click()
-  await page.getByRole('button', { name: '确认', exact: true }).click()
-  await expect(page.getByRole('button', { name: '恢复这份快照' })).toBeHidden()
-
-  await openCommitteeSettings(page)
-  await expectSnapshotOptions(page, 2)
-  await expect(page.getByRole('alert')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '开始点名', exact: true })).toBeVisible()
 })
