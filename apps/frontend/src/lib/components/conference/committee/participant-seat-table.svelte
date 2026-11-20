@@ -165,17 +165,6 @@
           <td class="px-4 py-3">
             <div class="flex justify-center">
               <Switch
-                checked={seat.procedure.hasVetoPower ?? false}
-                disabled={!seat.procedure.hasVotingRights}
-                onCheckedChange={(hasVetoPower: boolean) => setSeatVetoPower(seat.id, hasVetoPower)}
-                title={t('procedure_veto_rights')}
-                aria-label={t('procedure_set_veto_rights_for_value', { value1: seat.name })}
-              />
-            </div>
-          </td>
-          <td class="px-4 py-3">
-            <div class="flex justify-center">
-              <Switch
                 checked={seat.procedure.hasVotingRights}
                 disabled={!isPresent}
                 onCheckedChange={(hasVotingRights: boolean) =>
@@ -186,6 +175,17 @@
                     : t('procedure_observer_no_voting_rights')
                   : t('procedure_absent_voting_rights_cannot_be_changed')}
                 aria-label={t('procedure_set_voting_rights_for_value', { value1: seat.name })}
+              />
+            </div>
+          </td>
+          <td class="px-4 py-3">
+            <div class="flex justify-center">
+              <Switch
+                checked={seat.procedure.hasVetoPower ?? false}
+                disabled={!seat.procedure.hasVotingRights}
+                onCheckedChange={(hasVetoPower: boolean) => setSeatVetoPower(seat.id, hasVetoPower)}
+                title={t('procedure_veto_rights')}
+                aria-label={t('procedure_set_veto_rights_for_value', { value1: seat.name })}
               />
             </div>
           </td>
@@ -238,7 +238,7 @@
         </tr>
       {:else}
         <tr>
-          <td colspan="5" class="px-4 py-10 text-center text-muted-foreground">{t('procedure_no_participants')}</td>
+          <td colspan="6" class="px-4 py-10 text-center text-muted-foreground">{t('procedure_no_participants')}</td>
         </tr>
       {/each}
     </tbody>
