@@ -374,6 +374,7 @@
     min-height: 16rem;
     background: var(--primary);
     color: var(--primary-foreground);
+    cursor: pointer;
     transition: opacity 150ms ease;
   }
   .resume-card:hover {
@@ -446,6 +447,7 @@
     background: var(--muted);
     padding: 0.65rem;
     text-align: left;
+    cursor: pointer;
     transition: background-color 150ms ease;
   }
   .quick-action:hover {
