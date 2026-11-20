@@ -332,12 +332,13 @@
     </Button>
     <Button
       variant="ghost"
-      class="no-drag shrink-0 px-3"
+      size="sm"
+      class="no-drag px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
       onclick={() => settingsDialogOpen.set(true)}
       title={t('settings_title')}
       aria-label={t('settings_title')}
     >
-      <Settings />
+      <Settings size={14} />
     </Button>
   {/snippet}
 
