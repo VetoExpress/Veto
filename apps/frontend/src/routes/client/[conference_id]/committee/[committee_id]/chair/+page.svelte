@@ -9,7 +9,8 @@
   import {
     currentCommittee,
     startInitialRollCall,
-    resumeMeeting
+    resumeMeeting,
+    resetRollCall
   } from '$lib/classes/stores/conference/conference-store'
   import {
     getDisplayBridge,
@@ -30,8 +31,28 @@
 
   import PageTopBar from '$lib/components/conference/common/page-top-bar.svelte'
 
-  import { Gavel, Play, Monitor, HelpCircle, Timer, ScrollText, Settings } from '@lucide/svelte'
+  import {
+    Gavel,
+    Play,
+    Monitor,
+    HelpCircle,
+    Timer,
+    ScrollText,
+    Settings,
+    RotateCcw
+  } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
+  import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger
+  } from '$lib/components/ui/alert-dialog'
 
   const conferenceId = $derived(page.params.conference_id ?? null)
   const committeeId = $derived(page.params.committee_id ?? null)
@@ -45,6 +66,7 @@
   let motionDialogOpen = $state(false)
   let pointDialogOpen = $state(false)
   let logDialogOpen = $state(false)
+  let showResetConfirm = $state(false)
 
   function openRollCall(): void {
     if (!conf) return
@@ -92,6 +114,45 @@
           <Settings size={12} />
           {t('procedure_meeting_settings')}
         </Button>
+
+        <AlertDialog bind:open={showResetConfirm}>
+          <AlertDialogTrigger>
+            {#snippet child({ props })}
+              <Button
+                {...props}
+                size="sm"
+                variant="outline"
+                class="h-8 gap-1.5 text-xs"
+                disabled={!conf || conf.participantSeats.length === 0}
+              >
+                <RotateCcw size={12} />
+                {t('procedure_restart_roll_call')}
+              </Button>
+            {/snippet}
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t('procedure_restart_roll_call')}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t(
+                  'procedure_this_resets_all_participants_to_absent_and_returns_the_meeting_to_roll_call_continue'
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t('procedure_cancel')}</AlertDialogCancel>
+              <AlertDialogAction
+                onclick={() => {
+                  resetRollCall()
+                  showResetConfirm = false
+                  openRollCall()
+                }}
+              >
+                {t('procedure_confirm_restart')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <Button
           size="sm"

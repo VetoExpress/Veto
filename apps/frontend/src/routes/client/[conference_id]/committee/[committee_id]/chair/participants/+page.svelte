@@ -5,9 +5,8 @@
     type ProcedureMessage
   } from '$lib/components/conference/common/message'
   import { t, formatNumber } from '$lib/i18n'
-  import { goto } from '$app/navigation'
   import { page } from '$app/state'
-  import { Plus, RotateCcw, Users } from '@lucide/svelte'
+  import { Plus, Users } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import { Card, CardContent } from '$lib/components/ui/card'
   import * as Dialog from '$lib/components/ui/dialog'
@@ -22,21 +21,9 @@
     EmptyDescription
   } from '$lib/components/ui/empty'
   import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger
-  } from '$lib/components/ui/alert-dialog'
-  import {
     currentCommittee,
     currentConferenceRecord,
-    setSeatVotingRights,
-    resetRollCall
+    setSeatVotingRights
   } from '$lib/classes/stores/conference/conference-store'
   import { addSeat, updateSeat } from '$lib/classes/stores/delegate/delegate-store'
   import {
@@ -92,8 +79,6 @@
     return conference?.seatGroups.find((group) => group.type === 'cabinet')?.id ?? ''
   })
 
-  // ---- 重新点名确认 ----
-  let showResetConfirm = $state(false)
   let showAddSeatDialog = $state(false)
   let newSeatName = $state('')
   let newSeatShortName = $state('')
@@ -155,44 +140,6 @@
       <Plus size={12} />
       {t('procedure_add_seat')}
     </Button>
-    <AlertDialog bind:open={showResetConfirm}>
-      <AlertDialogTrigger>
-        {#snippet child({ props })}
-          <Button
-            {...props}
-            size="sm"
-            variant="outline"
-            class="h-8 gap-1.5 text-xs"
-            disabled={!conf || sortedSeats.length === 0}
-          >
-            <RotateCcw size={12} />
-            {t('procedure_restart_roll_call')}
-          </Button>
-        {/snippet}
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{t('procedure_restart_roll_call')}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {t(
-              'procedure_this_resets_all_participants_to_absent_and_returns_the_meeting_to_roll_call_continue'
-            )}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>{t('procedure_cancel')}</AlertDialogCancel>
-          <AlertDialogAction
-            onclick={() => {
-              resetRollCall()
-              showResetConfirm = false
-              goto(resolve(`/client/${conferenceId}/committee/${committeeId}/chair/roll-call`))
-            }}
-          >
-            {t('procedure_confirm_restart')}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
   {/snippet}
 </PageTopBar>
 
