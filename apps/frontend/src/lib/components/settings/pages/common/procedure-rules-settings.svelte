@@ -2,7 +2,6 @@
   import { untrack } from 'svelte'
   import { t, formatNumber, type MessageKey } from '$lib/i18n'
   import { Button } from '$lib/components/ui/button'
-  import { Checkbox } from '$lib/components/ui/checkbox'
   import { Input } from '$lib/components/ui/input'
   import * as Field from '$lib/components/ui/field'
   import * as Select from '$lib/components/ui/select'
@@ -18,11 +17,10 @@
     initialRules: ProcedureRulesConfig
     seats: Seat[]
     onSave: (config: ProcedureRulesConfig) => boolean
-    vetoMode?: 'rules' | 'seat'
   }
   type Option = { value: string; label: MessageKey }
 
-  let { initialRules, seats, onSave, vetoMode = 'rules' }: Props = $props()
+  let { initialRules, seats, onSave }: Props = $props()
   // The parent keys this form by committee; store updates must not replace an open draft.
   let draft = $state<ProcedureRulesConfig>(
     untrack(() => structuredClone($state.snapshot(initialRules)))
@@ -60,9 +58,6 @@
   let dirty = $derived(draftValue !== savedValue)
   let quorum = $derived(
     validThreshold(draft.quorum.threshold) ? calculateQuorum(participants, draft.quorum) : null
-  )
-  let invalidVetoSeats = $derived(
-    draft.veto.seatIds.some((id) => !eligibleSeats.some((seat) => seat.id === id))
   )
   let proceduralDenominator = $derived(
     participants.filter(
@@ -166,15 +161,18 @@
   {/if}
 {/snippet}
 
-<form onsubmit={save} class="blur-setting-card rounded-lg px-6 py-4">
-  <Field.Group>
-    <Field.Set>
-      <Field.Legend class="text-lg font-semibold">{t('settings_procedure_rules')}</Field.Legend>
-      <Field.Description>{t('settings_procedure_rules_description')}</Field.Description>
-      <Field.Description>{t('settings_rules_snapshot_notice')}</Field.Description>
-      <Field.Group>
-        <Field.Set>
-          <Field.Legend variant="label" class="text-lg font-semibold">
+<div class="mb-1 text-lg font-semibold">{t('settings_procedure_rules')}</div>
+<p class="mb-4 text-sm text-muted-foreground">
+  {t('settings_procedure_rules_description')}
+  {t('settings_rules_snapshot_notice')}
+</p>
+
+<form onsubmit={save} class="space-y-3">
+  <Field.Group class="gap-3">
+    <Field.Set class="gap-3">
+      <Field.Group class="gap-3">
+        <Field.Set class="gap-3 rounded-lg px-6 py-4 blur-setting-card">
+          <Field.Legend variant="label" class="font-bold">
             {t('settings_rules_quorum')}
           </Field.Legend>
           <Field.Group class="gap-4">
@@ -212,8 +210,8 @@
             </Field.Description>
           </Field.Group>
         </Field.Set>
-        <Field.Set>
-          <Field.Legend variant="label" class="text-lg font-semibold">
+        <Field.Set class="gap-3 rounded-lg px-6 py-4 blur-setting-card">
+          <Field.Legend variant="label" class="font-bold">
             {t('settings_rules_procedural')}
           </Field.Legend>
           <Field.Description>{t('settings_rules_procedural_hint')}</Field.Description>
@@ -253,8 +251,8 @@
             </Field.Description>
           </Field.Group>
         </Field.Set>
-        <Field.Set>
-          <Field.Legend variant="label" class="text-lg font-semibold">
+        <Field.Set class="gap-3 rounded-lg px-6 py-4 blur-setting-card">
+          <Field.Legend variant="label" class="font-bold">
             {t('settings_rules_document')}
           </Field.Legend>
           <Field.Group class="gap-4">
@@ -287,88 +285,24 @@
             </Field.Description>
           </Field.Group>
         </Field.Set>
-        {#if vetoMode === 'rules'}
-          <Field.Set>
-            <Field.Legend variant="label" class="text-lg font-semibold">
-              {t('settings_rules_veto')}
-            </Field.Legend>
-            <Field.Group class="gap-4">
-            <Field.Field orientation="horizontal">
-              <Checkbox id="rules-veto-enabled" bind:checked={draft.veto.enabled} />
-              <Field.Label for="rules-veto-enabled">{t('settings_rules_veto_enabled')}</Field.Label>
-            </Field.Field>
-            <Field.Field
-              data-invalid={invalidVetoSeats || (draft.veto.enabled && !draft.veto.seatIds.length)}
-            >
-              <Field.Label for="rules-veto-seats">{t('settings_rules_veto_seats')}</Field.Label>
-              <Select.Root type="multiple" bind:value={draft.veto.seatIds}>
-                <Select.Trigger
-                  id="rules-veto-seats"
-                  class="w-full"
-                  aria-invalid={invalidVetoSeats ||
-                    (draft.veto.enabled && !draft.veto.seatIds.length)}
-                  aria-describedby="rules-veto-hint"
-                >
-                  {draft.veto.seatIds.length
-                    ? t('settings_rules_selected_seats', {
-                        count: formatNumber(draft.veto.seatIds.length)
-                      })
-                    : t('settings_rules_select_seats')}
-                </Select.Trigger>
-                <Select.Content>
-                  <Select.Group>
-                    {#each eligibleSeats as seat (seat.id)}
-                      <Select.Item value={seat.id} label={seat.name} />
-                    {/each}
-                  </Select.Group>
-                </Select.Content>
-              </Select.Root>
-              <Field.Description id="rules-veto-hint">
-                {t('settings_rules_veto_hint')}
-              </Field.Description>
-              {#if eligibleSeats.length === 0}
-                <Field.Description>{t('settings_rules_no_eligible_seats')}</Field.Description>
-              {/if}
-              {#if draft.veto.enabled && !draft.veto.seatIds.length}
-                <Field.Error>{t('settings_rules_veto_required')}</Field.Error>
-              {/if}
-              {#if invalidVetoSeats}
-                <Field.Error>{t('settings_rules_veto_invalid')}</Field.Error>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onclick={() => {
-                    draft.veto.seatIds = draft.veto.seatIds.filter((id) =>
-                      eligibleSeats.some((seat) => seat.id === id)
-                    )
-                  }}
-                >
-                  {t('settings_rules_remove_ineligible')}
-                </Button>
-              {/if}
-            </Field.Field>
-            </Field.Group>
-          </Field.Set>
-        {:else}
-          <Field.Set>
-            <Field.Legend variant="label" class="text-lg font-semibold">
-              {t('settings_rules_veto')}
-            </Field.Legend>
-            <Field.Description>{t('settings_rules_veto_seat_assignment_hint')}</Field.Description>
-            <Field.Description>
-              {#if eligibleSeats.some((seat) => seat.procedure.hasVetoPower)}
-                {t('settings_rules_veto_assigned_seats', {
-                  seats: eligibleSeats
-                    .filter((seat) => seat.procedure.hasVetoPower)
-                    .map((seat) => seat.name)
-                    .join('、')
-                })}
-              {:else}
-                {t('settings_rules_veto_no_assigned_seats')}
-              {/if}
-            </Field.Description>
-          </Field.Set>
-        {/if}
+        <Field.Set class="gap-3 rounded-lg px-6 py-4 blur-setting-card">
+          <Field.Legend variant="label" class="font-bold">
+            {t('settings_rules_veto')}
+          </Field.Legend>
+          <Field.Description>{t('settings_rules_veto_seat_assignment_hint')}</Field.Description>
+          <Field.Description>
+            {#if eligibleSeats.some((seat) => seat.procedure.hasVetoPower)}
+              {t('settings_rules_veto_assigned_seats', {
+                seats: eligibleSeats
+                  .filter((seat) => seat.procedure.hasVetoPower)
+                  .map((seat) => seat.name)
+                  .join('、')
+              })}
+            {:else}
+              {t('settings_rules_veto_no_assigned_seats')}
+            {/if}
+          </Field.Description>
+        </Field.Set>
       </Field.Group>
     </Field.Set>
     {#if !valid}
@@ -377,7 +311,7 @@
     {#if failedValue === draftValue}
       <Field.Error>{t('settings_rules_save_failed')}</Field.Error>
     {/if}
-    <Field.Field orientation="horizontal">
+    <Field.Field orientation="horizontal" class="rounded-lg px-6 py-4 blur-setting-card">
       <Button type="submit" disabled={!valid || !dirty}>{t('settings_save_changes')}</Button>
       <Field.Description role="status">
         {dirty ? t('settings_rules_unsaved') : saved ? t('settings_rules_saved') : ''}

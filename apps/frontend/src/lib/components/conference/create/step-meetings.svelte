@@ -84,16 +84,15 @@
         </div>
       </article>
 
-      <article class="overflow-clip rounded-lg border">
+      <div>
         {#key `${committee.id}:${JSON.stringify(committee.procedureRules)}`}
           <ProcedureRulesSettings
             initialRules={committee.procedureRules}
             seats={wizard.procedureSeats(committee.id)}
-            vetoMode="seat"
             onSave={(config) => wizard.setCommitteeProcedureRules(committee.id, config)}
           />
         {/key}
-      </article>
+      </div>
     </div>
   {/each}
 
