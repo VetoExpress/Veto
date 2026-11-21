@@ -19,7 +19,7 @@ import { registerEventBusIpc } from './event-bus'
 import { registerPluginsIpc } from './plugins'
 import { registerAssetsIpc } from './assets'
 import { registerConferenceIpc } from './conference'
-import { registerUpdaterIpc } from './updater'
+import { initializeUpdater, registerUpdaterIpc } from './updater'
 import { registerAccountIpc } from './account'
 import { registerI18nIpc } from './i18n'
 
@@ -52,3 +52,5 @@ export function registerAllIpcHandlers(deps: IpcDependencies): void {
   registerAssetsIpc(deps.pluginInstances)
   registerConferenceIpc(deps.displayWindow)
 }
+
+export { initializeUpdater }

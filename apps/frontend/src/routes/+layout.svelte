@@ -7,6 +7,7 @@
   import { conferenceSync } from '$lib/classes/stores/conference/conference-sync-store'
   import { ModeWatcher } from 'mode-watcher'
   import MyAlertDialog from '$lib/components/dialog/my-alert-dialog.svelte'
+  import AutoUpdateDialog from '$lib/components/dialog/auto-update-dialog.svelte'
   import SettingsDialog from '$lib/components/settings/settings-dialog.svelte'
   import TimerDialog from '$lib/components/conference/timer/timer-dialog.svelte'
   import { timerDialogOpen } from '$lib/classes/stores/conference/timer-store'
@@ -40,6 +41,7 @@
 
 <ModeWatcher />
 <MyAlertDialog />
+<AutoUpdateDialog />
 <SettingsDialog />
 <TimerDialog bind:open={$timerDialogOpen} />
 {@render children()}

@@ -199,7 +199,14 @@ const veto = {
       ipcRenderer.invoke('veto:updater:quit-and-install'),
 
     /** 获取当前应用版本 */
-    getVersion: (): Promise<string> => ipcRenderer.invoke('veto:updater:get-version')
+    getVersion: (): Promise<string> => ipcRenderer.invoke('veto:updater:get-version'),
+
+    /** 获取启动安装和待处理更新状态 */
+    getStartupStatus: (): Promise<{
+      installing: boolean
+      version: string | null
+      availableVersion: string | null
+    }> => ipcRenderer.invoke('veto:updater:get-startup-status')
   },
 
   app: {

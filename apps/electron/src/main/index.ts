@@ -15,14 +15,13 @@ import { app, shell, BrowserWindow, protocol } from 'electron'
 import { join, extname } from 'path'
 import * as fs from 'fs'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
-import { autoUpdater } from 'electron-updater'
-import { createLogger, initializeLogging, log as baseLog } from './logger'
+import { createLogger, initializeLogging } from './logger'
 import icon from '../../resources/icon.png?asset'
 import { ensurePluginsDir, scanPluginDirectory } from './plugin-discovery'
 import { loadPluginConfig } from './plugin-store'
 import { stopDisplayWs as stopDisplayDataWs } from './display-ws'
 import { loadPlugin, unloadAll } from './plugin-host/extension-host/index'
-import { registerAllIpcHandlers, type IpcDependencies } from './ipc'
+import { initializeUpdater, registerAllIpcHandlers, type IpcDependencies } from './ipc'
 import { getAppUrl } from './dev-server'
 import { scheduleLaunchTelemetry } from './telemetry'
 import type { PluginInstance } from './plugin-discovery'
@@ -112,35 +111,6 @@ function createWindow(): void {
     // The protocol handler serves index.html for the root request.
     mainWindow.loadURL('veto://app/')
   }
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// 自动更新
-// ═══════════════════════════════════════════════════════════════════
-
-function setupAutoUpdater(): void {
-  autoUpdater.logger = baseLog
-  autoUpdater.autoDownload = false
-
-  const sendToAll = (event: string, data: unknown): void => {
-    for (const win of BrowserWindow.getAllWindows()) {
-      win.webContents.send('veto:event', { event, data })
-    }
-  }
-
-  autoUpdater.on('checking-for-update', () => sendToAll('updater:checking-for-update', {}))
-  autoUpdater.on('update-available', (info) => sendToAll('updater:update-available', info))
-  autoUpdater.on('update-not-available', (info) => sendToAll('updater:update-not-available', info))
-  autoUpdater.on('download-progress', (progress) =>
-    sendToAll('updater:download-progress', {
-      bytesPerSecond: progress.bytesPerSecond,
-      percent: Math.round(progress.percent),
-      total: progress.total,
-      transferred: progress.transferred
-    })
-  )
-  autoUpdater.on('update-downloaded', (info) => sendToAll('updater:update-downloaded', info))
-  autoUpdater.on('error', (error) => sendToAll('updater:error', { message: error.message }))
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -259,14 +229,12 @@ app.whenReady().then(async () => {
     }
   }
 
-  // 自动更新
-  setupAutoUpdater()
-
   // 注册自定义协议
   registerProtocol()
 
   // 创建主窗口
   createWindow()
+  initializeUpdater()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

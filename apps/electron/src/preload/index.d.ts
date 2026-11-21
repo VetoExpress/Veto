@@ -87,6 +87,11 @@ export interface VetoAPI {
     download: () => Promise<{ success: boolean; result?: unknown; error?: string }>
     quitAndInstall: () => Promise<{ success: boolean }>
     getVersion: () => Promise<string>
+    getStartupStatus: () => Promise<{
+      installing: boolean
+      version: string | null
+      availableVersion: string | null
+    }>
   }
   app: {
     openDevTools: () => Promise<{ success: boolean; error?: string }>
