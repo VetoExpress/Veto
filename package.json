@@ -16,6 +16,8 @@
     "format": "pnpm -r format && prettier --write \"tests/load/**/*.{ts,mjs,json,md}\" --ignore-path .gitignore",
     "typecheck": "pnpm i18n:compile && pnpm -r typecheck && pnpm typecheck:load",
     "build:frontend": "pnpm --filter @vetoexpress/frontend build",
+    "build:platform": "pnpm --filter veto build:vinext",
+    "deploy:platform": "pnpm --filter veto deploy:vinext",
     "build:electron": "pnpm --filter @vetoexpress/electron build",
     "build:win": "pnpm build:frontend && node scripts/copy-frontend.mjs && npm --prefix apps/electron run build:win",
     "build:mac": "pnpm build:frontend && node scripts/copy-frontend.mjs && npm --prefix apps/electron run build:mac",

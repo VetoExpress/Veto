@@ -3,6 +3,9 @@
   import {
     Activity,
     ArrowLeft,
+    Check,
+    Circle,
+    CircleDot,
     FolderOpen,
     Globe,
     House,
@@ -13,7 +16,8 @@
     ScrollText,
     Settings,
     UserRoundCheck,
-    Users
+    Users,
+    Workflow
   } from '@lucide/svelte'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
@@ -111,8 +115,30 @@
       ? (cloudProjection?.committee.name ?? cloudResult?.committeeName ?? activeCommittee?.name)
       : activeCommittee?.name
   )
+  const agendaMode = $derived(activeCommittee?.agendaMode ?? false)
+  const agendaRows = $derived.by(() => {
+    const workflow = activeCommittee?.appealWorkflow
+    return [...(activeCommittee?.agenda ?? [])]
+      .sort((left, right) => left.sortOrder - right.sortOrder)
+      .map((item) => {
+        const completed = workflow?.completedAgendaItemIds.includes(item.id) ?? false
+        const current = workflow?.currentAgendaItemId === item.id
+        const pcn = workflow?.pcnByAgendaItemId[item.id] ?? null
+        return {
+          item,
+          status: completed ? 'completed' : current ? 'current' : 'pending',
+          pcn
+        } as const
+      })
+  })
   const navigation = $derived(
     [
+      {
+        path: `${committeeRoute}/chair/appeal`,
+        label: t('procedure_appeal_workflow'),
+        icon: Workflow,
+        visible: isChair && agendaMode
+      },
       {
         path: committeeRoute,
         label: t('procedure_overview'),
@@ -121,7 +147,7 @@
       },
       {
         path: `${committeeRoute}/chair`,
-        label: t('procedure_chair'),
+        label: t('procedure_chair_workspace'),
         icon: Users,
         visible: isChair
       },
@@ -160,8 +186,10 @@
 
   function isNavigationActive(path: string): boolean {
     if (path === committeeRoute) return $page.url.pathname === path
-    if (path === `${committeeRoute}/chair` && $page.url.pathname.startsWith(`${path}/participants`))
-      return false
+    if (path === `${committeeRoute}/chair`) {
+      if ($page.url.pathname.startsWith(`${path}/appeal`)) return false
+      if ($page.url.pathname.startsWith(`${path}/participants`)) return false
+    }
     return $page.url.pathname === path || $page.url.pathname.startsWith(`${path}/`)
   }
 
@@ -226,8 +254,50 @@
               </Sidebar.MenuItem>
             {/each}
           </Sidebar.Menu>
+          {#if agendaMode}
+            <Sidebar.GroupLabel
+              class="h-auto px-3 pb-2 pt-4 text-[11px] font-normal tracking-[0.12em]"
+            >
+              {t('procedure_agenda_section')}
+            </Sidebar.GroupLabel>
+            <ScrollArea class="max-h-44 overflow-hidden">
+              <Sidebar.Menu class="gap-1 pr-1">
+                {#each agendaRows as row (row.item.id)}
+                  <Sidebar.MenuItem>
+                    <Sidebar.MenuButton
+                      class="h-8 cursor-pointer gap-2"
+                      title={row.item.title}
+                      onclick={() => goTo(committeeRoute)}
+                    >
+                      {#if row.status === 'completed'}
+                        <Check class="text-emerald-500" />
+                      {:else if row.status === 'current'}
+                        <CircleDot class="text-sky-500" />
+                      {:else}
+                        <Circle class="text-muted-foreground/45" />
+                      {/if}
+                      <span class="min-w-0 flex-1 truncate text-xs">{row.item.title}</span>
+                      {#if row.pcn?.status === 'finalized'}
+                        <span class="size-1.5 shrink-0 rounded-full bg-emerald-500"></span>
+                      {/if}
+                    </Sidebar.MenuButton>
+                  </Sidebar.MenuItem>
+                {/each}
+                {#if agendaRows.length === 0}
+                  <p class="px-3 py-1 text-[11px] text-muted-foreground">
+                    {t('procedure_agenda_empty')}
+                  </p>
+                {/if}
+              </Sidebar.Menu>
+            </ScrollArea>
+          {/if}
           {#if canControlConference}
             <!-- 代表团列表 -->
+            <Sidebar.GroupLabel
+              class="h-auto px-3 pb-2 pt-4 text-[11px] font-normal tracking-[0.12em]"
+            >
+              {t('procedure_delegation_section')}
+            </Sidebar.GroupLabel>
             <div class="flex flex-1 flex-col">
               {#if cloudSession.chairError}
                 <p class="px-5 pb-3 text-xs text-destructive">{cloudSession.chairError}</p>

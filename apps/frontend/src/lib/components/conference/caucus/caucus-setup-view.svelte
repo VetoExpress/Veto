@@ -85,7 +85,12 @@
     </div>
     <!-- 开始磋商 -->
     <div class="flex justify-center gap-4">
-      <Button size="lg" class="gap-2 min-w-[200px]" onclick={handleStart}>
+      <Button
+        size="lg"
+        class="gap-2 min-w-[200px]"
+        disabled={listedIds.length === 0}
+        onclick={handleStart}
+      >
         <Play size={18} />
         {t('procedure_start_caucus')}
       </Button>

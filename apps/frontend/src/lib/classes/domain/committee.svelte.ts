@@ -50,6 +50,7 @@ import {
   tallyVotes as tallyVotesEngine
 } from '$lib/classes/utils/committee/voting'
 import type { ProcedureRulesConfig, QuorumRecord } from '$lib/classes/types/procedure-rules'
+import type { AppealPcn, AppealWorkflowState } from '$lib/classes/types/appeal'
 import {
   defaultProcedureRules,
   cloneProcedureRules,
@@ -61,6 +62,17 @@ import {
   evaluateVote
 } from '$lib/classes/utils/committee/procedure-rules'
 import { calcMaxSpeakers } from '$lib/classes/utils/committee/caucus'
+import {
+  appendAppealEvent,
+  cloneAppealWorkflow,
+  createAppealWorkflow,
+  ensureAppealPcn,
+  latestAppealPcnVersion,
+  newAppealReadingSession,
+  nextAppealAgendaItemId,
+  normalizeAppealWorkflow,
+  isAppealCommitteeName
+} from '$lib/classes/utils/committee/appeal'
 
 // ---- 工具函数 ----------------------------------------------------------
 
@@ -276,8 +288,464 @@ export class Committee {
     return true
   }
 
+  // ================================================================
+  //  APPEAL workflow
+  // ================================================================
+
+  private appendAppealPcnVersion(
+    title: string,
+    content: string,
+    note?: string
+  ): AppealWorkflowState | null {
+    const agendaItemId = this.appealWorkflow.currentAgendaItemId
+    if (!agendaItemId) return null
+    const pcn = this.appealWorkflow.pcnByAgendaItemId[agendaItemId]
+    if (!pcn || pcn.status === 'finalized') return null
+
+    const trimmedTitle = title.trim()
+    const trimmedNote = note?.trim()
+    if (!trimmedTitle) return null
+    const latest = latestAppealPcnVersion(pcn)
+    if (
+      latest &&
+      latest.title === trimmedTitle &&
+      latest.content === content &&
+      !trimmedNote
+    ) {
+      return null
+    }
+
+    const now = Date.now()
+    const nextVersion = (latest?.version ?? 0) + 1
+    const status =
+      this.appealWorkflow.stage === 'evaluation_debate'
+        ? 'draft'
+        : this.appealWorkflow.stage === 'consensus_meeting'
+          ? 'negotiation'
+          : pcn.status
+    const nextPcn: AppealPcn = {
+      ...pcn,
+      status,
+      versions: [
+        ...pcn.versions,
+        {
+          version: nextVersion,
+          title: trimmedTitle,
+          content,
+          ...(trimmedNote ? { note: trimmedNote } : {}),
+          createdAt: now
+        }
+      ],
+      updatedAt: now
+    }
+    return {
+      ...this.appealWorkflow,
+      pcnByAgendaItemId: {
+        ...this.appealWorkflow.pcnByAgendaItemId,
+        [agendaItemId]: nextPcn
+      }
+    }
+  }
+
+  addAgendaItem(title: string, description?: string): string | null {
+    const trimmed = title.trim()
+    if (!trimmed) return null
+    const id = generateId()
+    const sortOrder =
+      this.agenda.length === 0 ? 0 : Math.max(...this.agenda.map((item) => item.sortOrder)) + 1
+    this.agenda = [
+      ...this.agenda,
+      {
+        id,
+        title: trimmed,
+        description: description?.trim() || undefined,
+        sortOrder
+      }
+    ]
+    this.touch()
+    return id
+  }
+
+  updateAgendaItemTitle(itemId: string, title: string): boolean {
+    const trimmed = title.trim()
+    if (!trimmed) return false
+    const item = this.agenda.find((entry) => entry.id === itemId)
+    if (!item) return false
+    this.agenda = this.agenda.map((entry) =>
+      entry.id === itemId ? { ...entry, title: trimmed } : entry
+    )
+    this.touch()
+    return true
+  }
+
+  moveAgendaItem(itemId: string, direction: -1 | 1): boolean {
+    const ordered = [...this.agenda].sort((a, b) => a.sortOrder - b.sortOrder)
+    const index = ordered.findIndex((item) => item.id === itemId)
+    const target = index + direction
+    if (index < 0 || target < 0 || target >= ordered.length) return false
+    ;[ordered[index], ordered[target]] = [ordered[target], ordered[index]]
+    this.agenda = ordered.map((item, sortOrder) => ({ ...item, sortOrder }))
+    this.touch()
+    return true
+  }
+
+  confirmAppealRollCall(): void {
+    this.appealWorkflow = appendAppealEvent(
+      { ...this.appealWorkflow, stage: 'agenda' },
+      'roll_call_confirmed'
+    )
+    this.touch()
+  }
+
+  restartAppealWorkflow(): void {
+    this.appealWorkflow = createAppealWorkflow()
+    this.touch()
+  }
+
+  acceptAppealAgenda(): boolean {
+    const ordered = [...this.agenda].sort((a, b) => a.sortOrder - b.sortOrder)
+    const completed = new Set(this.appealWorkflow.completedAgendaItemIds)
+    const firstItem = ordered.find((item) => !completed.has(item.id)) ?? ordered[0]
+    if (!firstItem) return false
+
+    let next: AppealWorkflowState = {
+      ...this.appealWorkflow,
+      stage: 'evaluation_debate',
+      currentAgendaItemId: firstItem.id,
+      agendaAcceptedAt: Date.now(),
+      reading: null,
+      consensusReading: null,
+      negotiation: null
+    }
+    next = ensureAppealPcn(next, firstItem.id, firstItem.title)
+    next = appendAppealEvent(next, 'agenda_accepted', firstItem.title)
+    this.appealWorkflow = appendAppealEvent(next, 'evaluation_started', firstItem.title)
+    this.touch()
+    return true
+  }
+
+  saveAppealPcn(title: string, content: string): boolean {
+    const next = this.appendAppealPcnVersion(title, content)
+    if (!next) return false
+    this.appealWorkflow = appendAppealEvent(next, 'pcn_saved', title.trim())
+    this.touch()
+    return true
+  }
+
+  setAppealPcnFileName(name: string): boolean {
+    const agendaItemId = this.appealWorkflow.currentAgendaItemId
+    const trimmed = name.trim()
+    if (!agendaItemId || !trimmed) return false
+    const pcn = this.appealWorkflow.pcnByAgendaItemId[agendaItemId]
+    if (!pcn) return false
+    const now = Date.now()
+    this.appealWorkflow = {
+      ...this.appealWorkflow,
+      pcnByAgendaItemId: {
+        ...this.appealWorkflow.pcnByAgendaItemId,
+        [agendaItemId]: { ...pcn, fileName: trimmed, updatedAt: now }
+      }
+    }
+    this.touch()
+    return true
+  }
+
+  endAppealEvaluationDebate(): boolean {
+    if (this.appealWorkflow.stage !== 'evaluation_debate') return false
+    this.appealWorkflow = appendAppealEvent(
+      {
+        ...this.appealWorkflow,
+        stage: 'document_reading',
+        reading: null,
+        negotiation: null
+      },
+      'evaluation_ended'
+    )
+    this.touch()
+    return true
+  }
+
+  startAppealReading(): boolean {
+    const agendaItemId = this.appealWorkflow.currentAgendaItemId
+    const pcn = agendaItemId
+      ? this.appealWorkflow.pcnByAgendaItemId[agendaItemId]
+      : undefined
+    if (!agendaItemId || !pcn || pcn.status === 'finalized' || !pcn.fileName.trim()) return false
+    const now = Date.now()
+    this.appealWorkflow = appendAppealEvent(
+      {
+        ...this.appealWorkflow,
+        stage: 'document_reading',
+        reading: newAppealReadingSession(),
+        consensusReading: null,
+        pcnByAgendaItemId: {
+          ...this.appealWorkflow.pcnByAgendaItemId,
+          [agendaItemId]: { ...pcn, status: 'reading', updatedAt: now }
+        }
+      },
+      'reading_started'
+    )
+    this.touch()
+    return true
+  }
+
+  finishAppealReading(): boolean {
+    const reading = this.appealWorkflow.reading
+    if (!reading || reading.completedAt) return false
+    this.appealWorkflow = appendAppealEvent(
+      {
+        ...this.appealWorkflow,
+        stage: 'negotiation_decision',
+        reading: { ...reading, completedAt: Date.now() }
+      },
+      'reading_completed'
+    )
+    this.touch()
+    return true
+  }
+
+  decideAppealNegotiation(needed: boolean): void {
+    const now = Date.now()
+    const current = this.appealWorkflow.negotiation
+    const agendaItemId = this.appealWorkflow.currentAgendaItemId
+    const pcn = agendaItemId
+      ? this.appealWorkflow.pcnByAgendaItemId[agendaItemId]
+      : undefined
+    this.appealWorkflow = appendAppealEvent(
+      {
+        ...this.appealWorkflow,
+        stage: needed ? 'consensus_meeting' : 'pcn_finalization',
+        consensusReading: null,
+        pcnByAgendaItemId:
+          agendaItemId && pcn
+            ? {
+                ...this.appealWorkflow.pcnByAgendaItemId,
+                [agendaItemId]: {
+                  ...pcn,
+                  status: needed ? 'negotiation' : 'ready',
+                  updatedAt: now
+                }
+              }
+            : this.appealWorkflow.pcnByAgendaItemId,
+        negotiation: {
+          needed,
+          notes: current?.notes ?? '',
+          decidedAt: now,
+          ...(current?.revisedAt ? { revisedAt: current.revisedAt } : {})
+        }
+      },
+      needed ? 'negotiation_requested' : 'negotiation_skipped'
+    )
+    this.touch()
+  }
+
+  startAppealConsensusReading(): boolean {
+    if (this.appealWorkflow.stage !== 'consensus_meeting') return false
+    const agendaItemId = this.appealWorkflow.currentAgendaItemId
+    const pcn = agendaItemId
+      ? this.appealWorkflow.pcnByAgendaItemId[agendaItemId]
+      : undefined
+    if (!agendaItemId || !pcn || !pcn.fileName.trim()) return false
+    this.appealWorkflow = appendAppealEvent(
+      {
+        ...this.appealWorkflow,
+        consensusReading: newAppealReadingSession()
+      },
+      'consensus_reading_started'
+    )
+    this.touch()
+    return true
+  }
+
+  finishAppealConsensusReading(): boolean {
+    const reading = this.appealWorkflow.consensusReading
+    if (this.appealWorkflow.stage !== 'consensus_meeting' || !reading || reading.completedAt) {
+      return false
+    }
+    this.appealWorkflow = appendAppealEvent(
+      {
+        ...this.appealWorkflow,
+        stage: 'document_reading',
+        reading: null,
+        consensusReading: { ...reading, completedAt: Date.now() }
+      },
+      'consensus_reading_completed'
+    )
+    this.touch()
+    return true
+  }
+
+  submitAppealRevision(title: string, content: string, notes: string): boolean {
+    if (!content.trim()) return false
+    const next = this.appendAppealPcnVersion(title, content, notes)
+    if (!next) return false
+    const now = Date.now()
+    this.appealWorkflow = appendAppealEvent(
+      {
+        ...next,
+        stage: 'document_reading',
+        reading: null,
+        consensusReading: null,
+        negotiation: {
+          needed: true,
+          notes,
+          decidedAt: this.appealWorkflow.negotiation?.decidedAt ?? now,
+          revisedAt: now,
+          ...(this.appealWorkflow.negotiation?.confirmedAt
+            ? { confirmedAt: this.appealWorkflow.negotiation.confirmedAt }
+            : {})
+        }
+      },
+      'revision_saved',
+      title.trim()
+    )
+    this.touch()
+    return true
+  }
+
+  recordAppealRevision(notes: string): boolean {
+    const agendaItemId = this.appealWorkflow.currentAgendaItemId
+    if (!agendaItemId) return false
+    const pcn = this.appealWorkflow.pcnByAgendaItemId[agendaItemId]
+    if (!pcn || pcn.status === 'finalized') return false
+    const latest = latestAppealPcnVersion(pcn)
+    const agendaTitle = this.agenda.find((item) => item.id === agendaItemId)?.title
+    const now = Date.now()
+    const trimmedNotes = notes.trim()
+    const nextPcn: AppealPcn = {
+      ...pcn,
+      status: 'negotiation',
+      versions: [
+        ...pcn.versions,
+        {
+          version: (latest?.version ?? 0) + 1,
+          title: latest?.title || agendaTitle || '',
+          content: '',
+          ...(trimmedNotes ? { note: trimmedNotes } : {}),
+          createdAt: now
+        }
+      ],
+      updatedAt: now
+    }
+    this.appealWorkflow = appendAppealEvent(
+      {
+        ...this.appealWorkflow,
+        stage: 'document_reading',
+        reading: null,
+        negotiation: {
+          needed: true,
+          notes,
+          decidedAt: this.appealWorkflow.negotiation?.decidedAt ?? now,
+          revisedAt: now
+        },
+        pcnByAgendaItemId: {
+          ...this.appealWorkflow.pcnByAgendaItemId,
+          [agendaItemId]: nextPcn
+        }
+      },
+      'revision_saved',
+      nextPcn.versions.at(-1)?.title
+    )
+    this.touch()
+    return true
+  }
+
+  confirmAppealConsensus(notes: string): void {
+    const agendaItemId = this.appealWorkflow.currentAgendaItemId
+    const pcn = agendaItemId
+      ? this.appealWorkflow.pcnByAgendaItemId[agendaItemId]
+      : undefined
+    const now = Date.now()
+    this.appealWorkflow = appendAppealEvent(
+      {
+        ...this.appealWorkflow,
+        stage: 'pcn_finalization',
+        negotiation: {
+          needed: true,
+          notes,
+          decidedAt: this.appealWorkflow.negotiation?.decidedAt ?? now,
+          ...(this.appealWorkflow.negotiation?.revisedAt
+            ? { revisedAt: this.appealWorkflow.negotiation.revisedAt }
+            : {}),
+          confirmedAt: now
+        },
+        pcnByAgendaItemId:
+          agendaItemId && pcn
+            ? {
+                ...this.appealWorkflow.pcnByAgendaItemId,
+                [agendaItemId]: { ...pcn, status: 'ready', updatedAt: now }
+              }
+            : this.appealWorkflow.pcnByAgendaItemId
+      },
+      'consensus_confirmed'
+    )
+    this.touch()
+  }
+
+  finalizeAppealPcn(): boolean {
+    const agendaItemId = this.appealWorkflow.currentAgendaItemId
+    if (!agendaItemId) return false
+    const pcn = this.appealWorkflow.pcnByAgendaItemId[agendaItemId]
+    const latest = latestAppealPcnVersion(pcn)
+    if (!pcn || !latest || !pcn.fileName.trim()) return false
+    const now = Date.now()
+    this.appealWorkflow = appendAppealEvent(
+      {
+        ...this.appealWorkflow,
+        stage: 'item_complete',
+        completedAgendaItemIds: [
+          ...new Set([...this.appealWorkflow.completedAgendaItemIds, agendaItemId])
+        ],
+        pcnByAgendaItemId: {
+          ...this.appealWorkflow.pcnByAgendaItemId,
+          [agendaItemId]: {
+            ...pcn,
+            status: 'finalized',
+            updatedAt: now,
+            finalizedAt: now
+          }
+        }
+      },
+      'pcn_finalized',
+      latest.title
+    )
+    this.touch()
+    return true
+  }
+
+  moveToNextAppealAgendaItem(): string | null {
+    const ordered = [...this.agenda].sort((a, b) => a.sortOrder - b.sortOrder)
+    const nextId = nextAppealAgendaItemId(
+      this.appealWorkflow,
+      ordered.map((item) => item.id)
+    )
+    if (!nextId) return null
+    const item = ordered.find((entry) => entry.id === nextId)
+    if (!item) return null
+
+    let next: AppealWorkflowState = {
+      ...this.appealWorkflow,
+      stage: 'evaluation_debate',
+      currentAgendaItemId: nextId,
+      reading: null,
+      consensusReading: null,
+      negotiation: null
+    }
+    next = ensureAppealPcn(next, nextId, item.title)
+    this.appealWorkflow = appendAppealEvent(next, 'next_item_started', item.title)
+    this.touch()
+    return nextId
+  }
+
+  get currentAppealPcn(): AppealPcn | null {
+    const agendaItemId = this.appealWorkflow.currentAgendaItemId
+    return agendaItemId ? (this.appealWorkflow.pcnByAgendaItemId[agendaItemId] ?? null) : null
+  }
+
   // ── 议题 ──
   agenda: AgendaItem[] = $state([])
+  agendaMode: boolean = $state(false)
+  appealWorkflow: AppealWorkflowState = $state(createAppealWorkflow())
 
   // ── 发言名单 ──
   speakerList: SpeakerList = new SpeakerList('main', '主发言名单')
@@ -318,6 +786,13 @@ export class Committee {
   /** 从 Conference 数据还原状态 */
   private restoreFromConference(data: Partial<CommitteeDTO>): void {
     if (data.name != null) this.name = data.name
+    this.agendaMode =
+      data.agendaMode ??
+      Boolean(
+        data.appealWorkflow?.currentAgendaItemId ||
+          data.appealWorkflow?.events?.length ||
+          isAppealCommitteeName(data.name)
+      )
     if (data.defaultSpeakingTimeSec != null)
       this.defaultSpeakingTimeSec = data.defaultSpeakingTimeSec
     if (
@@ -359,6 +834,15 @@ export class Committee {
       }))
     }
     if (data.agenda != null) this.agenda = data.agenda.map((item) => ({ ...item }))
+    if (data.appealWorkflow != null) {
+      this.appealWorkflow = normalizeAppealWorkflow({
+        ...createAppealWorkflow(),
+        ...data.appealWorkflow,
+        completedAgendaItemIds: data.appealWorkflow.completedAgendaItemIds ?? [],
+        pcnByAgendaItemId: data.appealWorkflow.pcnByAgendaItemId ?? {},
+        events: data.appealWorkflow.events ?? []
+      })
+    }
     if (data.phase != null) this.phase = data.phase
     if (data.motions != null)
       this.motions = (data.motions as Motion[]).map((motion) => ({ ...motion }))
@@ -1008,6 +1492,10 @@ export class Committee {
   }
 
   private executeClosureDebate(): void {
+    if (this.agendaMode && this.appealWorkflow.stage === 'evaluation_debate') {
+      this.endAppealEvaluationDebate()
+      return
+    }
     if (this.activeSpeaker) {
       this.activeSpeaker = null
     }
@@ -1216,6 +1704,16 @@ export class Committee {
     const { motionId, speakerSeatIds, remainingSec } = this.caucusSetup
     const motion = this.motions.find((m) => m.id === motionId)
     if (!motion) return
+    if (speakerSeatIds.length === 0) {
+      console.warn('CaucusStartRejected', {
+        operation: 'startCaucusWithSetup',
+        committeeId: this.id,
+        motionId,
+        reason: 'empty speaker list',
+        impact: 'caucus remains in setup'
+      })
+      return
+    }
 
     const perSpeakerSec = ((motion as any).speakingTimePerPersonSec as number) ?? 60
     const totalSec = remainingSec ?? ((motion as any).totalTimeSec as number)
@@ -1477,7 +1975,9 @@ export class Committee {
   endCaucus(): void {
     const caucusType = this.activeCaucus?.type
     this.phase = 'general_debate'
+    this.caucusSetup = null
     this.activeCaucus = null
+    this.activeSpeaker = null
     const eventType = caucusType === 'individual' ? 'individual_speech_ended' : 'caucus_ended'
     this.addConferenceEntry(
       eventType,
@@ -2025,6 +2525,8 @@ export class Committee {
       name: this.name,
       phase: this.phase,
       agenda: this.agenda.map((item) => ({ ...item })),
+      agendaMode: this.agendaMode,
+      appealWorkflow: cloneAppealWorkflow(this.appealWorkflow),
       speakerLists: this.speakerList.toJSON(),
       motions: this.motions.map((motion) => ({ ...motion })),
       dismissedResolvedMotionIds: [...this.dismissedResolvedMotionIds],

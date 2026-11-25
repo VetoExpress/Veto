@@ -56,7 +56,7 @@
   "settings_clear_battles_confirm": "This cannot be undone. All battles will be permanently deleted.",
   "settings_battles_cleared": "All battles cleared",
   "settings_clear_all": "Clear all data",
-  "settings_committee_description": "Configure the current meeting's rules of procedure.",
+  "settings_committee_description": "Configure the current meeting's Agenda item mode and rules of procedure.",
   "settings_voting_rules": "Voting rules",
   "settings_voting_description": "Approval threshold for substantive votes, calculated from present seats with voting rights.",
   "settings_majority_simple": "Simple majority",

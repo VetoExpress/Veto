@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tick } from 'svelte'
   import { t } from '$lib/i18n'
   import {
     Presentation,
@@ -35,7 +36,10 @@
   import { toSeatView } from '$lib/classes/types/delegate'
   import { defaultProcedureRules } from '$lib/classes/utils/committee/procedure-rules'
 
-  let { open = $bindable(false) }: { open: boolean } = $props()
+  let {
+    open = $bindable(false),
+    initialType = null
+  }: { open: boolean; initialType?: MotionType | null } = $props()
 
   const conf = $derived($currentCommittee)
   const procedureRules = $derived(
@@ -117,6 +121,11 @@
   // ToggleGroup 需要 string 类型的 value 绑定
   let toggleValue = $state('')
   $effect(() => {
+    if (!open) return
+    selectedType = initialType
+    toggleValue = initialType ?? ''
+  })
+  $effect(() => {
     if (toggleValue) {
       selectedType = toggleValue as MotionType
     }
@@ -179,7 +188,7 @@
     open = value
   }
 
-  function handlePropose(): void {
+  async function handlePropose(): Promise<void> {
     if (!selectedType || !conf) return
 
     const proposerDel = selectedProposer || conf.participantSeats[0]
@@ -224,6 +233,7 @@
     }
 
     proposeMotion(motionData)
+    await tick()
 
     // 判断是否需要表决：需表决 → 导航到动议表决页；否则直接通过执行
     const resolution = resolveMotion(selectedType)

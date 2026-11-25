@@ -8,6 +8,8 @@ allowBuilds:
   msw: false
   '@parcel/watcher': set this to true or false
   '@swc/core': set this to true or false
+  esbuild: true
+  workerd: true
 
 minimumReleaseAgeExclude:
   - '@inlang/paraglide-js@3.2.2'
@@ -15,3 +17,6 @@ minimumReleaseAgeExclude:
   - next-intl-swc-plugin-extractor@4.14.10
   - next-intl@4.14.10
   - use-intl@4.14.10
+  - '@cloudflare/workers-utils@0.57.0'
+  - miniflare@5.20261123.1-beta
+  - wrangler@4.168.0

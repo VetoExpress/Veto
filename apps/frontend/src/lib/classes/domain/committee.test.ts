@@ -136,6 +136,48 @@ describe('Committee domain aggregate', () => {
     }
   )
 
+  it('does not start a moderated caucus with an empty speaker list', () => {
+    const committee = new Committee({ phase: 'general_debate' })
+    const seatId = committee.addSeat('Delegate', 'group-1')
+    const motionId = committee.proposeMotion({
+      type: 'moderated_caucus',
+      proposedBySeatId: seatId,
+      totalTimeSec: 600,
+      speakingTimePerPersonSec: 60,
+      topic: 'Climate security'
+    } as any)
+
+    committee.approveMotion(motionId)
+    committee.removeFromCaucusSpeakersSetup(seatId)
+    committee.startCaucusWithSetup()
+
+    expect(committee.phase).toBe('caucus_setup')
+    expect(committee.activeCaucus).toBeNull()
+    expect(committee.caucusSetup?.speakerSeatIds).toEqual([])
+  })
+
+  it('clears caucus setup and active speaker state when ending a caucus', () => {
+    const committee = new Committee({ phase: 'general_debate' })
+    const seatId = committee.addSeat('Delegate', 'group-1')
+    const motionId = committee.proposeMotion({
+      type: 'moderated_caucus',
+      proposedBySeatId: seatId,
+      totalTimeSec: 600,
+      speakingTimePerPersonSec: 60,
+      topic: 'Climate security'
+    } as any)
+
+    committee.approveMotion(motionId)
+    committee.startCaucusWithSetup()
+    committee.startCaucusSpeakerEntry()
+    committee.endCaucus()
+
+    expect(committee.phase).toBe('general_debate')
+    expect(committee.caucusSetup).toBeNull()
+    expect(committee.activeCaucus).toBeNull()
+    expect(committee.activeSpeaker).toBeNull()
+  })
+
   it('uses the configured majority for substantive voting and preserves it after reload', () => {
     const committee = new Committee({ phase: 'general_debate' })
     const seatIds = Array.from({ length: 5 }, (_, sortOrder) =>

@@ -9,6 +9,7 @@
   import { get } from 'svelte/store'
   import { Timer, MessageSquare } from '@lucide/svelte'
   import PanelHeader from '$lib/components/conference/common/panel-header.svelte'
+  import { Button } from '$lib/components/ui/button/index.js'
   import { Separator } from '$lib/components/ui/separator/index.js'
   import ActiveSpeakerCard from '$lib/components/conference/speakers/active-speaker-card.svelte'
   import ReadySpeakerCard from '$lib/components/conference/speakers/ready-speaker-card.svelte'
@@ -21,7 +22,8 @@
     resumeSpeaker,
     advanceCaucusSpeaker,
     cancelCaucusSpeaker,
-    startCaucusSpeaker
+    startCaucusSpeaker,
+    endCaucus
   } from '$lib/classes/stores/conference/conference-store'
   import { destroyTimer } from '$lib/classes/services/engine/conference-engine'
   import { formatTime } from '$lib/classes/formatters/time-formater'
@@ -204,6 +206,11 @@
     syncDisplay()
   }
 
+  function endCaucusHandler(): void {
+    endCaucus()
+    syncDisplay()
+  }
+
   // ── 键盘快捷键（无让渡）─────────────────────────────────────
   function isInInput(el: HTMLElement): boolean {
     const tag = el.tagName
@@ -307,6 +314,13 @@
       showIndex={false}
       showDelete={false}
     />
+
+    <div class="flex justify-end">
+      <Button variant="destructive" class="gap-2" onclick={endCaucusHandler}>
+        <Timer size={14} />
+        {t('procedure_finish_early')}{t('procedure_moderated_caucus')}
+      </Button>
+    </div>
 
     {#if isListExhausted}
       <div class="text-center text-sm text-muted-foreground">

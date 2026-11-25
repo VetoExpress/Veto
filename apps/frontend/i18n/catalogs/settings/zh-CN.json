@@ -56,7 +56,7 @@
   "settings_clear_battles_confirm": "此操作不可撤销，所有战局将被永久删除。",
   "settings_battles_cleared": "已清除所有战局数据",
   "settings_clear_all": "清除所有数据",
-  "settings_committee_description": "配置当前会议的议事规则。",
+  "settings_committee_description": "配置当前会议的 Agenda 议题模式与议事规则。",
   "settings_voting_rules": "投票规则",
   "settings_voting_description": "实质性投票所需的赞成票门槛，按出席且拥有投票权的席位计算。",
   "settings_majority_simple": "二分之一多数",

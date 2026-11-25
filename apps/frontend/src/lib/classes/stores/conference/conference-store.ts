@@ -93,6 +93,13 @@ export function setSubstantiveVotingMajority(majorityRule: MajorityRule): void {
   syncEngine(engine)
 }
 
+export function setAgendaMode(enabled: boolean): void {
+  const engine = getCurrentEngine()
+  if (!engine) return
+  engine.agendaMode = enabled
+  syncEngine(engine)
+}
+
 export function setProcedureRules(
   config: import('$lib/classes/types/procedure-rules').ProcedureRulesConfig
 ): boolean {

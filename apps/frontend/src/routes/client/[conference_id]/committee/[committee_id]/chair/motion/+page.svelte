@@ -44,6 +44,7 @@
   const committeeId = $derived(page.params.committee_id ?? null)
 
   const conf = $derived($currentCommittee)
+  const agendaMode = $derived(conf?.agendaMode ?? false)
 
   const MOTION_ICONS: Record<string, typeof Presentation> = {
     open_speakers_list: Presentation,
@@ -97,7 +98,11 @@
   function handleApprove(): void {
     if (!pendingMotion) return
     approveMotion(pendingMotion.id)
-    goBack()
+    if (agendaMode && pendingMotion.type === 'closure_debate') {
+      goto(resolve(`/client/${conferenceId}/committee/${committeeId}/chair/appeal`))
+    } else {
+      goBack()
+    }
   }
 
   function handleReject(): void {
@@ -112,17 +117,13 @@
     }
   }
 
-  // 如果没有待表决动议，自动返回
+  // 如果没有待表决动议，自动返回；避免残留“没有待表决的动议”状态。
   $effect(() => {
-    if (conf && !pendingMotion) {
-      // 检查是否有刚被处理的动议（短暂延迟后返回）
-      const hasProcessedMotion = conf.motions.some(
-        (m) => m.status === 'approved' || m.status === 'rejected'
-      )
-      if (!hasProcessedMotion) {
-        goto(resolve(`/client/${conferenceId}/committee/${committeeId}/chair`))
-      }
-    }
+    if (!conf || pendingMotion) return
+    const timeout = window.setTimeout(() => {
+      goto(resolve(`/client/${conferenceId}/committee/${committeeId}/chair`))
+    }, 0)
+    return () => window.clearTimeout(timeout)
   })
 </script>
 
@@ -205,7 +206,9 @@
               </div>
             {:else if pendingMotion.type === 'closure_debate'}
               <div class="mt-3 text-sm text-muted-foreground">
-                {t('procedure_close_debate_on_the_current_topic_then_start_the_pre_vote_roll_call')}
+                {agendaMode
+                  ? t('procedure_appeal_end_debate_motion_description')
+                  : t('procedure_close_debate_on_the_current_topic_then_start_the_pre_vote_roll_call')}
               </div>
             {:else if pendingMotion.type === 'substantive_vote'}
               <div
@@ -267,7 +270,7 @@
     <div class="flex flex-1 items-center justify-center">
       <div class="flex flex-col items-center gap-4 text-muted-foreground">
         <Vote size={48} class="opacity-30" />
-        <p class="text-lg font-medium">{t('procedure_no_motion_awaiting_a_vote')}</p>
+        <p class="text-lg font-medium">{t('procedure_loading')}</p>
         <Button variant="outline" size="sm" onclick={goBack}>
           {t('procedure_back_to_meeting')}
         </Button>

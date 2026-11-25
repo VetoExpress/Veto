@@ -8,6 +8,7 @@ import type {
   Entry,
   ConferenceEntry
 } from '../../../../../shared/action-types'
+import type { AppealWorkflowState } from './appeal'
 import { ACTION_MESSAGE_KEYS, getLocalizedLabels } from '../../../../../shared/action-types'
 import { t } from '$lib/i18n'
 import type { MessageKey } from '$lib/i18n'
@@ -296,6 +297,8 @@ export type CaucusType =
   'moderated' | 'unmoderated' | 'moderated_debate' | 'unmoderated_debate' | 'individual'
 
 export interface Committee {
+  agendaMode?: boolean
+  appealWorkflow?: AppealWorkflowState
   procedureRules?: import('./procedure-rules').ProcedureRulesConfig
   quorumRecord?: import('./procedure-rules').QuorumRecord
   id: string

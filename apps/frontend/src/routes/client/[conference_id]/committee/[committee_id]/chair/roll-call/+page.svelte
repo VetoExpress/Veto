@@ -162,7 +162,11 @@
   function handleComplete(): void {
     if (!quorum?.met) return
     if (completeRollCall()) {
-      goto(resolve(`/client/${conferenceId}/committee/${committeeId}/chair`))
+      if (conf?.agendaMode) {
+        goto(resolve(`/client/${conferenceId}/committee/${committeeId}/chair/appeal`))
+      } else {
+        goto(resolve(`/client/${conferenceId}/committee/${committeeId}/chair`))
+      }
     }
   }
 
