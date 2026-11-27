@@ -14,7 +14,9 @@
 </script>
 
 <DisplayPage>
-  {#if caucusTimer.type === 'moderated' && caucusTimer.caucusSpeakers}
+  {#if
+    (caucusTimer.type === 'moderated' || caucusTimer.type === 'consensus_meeting') &&
+    caucusTimer.caucusSpeakers}
     {@const speakers = caucusTimer.caucusSpeakers}
     {@const currentIdx = caucusTimer.currentSpeakerIndex ?? -1}
     {@const currentSpeaker = currentIdx >= 0 ? speakers[currentIdx] : null}
@@ -29,7 +31,13 @@
           status={data.currentSpeaker.status}
         />
       {:else}
-        <SpeakerQueueDisplay {speakers} max={DISPLAY_MAX_SPEAKERS} title={t('components_moderated_caucus')} />
+        <SpeakerQueueDisplay
+          {speakers}
+          max={DISPLAY_MAX_SPEAKERS}
+          title={caucusTimer.type === 'consensus_meeting'
+            ? t('components_agenda_consensus_meeting')
+            : t('components_moderated_caucus')}
+        />
       {/if}
     </div>
   {:else if caucusTimer.type === 'individual'}

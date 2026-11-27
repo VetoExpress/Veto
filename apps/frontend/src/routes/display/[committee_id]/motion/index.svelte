@@ -16,7 +16,8 @@
     Timer,
     LogOut,
     Vote,
-    UserRoundCheck
+    UserRoundCheck,
+    Handshake
   } from '@lucide/svelte'
   import { MOTION_LABELS } from '$lib/classes/types/conference'
   import type { ConferenceDisplayData } from '$lib/classes/types/conference'
@@ -45,7 +46,9 @@
     suspend_meeting: Timer,
     close_meeting: LogOut,
     substantive_vote: Vote,
-    change_attendance: UserRoundCheck
+    change_attendance: UserRoundCheck,
+    consensus_meeting: Handshake,
+    postpone_consensus_meeting: Handshake
   }
 
   const Icon = $derived(
@@ -81,6 +84,10 @@
         return { title: t('components_change_attendance') }
       case 'substantive_vote':
         return { title: am?.documentName ?? '' }
+      case 'consensus_meeting':
+        return { title: am?.issue ?? t('components_agenda_consensus_meeting') }
+      case 'postpone_consensus_meeting':
+        return { title: t('components_agenda_postponed') }
       default:
         return { title: MOTION_LABELS[type] ?? type }
     }
@@ -145,6 +152,23 @@
             {t('components_speaker_duration', { seconds: activeMotion.speakingTimePerPersonSec })}
           </p>
         {/if}
+      </div>
+    {:else if activeMotion.type === 'consensus_meeting'}
+      <div class="mt-10 max-w-3xl text-center">
+        <p class="text-xs uppercase tracking-[0.18em] text-white/25">
+          {t('components_agenda_consensus_issue')}
+        </p>
+        <p class="mt-3 text-3xl font-light leading-10 text-white/65">
+          {activeMotion.issue}
+        </p>
+        <div class="mt-8 flex flex-wrap justify-center gap-6 text-xl tracking-wider text-white/25">
+          {#if activeMotion.totalTimeSec}
+            <p>{t('components_total_duration', { seconds: activeMotion.totalTimeSec })}</p>
+          {/if}
+          {#if activeMotion.speakingTimePerPersonSec}
+            <p>{t('components_speaker_duration', { seconds: activeMotion.speakingTimePerPersonSec })}</p>
+          {/if}
+        </div>
       </div>
     {:else if (activeMotion.type === 'unmoderated_caucus' || activeMotion.type === 'moderated_debate' || activeMotion.type === 'unmoderated_debate') && activeMotion.totalTimeSec}
       <div class="mt-5 text-2xl tracking-wider text-white/25">

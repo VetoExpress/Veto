@@ -29,6 +29,7 @@
       ? (conf?.participantSeats.find((seat) => seat.id === motion.proposedBySeatId) ?? null)
       : null
   )
+  const isConsensusMeeting = $derived(motion?.type === 'consensus_meeting')
 
   // 已在名单中的席位 ID（用于排除）
   const listedIds = $derived(setup?.speakerSeatIds ?? [])
@@ -69,11 +70,15 @@
         </div>
       {:else}
         <div class="text-sm font-medium text-indigo-700 dark:text-indigo-400">
-          {t('procedure_motion_approved_set_up_the_caucus_speakers_list')}
+          {isConsensusMeeting
+            ? t('procedure_appeal_consensus_title')
+            : t('procedure_motion_approved_set_up_the_caucus_speakers_list')}
         </div>
       {/if}
       <div class="mt-2 text-xl font-bold text-foreground">
-        {(motion as any).topic ?? t('procedure_moderated_caucus')}
+        {(motion as any).topic ??
+          (motion as any).issue ??
+          t('procedure_moderated_caucus')}
       </div>
       <div class="mt-1 text-sm text-muted-foreground">
         {#if setup.remainingSec != null}

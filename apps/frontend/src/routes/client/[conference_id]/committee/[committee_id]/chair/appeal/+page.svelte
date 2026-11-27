@@ -1,7 +1,7 @@
 <script lang="ts">
   import { page } from '$app/state'
   import { resolve } from '$app/paths'
-  import { RotateCcw, Workflow } from '@lucide/svelte'
+  import { RotateCcw, Square, Workflow } from '@lucide/svelte'
   import PageTopBar from '$lib/components/conference/common/page-top-bar.svelte'
   import AppealWorkflowView from '$lib/components/conference/appeal/appeal-workflow-view.svelte'
   import { Badge } from '$lib/components/ui/badge'
@@ -19,7 +19,8 @@
   } from '$lib/components/ui/alert-dialog'
   import {
     currentCommittee,
-    syncCurrentCommittee
+    finishAppealConsensusMeeting,
+    restartAppealWorkflow
   } from '$lib/classes/stores/conference/conference-store'
   import { t } from '$lib/i18n'
 
@@ -31,12 +32,14 @@
     new Set(workflow?.completedAgendaItemIds ?? []).size
   )
   const totalAgendaCount = $derived(conf?.agenda.length ?? 0)
+  const consensusMeetingActive = $derived(
+    workflow?.stage === 'consensus_meeting' &&
+      workflow.activeConsensusMeeting?.status === 'active'
+  )
   let restartConfirmOpen = $state(false)
 
   function restartWorkflow(): void {
-    if (!conf) return
-    conf.restartAppealWorkflow()
-    syncCurrentCommittee()
+    restartAppealWorkflow()
     restartConfirmOpen = false
   }
 </script>
@@ -60,6 +63,17 @@
           {completedAgendaCount} / {totalAgendaCount}
         </span>
       </Badge>
+      {#if consensusMeetingActive}
+        <Button
+          variant="destructive"
+          size="sm"
+          class="h-8 gap-1.5 text-xs"
+          onclick={() => finishAppealConsensusMeeting()}
+        >
+          <Square size={12} />
+          {t('procedure_appeal_consensus_end_meeting')}
+        </Button>
+      {/if}
       <AlertDialog bind:open={restartConfirmOpen}>
         <AlertDialogTrigger>
           {#snippet child({ props })}

@@ -259,6 +259,7 @@ export function createConference(
     procedure: {
       attendance: 'absent',
       hasVotingRights: participant.hasVotingRights ?? true,
+      isReferenceGroup: participant.hasVotingRights ?? true,
       hasVetoPower: false,
       sortOrder
     }
@@ -445,6 +446,7 @@ export function setSeatVotingRights(seatId: string, hasVotingRights: boolean): v
     procedure: {
       ...seat.procedure,
       hasVotingRights,
+      isReferenceGroup: hasVotingRights ? (seat.procedure.isReferenceGroup ?? true) : false,
       hasVetoPower: hasVotingRights ? seat.procedure.hasVetoPower : false
     }
   })
@@ -454,6 +456,20 @@ export function setSeatVotingRights(seatId: string, hasVotingRights: boolean): v
   engine.setProcedureRules({
     ...engine.procedureRules,
     veto: { enabled: vetoSeatIds.length > 0, seatIds: vetoSeatIds }
+  })
+  syncEngine(engine)
+}
+
+export function setSeatReferenceGroup(seatId: string, isReferenceGroup: boolean): void {
+  const engine = getCurrentEngine()
+  if (!engine) return
+  const seat = engine.getSeat(seatId)
+  if (!seat?.procedure) return
+  engine.updateSeat(seatId, {
+    procedure: {
+      ...seat.procedure,
+      isReferenceGroup: seat.procedure.hasVotingRights && isReferenceGroup
+    }
   })
   syncEngine(engine)
 }
@@ -660,6 +676,127 @@ export function dismissLastResolvedMotion(): void {
   if (!engine) return
   engine.dismissLastResolvedMotion()
   syncEngine(engine)
+}
+
+// ---- Appeal workflow -------------------------------------------------------
+
+function applyAppealAction(action: (engine: Committee) => boolean | void): boolean {
+  const engine = getCurrentEngine()
+  if (!engine) return false
+  const result = action(engine)
+  syncEngine(engine)
+  getDisplayBridge().sendUpdate(buildDisplayData(engine))
+  return result !== false
+}
+
+export function restartAppealWorkflow(): void {
+  applyAppealAction((engine) => engine.restartAppealWorkflow())
+}
+
+export function confirmAppealRollCall(): void {
+  applyAppealAction((engine) => engine.confirmAppealRollCall())
+}
+
+export function acceptAppealAgenda(): boolean {
+  return applyAppealAction((engine) => engine.acceptAppealAgenda())
+}
+
+export function startAppealAgendaObjectionVote(): string {
+  const engine = getCurrentEngine()
+  if (!engine) return ''
+  const id = engine.startAppealAgendaObjectionVote()
+  syncEngine(engine)
+  getDisplayBridge().sendUpdate(buildDisplayData(engine))
+  return id
+}
+
+export function enableAppealChair(): boolean {
+  return applyAppealAction((engine) => engine.enableAppealChair())
+}
+
+export function setAppealPcnFileName(name: string): boolean {
+  return applyAppealAction((engine) => engine.setAppealPcnFileName(name))
+}
+
+export function endAppealEvaluationDebate(): boolean {
+  return applyAppealAction((engine) => engine.endAppealEvaluationDebate())
+}
+
+export function startAppealReading(): boolean {
+  return applyAppealAction((engine) => engine.startAppealReading())
+}
+
+export function finishAppealReading(): boolean {
+  return applyAppealAction((engine) => engine.finishAppealReading())
+}
+
+export function decideAppealNegotiation(needed: boolean): void {
+  applyAppealAction((engine) => engine.decideAppealNegotiation(needed))
+}
+
+export function startAppealConsensusMeeting(issue: string, motionId: string): boolean {
+  return applyAppealAction((engine) => engine.startAppealConsensusMeeting(issue, motionId))
+}
+
+export function tickAppealConsensusMeeting(): boolean {
+  return applyAppealAction((engine) => engine.tickAppealConsensusMeeting())
+}
+
+export function grantAppealConsensusFloor(seatId: string): boolean {
+  return applyAppealAction((engine) => engine.grantAppealConsensusFloor(seatId))
+}
+
+export function addAppealConsensusSpeaker(seatId: string): boolean {
+  return applyAppealAction((engine) => engine.addAppealConsensusSpeaker(seatId))
+}
+
+export function startAppealConsensusSpeaker(): boolean {
+  return applyAppealAction((engine) => engine.startAppealConsensusSpeaker())
+}
+
+export function finishAppealConsensusSpeaker(): boolean {
+  return applyAppealAction((engine) => engine.finishAppealConsensusSpeaker())
+}
+
+export function pauseAppealConsensusMeeting(): boolean {
+  return applyAppealAction((engine) => engine.pauseAppealConsensusMeeting())
+}
+
+export function resumeAppealConsensusMeeting(): boolean {
+  return applyAppealAction((engine) => engine.resumeAppealConsensusMeeting())
+}
+
+export function finishAppealConsensusMeeting(): boolean {
+  return applyAppealAction((engine) => engine.finishAppealConsensusMeeting())
+}
+
+export function postponeAppealSession(): boolean {
+  return applyAppealAction((engine) => engine.postponeAppealSession())
+}
+
+export function resumePostponedAppealSession(): boolean {
+  return applyAppealAction((engine) => engine.resumePostponedAppealSession())
+}
+
+export function submitAppealRevision(notes: string): boolean {
+  return applyAppealAction((engine) => engine.submitAppealRevision(notes))
+}
+
+export function prepareAppealPcnFinalization(): boolean {
+  return applyAppealAction((engine) => engine.prepareAppealPcnFinalization())
+}
+
+export function finalizeAppealPcn(): boolean {
+  return applyAppealAction((engine) => engine.finalizeAppealPcn())
+}
+
+export function moveToNextAppealAgendaItem(): string | null {
+  const engine = getCurrentEngine()
+  if (!engine) return null
+  const id = engine.moveToNextAppealAgendaItem()
+  syncEngine(engine)
+  getDisplayBridge().sendUpdate(buildDisplayData(engine))
+  return id
 }
 
 export function startCaucus(motionId: string): void {

@@ -20,7 +20,8 @@
     LogOut,
     Check,
     X,
-    Vote
+    Vote,
+    Handshake
   } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import { Separator } from '$lib/components/ui/separator'
@@ -56,7 +57,9 @@
     closure_debate: Gavel,
     suspend_meeting: Timer,
     close_meeting: LogOut,
-    substantive_vote: Vote
+    substantive_vote: Vote,
+    consensus_meeting: Handshake,
+    postpone_consensus_meeting: Handshake
   }
 
   const pendingMotion = $derived(conf?.motions.find((m) => m.status === 'pending') ?? null)
@@ -209,6 +212,16 @@
                 {agendaMode
                   ? t('procedure_appeal_end_debate_motion_description')
                   : t('procedure_close_debate_on_the_current_topic_then_start_the_pre_vote_roll_call')}
+              </div>
+            {:else if pendingMotion.type === 'consensus_meeting'}
+              <div class="mt-3 rounded-md bg-background/50 px-4 py-2.5 text-sm text-muted-foreground">
+                {t('procedure_consensus_issue')}
+                <span class="font-medium text-foreground">{pendingMotion.issue}</span>
+                <p class="mt-1 text-xs">{t('procedure_consensus_limits')}</p>
+              </div>
+            {:else if pendingMotion.type === 'postpone_consensus_meeting'}
+              <div class="mt-3 text-sm text-muted-foreground">
+                {t('procedure_consensus_postpone_motion_description')}
               </div>
             {:else if pendingMotion.type === 'substantive_vote'}
               <div

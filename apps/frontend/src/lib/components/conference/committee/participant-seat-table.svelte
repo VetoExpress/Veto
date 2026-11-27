@@ -6,6 +6,7 @@
   import { removeSeat, updateSeat } from '$lib/classes/stores/delegate/delegate-store'
   import {
     changeSeatAttendance,
+    setSeatReferenceGroup,
     setSeatVotingRights,
     setSeatVetoPower
   } from '$lib/classes/stores/conference/conference-store'
@@ -92,6 +93,7 @@
         <th class="px-4 py-3 text-left font-medium">{t('procedure_abbreviation')}</th>
         <th class="w-36 px-4 py-3 text-center font-medium">{t('procedure_attendance')}</th>
         <th class="w-24 px-4 py-3 text-center font-medium">{t('procedure_voting_rights')}</th>
+        <th class="w-28 px-4 py-3 text-center font-medium">{t('procedure_reference_group')}</th>
         <th class="w-24 px-4 py-3 text-center font-medium">{t('procedure_veto_rights')}</th>
         <th class="px-4 py-3 text-right font-medium">{t('procedure_actions')}</th>
       </tr>
@@ -135,6 +137,18 @@
             {:else}
               {seat.shortName ?? '-'}
             {/if}
+          </td>
+          <td class="px-4 py-3">
+            <div class="flex justify-center">
+              <Switch
+                checked={seat.procedure.isReferenceGroup ?? seat.procedure.hasVotingRights}
+                disabled={!seat.procedure.hasVotingRights}
+                onCheckedChange={(isReferenceGroup: boolean) =>
+                  setSeatReferenceGroup(seat.id, isReferenceGroup)}
+                title={t('procedure_reference_group_hint')}
+                aria-label={t('procedure_set_reference_group_for_value', { value1: seat.name })}
+              />
+            </div>
           </td>
           <td class="px-4 py-3">
             <div class="flex justify-center">

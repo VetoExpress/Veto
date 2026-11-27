@@ -8,6 +8,7 @@
 
   import {
     currentCommittee,
+    enableAppealChair,
     startInitialRollCall,
     resumeMeeting,
     resetRollCall
@@ -61,8 +62,14 @@
   const presentation = $derived(conf ? getChairPresentation(conf) : null)
   const agendaMode = $derived(conf?.agendaMode ?? false)
   const agendaStage = $derived(conf?.appealWorkflow?.stage ?? null)
+  const consensusMeetingActive = $derived(
+    conf?.appealWorkflow?.activeConsensusMeeting?.status === 'active'
+  )
   const chairHostingRequired = $derived(
-    !agendaMode || agendaStage === 'evaluation_debate'
+    !agendaMode ||
+      agendaStage === 'evaluation_debate' ||
+      consensusMeetingActive ||
+      (conf?.appealWorkflow?.chairOverrideEnabled ?? false)
   )
   const rules = $derived(
     conf?.procedureRules ?? defaultProcedureRules(conf?.substantiveVotingMajority)
@@ -90,6 +97,14 @@
 
   function handlePrimaryAction(): void {
     if (presentation?.hasPrimaryAction) motionDialogOpen = true
+  }
+
+  function openAgendaWorkflow(): void {
+    goto(resolve(`/client/${conferenceId}/committee/${committeeId}/chair/appeal`))
+  }
+
+  function reenableChair(): void {
+    enableAppealChair()
   }
 </script>
 
@@ -236,6 +251,16 @@
           <p class="mt-2 text-sm leading-6 text-muted-foreground">
             {t('procedure_no_hosting_required_description')}
           </p>
+          <div class="mt-5 flex flex-col justify-center gap-2 sm:flex-row">
+            <Button class="gap-2" onclick={openAgendaWorkflow}>
+              <ListChecks size={15} />
+              {t('procedure_agenda_open_workflow')}
+            </Button>
+            <Button variant="outline" class="gap-2" onclick={reenableChair}>
+              <Gavel size={15} />
+              {t('procedure_reenable_chair')}
+            </Button>
+          </div>
         </div>
       </div>
     {/if}

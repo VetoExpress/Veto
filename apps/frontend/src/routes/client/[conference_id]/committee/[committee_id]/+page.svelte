@@ -62,7 +62,8 @@
     negotiation_decision: 'procedure_appeal_step_negotiation',
     consensus_meeting: 'procedure_appeal_step_consensus',
     pcn_finalization: 'procedure_appeal_step_finalization',
-    item_complete: 'procedure_agenda_stage_complete'
+    item_complete: 'procedure_agenda_stage_complete',
+    postponed: 'procedure_appeal_step_postponed'
   }
 
   const ACTION_MESSAGE_KEYS: Record<AppealWorkflowStage, MessageKey> = {
@@ -73,7 +74,8 @@
     negotiation_decision: 'procedure_agenda_action_negotiation',
     consensus_meeting: 'procedure_agenda_action_consensus',
     pcn_finalization: 'procedure_agenda_action_finalize',
-    item_complete: 'procedure_agenda_action_next'
+    item_complete: 'procedure_agenda_action_next',
+    postponed: 'procedure_agenda_action_resume_session'
   }
 
   const EVENT_MESSAGE_KEYS: Record<AppealWorkflowEventType, MessageKey> = {
@@ -91,7 +93,18 @@
     consensus_reading_completed: 'procedure_appeal_event_consensus_reading_completed',
     consensus_confirmed: 'procedure_appeal_event_consensus_confirmed',
     pcn_finalized: 'procedure_appeal_event_pcn_finalized',
-    next_item_started: 'procedure_appeal_event_next_item_started'
+    next_item_started: 'procedure_appeal_event_next_item_started',
+    agenda_objection_raised: 'procedure_appeal_event_agenda_objection_raised',
+    agenda_confirmed_formally: 'procedure_appeal_event_agenda_confirmed_formally',
+    agenda_rejected_informally: 'procedure_appeal_event_agenda_rejected_informally',
+    consensus_meeting_started: 'procedure_appeal_event_consensus_meeting_started',
+    consensus_meeting_speaker_started: 'procedure_appeal_event_consensus_speaker_started',
+    consensus_meeting_speaker_finished: 'procedure_appeal_event_consensus_speaker_finished',
+    consensus_meeting_ended: 'procedure_appeal_event_consensus_meeting_ended',
+    consensus_revision_required: 'procedure_appeal_event_consensus_revision_required',
+    consensus_revision_submitted: 'procedure_appeal_event_consensus_revision_submitted',
+    consensus_meeting_postponed: 'procedure_appeal_event_consensus_meeting_postponed',
+    session_resumed: 'procedure_appeal_event_session_resumed'
   }
 
   const conferenceId = $derived($page.params.conference_id ?? '')
@@ -223,6 +236,9 @@
     if (stage === 'document_reading') {
       return workflow.reading ? t('procedure_appeal_finish_reading') : t('procedure_appeal_start_reading')
     }
+    if (stage === 'postponed') {
+      return t('procedure_agenda_action_resume_session')
+    }
     if (stage === 'item_complete' && pendingAgendaCount === 0) {
       return t('procedure_agenda_action_all_complete')
     }
@@ -250,9 +266,6 @@
     if (stage === 'agenda') {
       reminders.push({ key: 'procedure_agenda_reminder_confirm_agenda' })
     }
-    if (stage === 'evaluation_debate' && !latestAgendaPcnVersion?.content.trim()) {
-      reminders.push({ key: 'procedure_agenda_reminder_pcn_draft' })
-    }
     if (stage === 'document_reading' && workflow?.reading && readingRemainingSec === 0) {
       reminders.push({ key: 'procedure_agenda_reminder_reading_due' })
     }
@@ -261,6 +274,9 @@
     }
     if (stage === 'consensus_meeting') {
       reminders.push({ key: 'procedure_agenda_reminder_consensus' })
+    }
+    if (stage === 'postponed') {
+      reminders.push({ key: 'procedure_agenda_reminder_postponed' })
     }
     if (stage === 'pcn_finalization') {
       reminders.push({ key: 'procedure_agenda_reminder_finalize' })

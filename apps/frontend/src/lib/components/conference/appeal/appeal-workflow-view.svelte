@@ -10,11 +10,15 @@
     Check,
     Clock3,
     FileCheck2,
+    Gavel,
     Handshake,
     ListChecks,
     MessageSquare,
     Pencil,
+    Play,
     Plus,
+    RotateCcw,
+    Send,
     Users,
     Workflow
   } from '@lucide/svelte'
@@ -23,12 +27,30 @@
   import { Button } from '$lib/components/ui/button'
   import * as Card from '$lib/components/ui/card'
   import { Input } from '$lib/components/ui/input'
-  import { currentCommittee, syncCurrentCommittee } from '$lib/classes/stores/conference/conference-store'
+  import { Textarea } from '$lib/components/ui/textarea'
+  import { Separator } from '$lib/components/ui/separator'
+  import {
+    acceptAppealAgenda,
+    confirmAppealRollCall,
+    currentCommittee,
+    enableAppealChair,
+    finalizeAppealPcn,
+    finishAppealReading,
+    moveToNextAppealAgendaItem,
+    resumePostponedAppealSession,
+    setAppealPcnFileName,
+    startAppealAgendaObjectionVote,
+    startAppealReading,
+    submitAppealRevision
+  } from '$lib/classes/stores/conference/conference-store'
   import { formatTime } from '$lib/classes/formatters/time-formater'
   import type { AppealWorkflowStage } from '$lib/classes/types/appeal'
   import {
+    getAppealConsensusProgress,
+    isAppealReadingCompleted,
     nextAppealAgendaItemId
   } from '$lib/classes/utils/committee/appeal'
+  import VotingView from '$lib/components/conference/voting/voting-view.svelte'
   import { cn } from '$lib/classes/utils'
   import { t, type MessageKey } from '$lib/i18n'
 
@@ -64,12 +86,40 @@
   )
 
   let pcnFileName = $state('')
+  let revisionNotes = $state('')
   let newAgendaTitle = $state('')
   let editingAgenda = $state(false)
   let formError = $state('')
   let now = $state(Date.now())
   let scrollContainer = $state<HTMLDivElement | null>(null)
 
+  const consensusProgress = $derived(
+    workflow ? getAppealConsensusProgress(workflow) : null
+  )
+  const activeMeeting = $derived(workflow?.activeConsensusMeeting ?? null)
+  const activeCaucus = $derived(
+    activeMeeting && conf?.activeCaucus?.motionId === activeMeeting.motionId
+      ? conf.activeCaucus
+      : null
+  )
+  const activeAgendaVote = $derived(
+    conf?.votingSessions.find(
+      (session) => !session.endedAt && session.targetType === 'agenda'
+    ) ?? null
+  )
+  const readingCompleted = $derived(
+    workflow ? isAppealReadingCompleted(workflow) : false
+  )
+  const canFinalizePcn = $derived(
+    readingCompleted &&
+      Boolean(pcnFileName.trim()) &&
+      !activeMeeting
+  )
+  const agendaRevisionPending = $derived(
+    workflow?.stage === 'agenda' &&
+      workflow.meetingStatus === 'informal' &&
+      workflow.agendaRevisionRequired
+  )
   $effect(() => {
     pcnFileName = currentPcn?.fileName ?? ''
   })
@@ -88,18 +138,13 @@
   $effect(() => {
     if (!conf || workflow?.stage !== 'roll_call') return
     if (conf.phase === 'preamble' || conf.phase === 'roll_call') return
-    conf.confirmAppealRollCall()
-    syncCurrentCommittee()
+    confirmAppealRollCall()
   })
 
   $effect(() => {
     const stage = workflow?.stage
     const activeReading =
-      stage === 'document_reading'
-        ? workflow?.reading
-        : stage === 'consensus_meeting'
-          ? workflow?.consensusReading
-          : null
+      stage === 'document_reading' ? workflow?.reading : null
     if (!activeReading || activeReading.completedAt) {
       return
     }
@@ -120,18 +165,22 @@
     )
   })
   const consensusRemainingSec = $derived.by(() => {
-    const reading = workflow?.consensusReading
-    if (!reading) return 10 * 60
-    if (reading.completedAt) return 0
+    if (!activeMeeting) return 25 * 60
+    if (!activeCaucus) {
+      return Math.max(0, activeMeeting.totalSec - activeMeeting.elapsedSec)
+    }
     return Math.max(
       0,
-      Math.ceil((reading.startedAt + reading.durationSec * 1000 - now) / 1000)
+      activeCaucus.totalSec -
+        activeCaucus.elapsedSec -
+        (conf?.activeSpeaker?.elapsedSec ?? 0)
     )
   })
 
   function activeStepIndex(stage: AppealWorkflowStage | undefined): number {
     if (!stage) return 0
     if (stage === 'item_complete') return steps.length
+    if (stage === 'postponed') return 3
     return Math.max(
       0,
       steps.findIndex((step) => step.stage === stage)
@@ -155,7 +204,6 @@
 
   function apply(action: () => unknown): boolean {
     const result = action()
-    syncCurrentCommittee()
     return result !== false
   }
 
@@ -172,7 +220,15 @@
       formError = t('procedure_appeal_add_an_item_first')
       return
     }
-    apply(() => conf?.acceptAppealAgenda())
+    apply(() => acceptAppealAgenda())
+  }
+
+  function raiseAgendaObjection(): void {
+    formError = ''
+    const sessionId = startAppealAgendaObjectionVote()
+    if (!sessionId) {
+      formError = t('procedure_appeal_objection_vote_unavailable')
+    }
   }
 
   function addAgendaItem(): void {
@@ -197,43 +253,84 @@
   }
 
   function persistPcnFileName(): boolean {
-    if (!conf || !pcnFileName.trim()) return false
-    const saved = conf.setAppealPcnFileName(pcnFileName)
-    syncCurrentCommittee()
+    if (!pcnFileName.trim()) return false
+    const saved = setAppealPcnFileName(pcnFileName)
     return saved
   }
 
   function startReading(): void {
     if (!persistPcnFileName()) return
-    apply(() => conf?.startAppealReading())
+    apply(() => startAppealReading())
   }
 
   function finishReading(): void {
     if (!persistPcnFileName()) return
-    apply(() => conf?.finishAppealReading())
+    apply(() => finishAppealReading())
   }
 
   function decideNegotiation(needed: boolean): void {
-    apply(() => conf?.decideAppealNegotiation(needed))
+    if (needed) openChairForMotion()
   }
 
-  function startConsensusReading(): void {
-    apply(() => conf?.startAppealConsensusReading())
+  function submitRevision(): void {
+    formError = ''
+    if (!submitAppealRevision(revisionNotes)) {
+      formError = t('procedure_appeal_revision_failed')
+      return
+    }
+    revisionNotes = ''
   }
 
-  function finishConsensusReading(): void {
-    apply(() => conf?.finishAppealConsensusReading())
+  function openChairForMotion(): void {
+    formError = ''
+    enableAppealChair()
+    openChair()
   }
 
   function finalizePcn(): void {
-    apply(() => conf?.finalizeAppealPcn())
+    apply(() => finalizeAppealPcn())
   }
 
   function moveToNextItem(): void {
-    apply(() => conf?.moveToNextAppealAgendaItem())
+    apply(() => moveToNextAppealAgendaItem())
+  }
+
+  function resumePostponed(): void {
+    apply(() => resumePostponedAppealSession())
+  }
+
+  function meetingStatusLabel(): string {
+    return t(
+      workflow?.meetingStatus === 'provisional'
+        ? 'procedure_appeal_meeting_status_provisional'
+        : workflow?.meetingStatus === 'informal'
+          ? 'procedure_appeal_meeting_status_informal'
+          : 'procedure_appeal_meeting_status_formal'
+    )
   }
 
 </script>
+
+{#snippet revisionEditor()}
+  <div class="space-y-3 rounded-xl border bg-background p-4">
+    <div class="space-y-1.5">
+      <p class="text-xs font-medium text-muted-foreground">
+        {t('procedure_appeal_negotiation_notes')}
+      </p>
+      <Textarea
+        bind:value={revisionNotes}
+        rows={3}
+        placeholder={t('procedure_appeal_negotiation_notes_placeholder')}
+      />
+    </div>
+    <div class="flex justify-end">
+      <Button class="gap-2" onclick={submitRevision}>
+        <Send size={15} />
+        {t('procedure_appeal_submit_revision')}
+      </Button>
+    </div>
+  </div>
+{/snippet}
 
 {#if conf && workflow}
   <div bind:this={scrollContainer} class="min-h-0 flex-1 overflow-y-auto bg-muted/20">
@@ -260,6 +357,9 @@
             <p class="mt-1.5 line-clamp-2 text-sm font-semibold text-foreground">
               {currentAgendaItem?.title ?? t('procedure_appeal_no_current_item')}
             </p>
+            <Badge variant="outline" class="mt-2">
+              {meetingStatusLabel()}
+            </Badge>
           </div>
         </div>
       </section>
@@ -308,8 +408,23 @@
 
       <div class="min-w-0">
         <main class="min-w-0">
+          {#if formError}
+            <p class="mb-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-2 text-sm text-destructive">
+              {formError}
+            </p>
+          {/if}
           <Card.Root class="gap-0 overflow-hidden pt-0 pb-6">
-            {#if workflow.stage === 'roll_call'}
+            {#if activeAgendaVote}
+              <div class="border-b px-6 py-4">
+                <h2 class="text-base font-semibold">{t('procedure_agenda_objection_vote_title')}</h2>
+                <p class="text-xs text-muted-foreground">
+                  {t('procedure_agenda_reference_group_only')}
+                </p>
+              </div>
+              <Card.Content class="pt-6">
+                <VotingView />
+              </Card.Content>
+            {:else if workflow.stage === 'roll_call'}
               <div class="border-b px-6 py-4">
                 <div>
                   <h2 class="text-base font-semibold">{t('procedure_appeal_roll_call_title')}</h2>
@@ -359,9 +474,31 @@
                   <p class="text-xs text-muted-foreground">
                     {t('procedure_appeal_agenda_description')}
                   </p>
+                  <Badge
+                    variant="outline"
+                    class={cn(
+                      'mt-2',
+                      workflow.meetingStatus === 'informal' &&
+                        'border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300'
+                    )}
+                  >
+                    {meetingStatusLabel()}
+                  </Badge>
                 </div>
               </div>
               <Card.Content class="space-y-5 pt-6">
+                {#if workflow.meetingStatus === 'informal'}
+                  <div class="rounded-xl border border-amber-300 bg-amber-50/70 p-4 text-sm dark:border-amber-900 dark:bg-amber-950/20">
+                    <p class="font-medium text-amber-800 dark:text-amber-200">
+                      {t('procedure_appeal_agenda_rejected_title')}
+                    </p>
+                    <p class="mt-1 text-xs leading-5 text-amber-700/80 dark:text-amber-300/80">
+                      {agendaRevisionPending
+                        ? t('procedure_appeal_agenda_revision_required')
+                        : t('procedure_appeal_agenda_revision_satisfied')}
+                    </p>
+                  </div>
+                {/if}
                 {#if orderedAgenda.length === 0}
                   <div class="rounded-xl border border-dashed p-8 text-center">
                     <ListChecks size={28} class="mx-auto text-muted-foreground/40" />
@@ -458,9 +595,25 @@
                       ? t('procedure_appeal_finish_editing')
                       : t('procedure_appeal_revise_agenda')}
                   </Button>
-                  <Button class="gap-2" disabled={!orderedAgenda.length} onclick={acceptAgenda}>
+                  <Button
+                    variant="outline"
+                    class="gap-2"
+                    disabled={!orderedAgenda.length}
+                    onclick={raiseAgendaObjection}
+                  >
+                    <Gavel size={15} />
+                    {t('procedure_appeal_raise_agenda_objection')}
+                  </Button>
+                  <Button
+                    class="gap-2"
+                    disabled={!orderedAgenda.length || agendaRevisionPending}
+                    onclick={acceptAgenda}
+                    title={agendaRevisionPending
+                      ? t('procedure_appeal_agenda_revision_required')
+                      : undefined}
+                  >
                     <Check size={15} />
-                    {t('procedure_appeal_accept_agenda')}
+                    {t('procedure_appeal_accept_agenda_without_objection')}
                   </Button>
                 </div>
               </Card.Content>
@@ -485,6 +638,12 @@
                   </h3>
                   <p class="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
                     {t('procedure_appeal_evaluation_body')}
+                  </p>
+                  <p class="mt-2 text-xs text-muted-foreground">
+                    {t('procedure_appeal_consensus_progress', {
+                      value1: consensusProgress?.started ?? 0,
+                      value2: consensusProgress?.limit ?? 3
+                    })}
                   </p>
                 </div>
 
@@ -615,6 +774,7 @@
                   <Button
                     variant="outline"
                     class="group h-auto w-full justify-between gap-4 whitespace-normal rounded-xl border bg-background p-4 text-left transition hover:bg-muted/40"
+                    disabled={!consensusProgress?.canStart}
                     onclick={() => decideNegotiation(true)}
                   >
                     <span class="flex min-w-0 items-start gap-3">
@@ -626,7 +786,9 @@
                           {t('procedure_appeal_needs_negotiation')}
                         </span>
                         <span class="mt-1 block text-xs leading-5 text-muted-foreground">
-                          {t('procedure_appeal_needs_negotiation_description')}
+                          {consensusProgress?.canStart
+                            ? t('procedure_appeal_needs_negotiation_description')
+                            : t('procedure_appeal_consensus_limit_reached')}
                         </span>
                       </span>
                     </span>
@@ -635,7 +797,8 @@
                   <Button
                     variant="outline"
                     class="group h-auto w-full justify-between gap-4 whitespace-normal rounded-xl border bg-background p-4 text-left transition hover:bg-muted/40"
-                    onclick={() => decideNegotiation(false)}
+                    disabled={!canFinalizePcn}
+                    onclick={finalizePcn}
                   >
                     <span class="flex min-w-0 items-start gap-3">
                       <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-foreground text-background">
@@ -646,68 +809,95 @@
                           {t('procedure_appeal_no_negotiation')}
                         </span>
                         <span class="mt-1 block text-xs leading-5 text-muted-foreground">
-                          {t('procedure_appeal_no_negotiation_description')}
+                          {t('procedure_appeal_finalize_now_description')}
                         </span>
                       </span>
                     </span>
                     <ArrowRight size={16} class="shrink-0 text-muted-foreground" />
                   </Button>
                 </div>
+
+                {#if consensusProgress?.canPostpone}
+                  <div class="flex justify-end">
+                    <Button
+                      variant="outline"
+                      class="gap-2"
+                      onclick={openChairForMotion}
+                    >
+                      <Clock3 size={16} />
+                      {t('procedure_appeal_motion_postpone_session')}
+                    </Button>
+                  </div>
+                {/if}
               </Card.Content>
             {:else if workflow.stage === 'consensus_meeting'}
               <div class="border-b px-6 py-4">
-                <div>
-                  <h2 class="text-base font-semibold">
-                    {t('procedure_appeal_consensus_title')}
-                  </h2>
-                  <p class="text-xs text-muted-foreground">
-                    {t('procedure_appeal_consensus_description')}
-                  </p>
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 class="text-base font-semibold">
+                      {t('procedure_appeal_consensus_title')}
+                    </h2>
+                    <p class="text-xs text-muted-foreground">
+                      {t('procedure_appeal_consensus_description')}
+                    </p>
+                  </div>
+                  <Badge variant="outline">
+                    {t('procedure_appeal_consensus_progress', {
+                      value1: consensusProgress?.started ?? 0,
+                      value2: consensusProgress?.limit ?? 3
+                    })}
+                  </Badge>
                 </div>
               </div>
               <Card.Content class="space-y-5 pt-6">
-                <div class="rounded-xl border bg-muted/20 px-4 py-3 text-sm">
-                  <span class="text-muted-foreground">{t('procedure_appeal_pcn_file_name')}</span>
-                  <span class="ml-2 font-medium">
-                    {pcnDisplayName}
-                  </span>
-                </div>
-                <div class="rounded-2xl border bg-muted/20 p-8 text-center">
-                  <div class="mx-auto flex size-12 items-center justify-center rounded-2xl border bg-background text-foreground">
-                    <Clock3 size={23} />
+                {#if activeMeeting}
+                  <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+                    <div class="rounded-xl border bg-muted/20 px-4 py-3 text-sm">
+                      <p class="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                        {t('procedure_consensus_issue')}
+                      </p>
+                      <p class="mt-1 font-medium">{activeMeeting.issue}</p>
+                      <p class="mt-1 text-xs text-muted-foreground">
+                        {t('procedure_appeal_consensus_pcn_label', { value1: pcnDisplayName })}
+                      </p>
+                    </div>
+                    <div class="flex items-center justify-center rounded-xl border bg-muted/20 px-6 py-3">
+                      <div class="text-center">
+                        <p class="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                          {t('procedure_appeal_consensus_remaining')}
+                        </p>
+                        <p class="mt-1 font-mono text-3xl font-semibold tabular-nums">
+                          {formatTime(consensusRemainingSec)}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <p class="mt-4 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                    {workflow.consensusReading
-                      ? t('procedure_appeal_consensus_remaining')
-                      : t('procedure_appeal_consensus_not_started')}
-                  </p>
-                  <p class="mt-2 font-mono text-6xl font-semibold tabular-nums tracking-tight">
-                    {formatTime(workflow.consensusReading ? consensusRemainingSec : 10 * 60)}
-                  </p>
-                  {#if workflow.consensusReading && consensusRemainingSec === 0}
-                    <p class="mt-3 text-sm text-muted-foreground">
-                      {t('procedure_appeal_consensus_time_is_up')}
-                    </p>
-                  {/if}
-                </div>
 
-                <div class="flex flex-wrap justify-end gap-2">
-                  {#if !workflow.consensusReading}
-                    <Button class="gap-2" onclick={startConsensusReading}>
-                      <Clock3 size={16} />
-                      {t('procedure_appeal_start_consensus')}
-                    </Button>
+                  {#if activeMeeting.status === 'awaiting_revision'}
+                    <div class="rounded-xl border border-amber-300 bg-amber-50/70 p-4 dark:border-amber-900 dark:bg-amber-950/20">
+                      <p class="text-sm font-medium text-amber-800 dark:text-amber-200">
+                        {t('procedure_appeal_consensus_revision_required')}
+                      </p>
+                      <p class="mt-1 text-xs leading-5 text-amber-700/80 dark:text-amber-300/80">
+                        {t('procedure_appeal_consensus_revision_required_description')}
+                      </p>
+                    </div>
+                    {@render revisionEditor()}
                   {:else}
-                    <Button variant="outline" class="gap-2" onclick={startConsensusReading}>
-                      <Clock3 size={16} />
-                      {t('procedure_appeal_restart_consensus')}
-                    </Button>
-                    <Button class="gap-2" onclick={finishConsensusReading}>
-                      <ArrowRight size={16} />
-                      {t('procedure_appeal_finish_consensus')}
-                    </Button>
+                    <div class="rounded-xl border border-sky-200 bg-sky-50/70 p-4 text-sm dark:border-sky-900 dark:bg-sky-950/20">
+                      <p class="font-medium text-sky-800 dark:text-sky-200">
+                        {t('procedure_appeal_consensus_hosted_by_chair')}
+                      </p>
+                      <p class="mt-1 text-xs leading-5 text-sky-700/80 dark:text-sky-300/80">
+                        {t('procedure_appeal_consensus_hosted_by_chair_description')}
+                      </p>
+                    </div>
                   {/if}
-                </div>
+                {:else}
+                  <div class="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+                    {t('procedure_appeal_consensus_no_active_meeting')}
+                  </div>
+                {/if}
               </Card.Content>
             {:else if workflow.stage === 'pcn_finalization'}
               <div class="border-b px-6 py-4">
@@ -748,9 +938,31 @@
                 </div>
 
                 <div class="flex justify-end border-t pt-5">
-                  <Button class="gap-2" onclick={finalizePcn}>
+                  <Button class="gap-2" disabled={!canFinalizePcn} onclick={finalizePcn}>
                     <FileCheck2 size={17} />
                     {t('procedure_appeal_finalize_and_file')}
+                  </Button>
+                </div>
+              </Card.Content>
+            {:else if workflow.stage === 'postponed'}
+              <Card.Content class="space-y-5 py-10 text-center">
+                <div class="mx-auto flex size-16 items-center justify-center rounded-full border bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">
+                  <Clock3 size={28} />
+                </div>
+                <div>
+                  <h2 class="text-xl font-semibold">
+                    {t('procedure_appeal_postponed_title')}
+                  </h2>
+                  <p class="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
+                    {t('procedure_appeal_postponed_description', {
+                      value1: consensusProgress?.completed ?? 0
+                    })}
+                  </p>
+                </div>
+                <div class="flex justify-center">
+                  <Button class="gap-2" onclick={resumePostponed}>
+                    <RotateCcw size={16} />
+                    {t('procedure_appeal_resume_postponed')}
                   </Button>
                 </div>
               </Card.Content>

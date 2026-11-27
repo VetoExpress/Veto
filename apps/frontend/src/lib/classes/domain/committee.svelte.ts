@@ -50,7 +50,14 @@ import {
   tallyVotes as tallyVotesEngine
 } from '$lib/classes/utils/committee/voting'
 import type { ProcedureRulesConfig, QuorumRecord } from '$lib/classes/types/procedure-rules'
-import type { AppealPcn, AppealWorkflowState } from '$lib/classes/types/appeal'
+import {
+  CONSENSUS_MEETING_DURATION_SEC,
+  CONSENSUS_SPEECH_DURATION_SEC,
+  type AppealConsensusMeeting,
+  type AppealConsensusSpeaker,
+  type AppealPcn,
+  type AppealWorkflowState
+} from '$lib/classes/types/appeal'
 import {
   defaultProcedureRules,
   cloneProcedureRules,
@@ -67,6 +74,8 @@ import {
   cloneAppealWorkflow,
   createAppealWorkflow,
   ensureAppealPcn,
+  getAppealConsensusProgress,
+  isAppealReadingCompleted,
   latestAppealPcnVersion,
   newAppealReadingSession,
   nextAppealAgendaItemId,
@@ -292,28 +301,14 @@ export class Committee {
   //  APPEAL workflow
   // ================================================================
 
-  private appendAppealPcnVersion(
-    title: string,
-    content: string,
-    note?: string
-  ): AppealWorkflowState | null {
+  private appendAppealPcnVersion(note?: string): AppealWorkflowState | null {
     const agendaItemId = this.appealWorkflow.currentAgendaItemId
     if (!agendaItemId) return null
     const pcn = this.appealWorkflow.pcnByAgendaItemId[agendaItemId]
     if (!pcn || pcn.status === 'finalized') return null
 
-    const trimmedTitle = title.trim()
     const trimmedNote = note?.trim()
-    if (!trimmedTitle) return null
     const latest = latestAppealPcnVersion(pcn)
-    if (
-      latest &&
-      latest.title === trimmedTitle &&
-      latest.content === content &&
-      !trimmedNote
-    ) {
-      return null
-    }
 
     const now = Date.now()
     const nextVersion = (latest?.version ?? 0) + 1
@@ -330,8 +325,6 @@ export class Committee {
         ...pcn.versions,
         {
           version: nextVersion,
-          title: trimmedTitle,
-          content,
           ...(trimmedNote ? { note: trimmedNote } : {}),
           createdAt: now
         }
@@ -362,6 +355,7 @@ export class Committee {
         sortOrder
       }
     ]
+    this.markAppealAgendaRevised()
     this.touch()
     return id
   }
@@ -371,9 +365,11 @@ export class Committee {
     if (!trimmed) return false
     const item = this.agenda.find((entry) => entry.id === itemId)
     if (!item) return false
+    if (item.title === trimmed) return false
     this.agenda = this.agenda.map((entry) =>
       entry.id === itemId ? { ...entry, title: trimmed } : entry
     )
+    this.markAppealAgendaRevised()
     this.touch()
     return true
   }
@@ -385,16 +381,64 @@ export class Committee {
     if (index < 0 || target < 0 || target >= ordered.length) return false
     ;[ordered[index], ordered[target]] = [ordered[target], ordered[index]]
     this.agenda = ordered.map((item, sortOrder) => ({ ...item, sortOrder }))
+    this.markAppealAgendaRevised()
     this.touch()
     return true
   }
 
+  private markAppealAgendaRevised(): void {
+    if (this.appealWorkflow.stage === 'agenda' && this.appealWorkflow.agendaRevisionRequired) {
+      this.appealWorkflow = {
+        ...this.appealWorkflow,
+        agendaRevisionRequired: false
+      }
+    }
+  }
+
+  private hasPendingAppealConsensusRevision(): boolean {
+    if (this.appealWorkflow.activeConsensusMeeting) return true
+    const agendaItemId = this.appealWorkflow.currentAgendaItemId
+    const meetings = agendaItemId
+      ? (this.appealWorkflow.consensusMeetingsByAgendaItemId[agendaItemId] ?? [])
+      : []
+    return meetings.some(
+      (meeting) =>
+        meeting.status === 'awaiting_revision' ||
+        (meeting.status === 'completed' && meeting.revisionSubmittedAt == null)
+    )
+  }
+
+  private canAdvanceAppealToFinalization(): boolean {
+    return (
+      isAppealReadingCompleted(this.appealWorkflow) && !this.hasPendingAppealConsensusRevision()
+    )
+  }
+
   confirmAppealRollCall(): void {
     this.appealWorkflow = appendAppealEvent(
-      { ...this.appealWorkflow, stage: 'agenda' },
+      { ...this.appealWorkflow, stage: 'agenda', meetingStatus: 'provisional' },
       'roll_call_confirmed'
     )
     this.touch()
+  }
+
+  startAppealAgendaObjectionVote(): string {
+    if (
+      this.appealWorkflow.stage !== 'agenda' ||
+      this.votingSessions.some((session) => !session.endedAt)
+    ) {
+      return ''
+    }
+    const sessionId = this.startVotingSession(
+      'agenda',
+      this.appealWorkflow.currentAgendaItemId ?? 'provisional-agenda',
+      'two_thirds',
+      message('domain_log_agenda_objection_vote')
+    )
+    if (!sessionId) return ''
+    this.appealWorkflow = appendAppealEvent(this.appealWorkflow, 'agenda_objection_raised')
+    this.touch()
+    return sessionId
   }
 
   restartAppealWorkflow(): void {
@@ -402,7 +446,7 @@ export class Committee {
     this.touch()
   }
 
-  acceptAppealAgenda(): boolean {
+  private passAppealAgenda(): boolean {
     const ordered = [...this.agenda].sort((a, b) => a.sortOrder - b.sortOrder)
     const completed = new Set(this.appealWorkflow.completedAgendaItemIds)
     const firstItem = ordered.find((item) => !completed.has(item.id)) ?? ordered[0]
@@ -411,23 +455,42 @@ export class Committee {
     let next: AppealWorkflowState = {
       ...this.appealWorkflow,
       stage: 'evaluation_debate',
+      meetingStatus: 'formal',
+      agendaRevisionRequired: false,
+      chairOverrideEnabled: false,
       currentAgendaItemId: firstItem.id,
       agendaAcceptedAt: Date.now(),
       reading: null,
       consensusReading: null,
-      negotiation: null
+      negotiation: null,
+      postponedAt: undefined,
+      postponedAgendaItemId: undefined
     }
-    next = ensureAppealPcn(next, firstItem.id, firstItem.title)
+    next = ensureAppealPcn(next, firstItem.id)
     next = appendAppealEvent(next, 'agenda_accepted', firstItem.title)
-    this.appealWorkflow = appendAppealEvent(next, 'evaluation_started', firstItem.title)
+    next = appendAppealEvent(next, 'evaluation_started', firstItem.title)
+    this.appealWorkflow = next
     this.touch()
     return true
   }
 
-  saveAppealPcn(title: string, content: string): boolean {
-    const next = this.appendAppealPcnVersion(title, content)
-    if (!next) return false
-    this.appealWorkflow = appendAppealEvent(next, 'pcn_saved', title.trim())
+  acceptAppealAgenda(): boolean {
+    if (this.appealWorkflow.stage !== 'agenda') return false
+    if (
+      this.appealWorkflow.meetingStatus === 'informal' &&
+      this.appealWorkflow.agendaRevisionRequired
+    )
+      return false
+    if (![...this.agenda].some((item) => item.id)) return false
+    return this.passAppealAgenda()
+  }
+
+  enableAppealChair(): boolean {
+    if (!this.agendaMode || this.appealWorkflow.chairOverrideEnabled) return false
+    this.appealWorkflow = {
+      ...this.appealWorkflow,
+      chairOverrideEnabled: true
+    }
     this.touch()
     return true
   }
@@ -452,12 +515,25 @@ export class Committee {
 
   endAppealEvaluationDebate(): boolean {
     if (this.appealWorkflow.stage !== 'evaluation_debate') return false
+    const agendaItemId = this.appealWorkflow.currentAgendaItemId
+    const pcn = agendaItemId ? this.appealWorkflow.pcnByAgendaItemId[agendaItemId] : undefined
+    if (!agendaItemId || !pcn) return false
+    const now = Date.now()
+    this.activeSpeaker = null
+    this.activeCaucus = null
+    this.yieldPending = null
+    this.phase = 'general_debate'
     this.appealWorkflow = appendAppealEvent(
       {
         ...this.appealWorkflow,
         stage: 'document_reading',
         reading: null,
-        negotiation: null
+        consensusReading: null,
+        negotiation: null,
+        pcnByAgendaItemId: {
+          ...this.appealWorkflow.pcnByAgendaItemId,
+          [agendaItemId]: { ...pcn, status: 'reading', updatedAt: now }
+        }
       },
       'evaluation_ended'
     )
@@ -466,10 +542,14 @@ export class Committee {
   }
 
   startAppealReading(): boolean {
+    if (
+      !['document_reading', 'negotiation_decision'].includes(this.appealWorkflow.stage) ||
+      this.hasPendingAppealConsensusRevision()
+    ) {
+      return false
+    }
     const agendaItemId = this.appealWorkflow.currentAgendaItemId
-    const pcn = agendaItemId
-      ? this.appealWorkflow.pcnByAgendaItemId[agendaItemId]
-      : undefined
+    const pcn = agendaItemId ? this.appealWorkflow.pcnByAgendaItemId[agendaItemId] : undefined
     if (!agendaItemId || !pcn || pcn.status === 'finalized' || !pcn.fileName.trim()) return false
     const now = Date.now()
     this.appealWorkflow = appendAppealEvent(
@@ -491,7 +571,13 @@ export class Committee {
 
   finishAppealReading(): boolean {
     const reading = this.appealWorkflow.reading
-    if (!reading || reading.completedAt) return false
+    if (
+      this.appealWorkflow.stage !== 'document_reading' ||
+      !reading ||
+      reading.completedAt ||
+      this.hasPendingAppealConsensusRevision()
+    )
+      return false
     this.appealWorkflow = appendAppealEvent(
       {
         ...this.appealWorkflow,
@@ -505,16 +591,19 @@ export class Committee {
   }
 
   decideAppealNegotiation(needed: boolean): void {
+    if (
+      !['document_reading', 'negotiation_decision'].includes(this.appealWorkflow.stage) ||
+      !this.canAdvanceAppealToFinalization()
+    )
+      return
     const now = Date.now()
     const current = this.appealWorkflow.negotiation
     const agendaItemId = this.appealWorkflow.currentAgendaItemId
-    const pcn = agendaItemId
-      ? this.appealWorkflow.pcnByAgendaItemId[agendaItemId]
-      : undefined
+    const pcn = agendaItemId ? this.appealWorkflow.pcnByAgendaItemId[agendaItemId] : undefined
     this.appealWorkflow = appendAppealEvent(
       {
         ...this.appealWorkflow,
-        stage: needed ? 'consensus_meeting' : 'pcn_finalization',
+        stage: needed ? 'negotiation_decision' : 'pcn_finalization',
         consensusReading: null,
         pcnByAgendaItemId:
           agendaItemId && pcn
@@ -539,53 +628,419 @@ export class Committee {
     this.touch()
   }
 
-  startAppealConsensusReading(): boolean {
-    if (this.appealWorkflow.stage !== 'consensus_meeting') return false
+  private replaceActiveAppealConsensusMeeting(
+    meeting: AppealConsensusMeeting
+  ): AppealWorkflowState {
+    const meetings = this.appealWorkflow.consensusMeetingsByAgendaItemId[meeting.agendaItemId] ?? []
+    return {
+      ...this.appealWorkflow,
+      activeConsensusMeeting: meeting,
+      consensusMeetingsByAgendaItemId: {
+        ...this.appealWorkflow.consensusMeetingsByAgendaItemId,
+        [meeting.agendaItemId]: meetings.some((entry) => entry.id === meeting.id)
+          ? meetings.map((entry) => (entry.id === meeting.id ? meeting : entry))
+          : [...meetings, meeting]
+      }
+    }
+  }
+
+  startAppealConsensusMeeting(issue: string, motionId: string): boolean {
     const agendaItemId = this.appealWorkflow.currentAgendaItemId
-    const pcn = agendaItemId
-      ? this.appealWorkflow.pcnByAgendaItemId[agendaItemId]
-      : undefined
-    if (!agendaItemId || !pcn || !pcn.fileName.trim()) return false
+    const pcn = agendaItemId ? this.appealWorkflow.pcnByAgendaItemId[agendaItemId] : undefined
+    const trimmedIssue = issue.trim()
+    const progress = getAppealConsensusProgress(this.appealWorkflow, agendaItemId)
+    if (
+      !agendaItemId ||
+      !pcn ||
+      !trimmedIssue ||
+      !['document_reading', 'negotiation_decision'].includes(this.appealWorkflow.stage) ||
+      !progress.canStart
+    ) {
+      return false
+    }
+    const now = Date.now()
+    const meeting: AppealConsensusMeeting = {
+      id: generateId(),
+      agendaItemId,
+      motionId,
+      issue: trimmedIssue,
+      startedAt: now,
+      totalSec: CONSENSUS_MEETING_DURATION_SEC,
+      elapsedSec: 0,
+      paused: false,
+      speakerTimeSec: CONSENSUS_SPEECH_DURATION_SEC,
+      speakers: [],
+      currentSpeakerIndex: null,
+      status: 'active',
+      lastTickAt: now
+    }
     this.appealWorkflow = appendAppealEvent(
       {
-        ...this.appealWorkflow,
-        consensusReading: newAppealReadingSession()
+        ...this.replaceActiveAppealConsensusMeeting(meeting),
+        stage: 'consensus_meeting',
+        negotiation: {
+          needed: true,
+          notes: this.appealWorkflow.negotiation?.notes ?? '',
+          decidedAt: this.appealWorkflow.negotiation?.decidedAt ?? now
+        },
+        pcnByAgendaItemId: {
+          ...this.appealWorkflow.pcnByAgendaItemId,
+          [agendaItemId]: { ...pcn, status: 'negotiation', updatedAt: now }
+        }
       },
-      'consensus_reading_started'
+      'consensus_meeting_started',
+      trimmedIssue
+    )
+    const motion = this.motions.find((entry) => entry.id === motionId)
+    if (motion?.type === 'consensus_meeting') {
+      this.phase = 'caucus_setup'
+      this.caucusSetup = {
+        motionId,
+        proposerPosition: 'first',
+        speakerSeatIds: motion.proposedBySeatId ? [motion.proposedBySeatId] : []
+      }
+      this.addConferenceEntry(
+        'phase_changed',
+        message('domain_log_caucus_setup', {
+          topic: trimmedIssue,
+          hasTopic: 'yes'
+        })
+      )
+    }
+    this.touch()
+    return true
+  }
+
+  tickAppealConsensusMeeting(now = Date.now()): boolean {
+    const meeting = this.appealWorkflow.activeConsensusMeeting
+    if (!meeting || meeting.status !== 'active') return false
+    if (meeting.paused) {
+      this.appealWorkflow = {
+        ...this.appealWorkflow,
+        activeConsensusMeeting: { ...meeting, lastTickAt: now }
+      }
+      return true
+    }
+    const lastTickAt = meeting.lastTickAt ?? now
+    const deltaSec = Math.max(0, Math.floor((now - lastTickAt) / 1000))
+    if (deltaSec === 0) return false
+
+    let currentSpeakerIndex = meeting.currentSpeakerIndex
+    let finishedSpeakerName: string | null = null
+    let speakers = meeting.speakers.map((speaker) => ({ ...speaker }))
+    if (currentSpeakerIndex != null) {
+      const current = speakers[currentSpeakerIndex]
+      if (current?.status === 'speaking') {
+        const elapsed = Math.min(current.allocatedTimeSec, current.elapsedSec + deltaSec)
+        if (elapsed >= current.allocatedTimeSec) {
+          speakers = speakers.map((speaker, index) =>
+            index === currentSpeakerIndex
+              ? { ...speaker, elapsedSec: current.allocatedTimeSec, status: 'finished' as const }
+              : speaker
+          )
+          finishedSpeakerName = this.getSpeakerSeatName(current)
+          const nextIndex = speakers.findIndex((speaker) => speaker.status === 'waiting')
+          currentSpeakerIndex = nextIndex >= 0 ? nextIndex : null
+        } else {
+          speakers = speakers.map((speaker, index) =>
+            index === currentSpeakerIndex ? { ...speaker, elapsedSec: elapsed } : speaker
+          )
+        }
+      }
+    }
+
+    const elapsedSec = Math.min(meeting.totalSec, meeting.elapsedSec + deltaSec)
+    const timeUp = elapsedSec >= meeting.totalSec
+    if (timeUp) {
+      speakers = speakers.map((speaker) =>
+        speaker.status === 'speaking' ? { ...speaker, status: 'finished' as const } : speaker
+      )
+      currentSpeakerIndex = null
+    }
+    const nextMeeting: AppealConsensusMeeting = {
+      ...meeting,
+      elapsedSec,
+      speakers,
+      currentSpeakerIndex,
+      lastTickAt: now,
+      ...(timeUp ? { status: 'awaiting_revision' as const, endedAt: now, paused: true } : {})
+    }
+    let next = this.replaceActiveAppealConsensusMeeting(nextMeeting)
+    if (finishedSpeakerName && !timeUp) {
+      next = appendAppealEvent(next, 'consensus_meeting_speaker_finished', finishedSpeakerName)
+    }
+    if (timeUp) {
+      next = appendAppealEvent(next, 'consensus_meeting_ended')
+    }
+    this.appealWorkflow = next
+    this.touch()
+    return true
+  }
+
+  grantAppealConsensusFloor(seatId: string): boolean {
+    const meeting = this.appealWorkflow.activeConsensusMeeting
+    const seat = this.participantSeats.find((entry) => entry.id === seatId)
+    if (!meeting || meeting.status !== 'active' || !seat) return false
+    if (meeting.paused) return false
+
+    let speakers = meeting.speakers.map((speaker) => ({ ...speaker }))
+    const current =
+      meeting.currentSpeakerIndex != null ? speakers[meeting.currentSpeakerIndex] : null
+    if (current?.status === 'speaking' && current.seatId === seatId) return true
+    if (current?.status === 'speaking') {
+      speakers = speakers.map((speaker, index) =>
+        index === meeting.currentSpeakerIndex
+          ? { ...speaker, status: 'finished' as const }
+          : speaker
+      )
+    }
+    const waitingIndex = speakers.findIndex(
+      (speaker) => speaker.seatId === seatId && speaker.status === 'waiting'
+    )
+    const speakingIndex =
+      waitingIndex >= 0
+        ? waitingIndex
+        : (() => {
+            speakers.push({
+              id: generateId(),
+              seatId,
+              allocatedTimeSec: CONSENSUS_SPEECH_DURATION_SEC,
+              elapsedSec: 0,
+              status: 'waiting'
+            })
+            return speakers.length - 1
+          })()
+    speakers = speakers.map((speaker, index) =>
+      index === speakingIndex ? { ...speaker, elapsedSec: 0, status: 'speaking' as const } : speaker
+    )
+    this.appealWorkflow = appendAppealEvent(
+      this.replaceActiveAppealConsensusMeeting({
+        ...meeting,
+        speakers,
+        currentSpeakerIndex: speakingIndex
+      }),
+      'consensus_meeting_speaker_started',
+      seat.name
     )
     this.touch()
     return true
   }
 
-  finishAppealConsensusReading(): boolean {
-    const reading = this.appealWorkflow.consensusReading
-    if (this.appealWorkflow.stage !== 'consensus_meeting' || !reading || reading.completedAt) {
+  addAppealConsensusSpeaker(seatId: string): boolean {
+    const meeting = this.appealWorkflow.activeConsensusMeeting
+    if (!meeting || meeting.status !== 'active') return false
+    const seat = this.participantSeats.find((entry) => entry.id === seatId)
+    if (!seat) return false
+    const speaker: AppealConsensusSpeaker = {
+      id: generateId(),
+      seatId,
+      allocatedTimeSec: CONSENSUS_SPEECH_DURATION_SEC,
+      elapsedSec: 0,
+      status: 'waiting'
+    }
+    this.appealWorkflow = this.replaceActiveAppealConsensusMeeting({
+      ...meeting,
+      speakers: [...meeting.speakers, speaker]
+    })
+    this.touch()
+    return true
+  }
+
+  startAppealConsensusSpeaker(): boolean {
+    const meeting = this.appealWorkflow.activeConsensusMeeting
+    if (!meeting || meeting.status !== 'active' || meeting.paused) return false
+    const index =
+      meeting.currentSpeakerIndex ??
+      meeting.speakers.findIndex((speaker) => speaker.status === 'waiting')
+    const speaker = index >= 0 ? meeting.speakers[index] : undefined
+    if (!speaker || speaker.status !== 'waiting') return false
+    const speakers = meeting.speakers.map((entry, entryIndex) =>
+      entryIndex === index ? { ...entry, status: 'speaking' as const } : entry
+    )
+    this.appealWorkflow = appendAppealEvent(
+      this.replaceActiveAppealConsensusMeeting({
+        ...meeting,
+        speakers,
+        currentSpeakerIndex: index
+      }),
+      'consensus_meeting_speaker_started',
+      this.getSpeakerSeatName(speaker)
+    )
+    this.touch()
+    return true
+  }
+
+  finishAppealConsensusSpeaker(): boolean {
+    const meeting = this.appealWorkflow.activeConsensusMeeting
+    if (!meeting || meeting.status !== 'active' || meeting.currentSpeakerIndex == null) return false
+    const current = meeting.speakers[meeting.currentSpeakerIndex]
+    if (!current || current.status !== 'speaking') return false
+    const speakers = meeting.speakers.map((speaker, index) =>
+      index === meeting.currentSpeakerIndex ? { ...speaker, status: 'finished' as const } : speaker
+    )
+    const nextIndex = speakers.findIndex((speaker) => speaker.status === 'waiting')
+    this.appealWorkflow = appendAppealEvent(
+      this.replaceActiveAppealConsensusMeeting({
+        ...meeting,
+        speakers,
+        currentSpeakerIndex: nextIndex >= 0 ? nextIndex : null
+      }),
+      'consensus_meeting_speaker_finished',
+      this.getSpeakerSeatName(current)
+    )
+    this.touch()
+    return true
+  }
+
+  pauseAppealConsensusMeeting(): boolean {
+    const meeting = this.appealWorkflow.activeConsensusMeeting
+    if (!meeting || meeting.status !== 'active' || meeting.paused) return false
+    this.appealWorkflow = this.replaceActiveAppealConsensusMeeting({
+      ...meeting,
+      paused: true,
+      lastTickAt: Date.now()
+    })
+    this.touch()
+    return true
+  }
+
+  resumeAppealConsensusMeeting(): boolean {
+    const meeting = this.appealWorkflow.activeConsensusMeeting
+    if (!meeting || meeting.status !== 'active' || !meeting.paused) return false
+    this.appealWorkflow = this.replaceActiveAppealConsensusMeeting({
+      ...meeting,
+      paused: false,
+      lastTickAt: Date.now()
+    })
+    this.touch()
+    return true
+  }
+
+  private finishAppealConsensusMeetingRecord(): boolean {
+    const meeting = this.appealWorkflow.activeConsensusMeeting
+    if (!meeting || meeting.status !== 'active') return false
+    const now = Date.now()
+    const speakers = meeting.speakers.map((speaker) =>
+      speaker.status === 'speaking' ? { ...speaker, status: 'finished' as const } : speaker
+    )
+    const finished: AppealConsensusMeeting = {
+      ...meeting,
+      speakers,
+      currentSpeakerIndex: null,
+      status: 'awaiting_revision',
+      endedAt: now,
+      paused: true,
+      lastTickAt: now
+    }
+    this.appealWorkflow = appendAppealEvent(
+      this.replaceActiveAppealConsensusMeeting(finished),
+      'consensus_meeting_ended'
+    )
+    this.touch()
+    return true
+  }
+
+  finishAppealConsensusMeeting(): boolean {
+    const meeting = this.appealWorkflow.activeConsensusMeeting
+    if (!meeting || meeting.status !== 'active') return false
+    const finished = this.finishAppealConsensusMeetingRecord()
+    if (!finished) return false
+
+    const isHostedByChair =
+      this.activeCaucus?.motionId === meeting.motionId ||
+      this.caucusSetup?.motionId === meeting.motionId
+    if (isHostedByChair) {
+      this.endCaucusState(this.activeCaucus?.type)
+    }
+    return true
+  }
+
+  postponeAppealSession(): boolean {
+    const progress = getAppealConsensusProgress(this.appealWorkflow)
+    if (
+      !['evaluation_debate', 'document_reading', 'negotiation_decision'].includes(
+        this.appealWorkflow.stage
+      ) ||
+      !progress.canPostpone
+    ) {
       return false
     }
+    const agendaItemId = this.appealWorkflow.currentAgendaItemId
+    this.appealWorkflow = appendAppealEvent(
+      {
+        ...this.appealWorkflow,
+        stage: 'postponed',
+        activeConsensusMeeting: null,
+        reading: null,
+        postponedAt: Date.now(),
+        ...(agendaItemId ? { postponedAgendaItemId: agendaItemId } : {})
+      },
+      'consensus_meeting_postponed'
+    )
+    this.touch()
+    return true
+  }
+
+  postponeAppealConsensusMeeting(): boolean {
+    return this.postponeAppealSession()
+  }
+
+  resumePostponedAppealSession(): boolean {
+    if (this.appealWorkflow.stage !== 'postponed') return false
+    const agendaItemId =
+      this.appealWorkflow.postponedAgendaItemId ?? this.appealWorkflow.currentAgendaItemId
+    if (!agendaItemId || !this.appealWorkflow.pcnByAgendaItemId[agendaItemId]) return false
     this.appealWorkflow = appendAppealEvent(
       {
         ...this.appealWorkflow,
         stage: 'document_reading',
+        meetingStatus: 'formal',
+        currentAgendaItemId: agendaItemId,
         reading: null,
-        consensusReading: { ...reading, completedAt: Date.now() }
+        postponedAt: undefined,
+        postponedAgendaItemId: undefined
       },
-      'consensus_reading_completed'
+      'session_resumed'
     )
     this.touch()
     return true
   }
 
-  submitAppealRevision(title: string, content: string, notes: string): boolean {
-    if (!content.trim()) return false
-    const next = this.appendAppealPcnVersion(title, content, notes)
+  submitAppealRevision(notes: string): boolean {
+    const activeMeeting = this.appealWorkflow.activeConsensusMeeting
+    if (
+      this.appealWorkflow.stage !== 'consensus_meeting' ||
+      !activeMeeting ||
+      activeMeeting.status !== 'awaiting_revision'
+    ) {
+      return false
+    }
+    const next = this.appendAppealPcnVersion(notes)
     if (!next) return false
     const now = Date.now()
+    const agendaItemId = this.appealWorkflow.currentAgendaItemId
+    const completedMeeting = activeMeeting
+      ? { ...activeMeeting, status: 'completed' as const, revisionSubmittedAt: now }
+      : null
     this.appealWorkflow = appendAppealEvent(
       {
         ...next,
         stage: 'document_reading',
         reading: null,
         consensusReading: null,
+        activeConsensusMeeting: null,
+        consensusMeetingsByAgendaItemId:
+          agendaItemId && completedMeeting
+            ? {
+                ...this.appealWorkflow.consensusMeetingsByAgendaItemId,
+                [agendaItemId]: [
+                  ...(
+                    this.appealWorkflow.consensusMeetingsByAgendaItemId[agendaItemId] ?? []
+                  ).slice(0, -1),
+                  completedMeeting
+                ]
+              }
+            : this.appealWorkflow.consensusMeetingsByAgendaItemId,
         negotiation: {
           needed: true,
           notes,
@@ -596,20 +1051,25 @@ export class Committee {
             : {})
         }
       },
-      'revision_saved',
-      title.trim()
+      activeMeeting ? 'consensus_revision_submitted' : 'revision_saved',
+      this.currentAppealPcn?.fileName
     )
     this.touch()
     return true
   }
 
   recordAppealRevision(notes: string): boolean {
+    if (
+      !['document_reading', 'negotiation_decision'].includes(this.appealWorkflow.stage) ||
+      !this.canAdvanceAppealToFinalization()
+    ) {
+      return false
+    }
     const agendaItemId = this.appealWorkflow.currentAgendaItemId
     if (!agendaItemId) return false
     const pcn = this.appealWorkflow.pcnByAgendaItemId[agendaItemId]
     if (!pcn || pcn.status === 'finalized') return false
     const latest = latestAppealPcnVersion(pcn)
-    const agendaTitle = this.agenda.find((item) => item.id === agendaItemId)?.title
     const now = Date.now()
     const trimmedNotes = notes.trim()
     const nextPcn: AppealPcn = {
@@ -619,8 +1079,6 @@ export class Committee {
         ...pcn.versions,
         {
           version: (latest?.version ?? 0) + 1,
-          title: latest?.title || agendaTitle || '',
-          content: '',
           ...(trimmedNotes ? { note: trimmedNotes } : {}),
           createdAt: now
         }
@@ -644,17 +1102,20 @@ export class Committee {
         }
       },
       'revision_saved',
-      nextPcn.versions.at(-1)?.title
+      nextPcn.fileName
     )
     this.touch()
     return true
   }
 
   confirmAppealConsensus(notes: string): void {
+    if (
+      !this.canAdvanceAppealToFinalization() ||
+      !['document_reading', 'negotiation_decision'].includes(this.appealWorkflow.stage)
+    )
+      return
     const agendaItemId = this.appealWorkflow.currentAgendaItemId
-    const pcn = agendaItemId
-      ? this.appealWorkflow.pcnByAgendaItemId[agendaItemId]
-      : undefined
+    const pcn = agendaItemId ? this.appealWorkflow.pcnByAgendaItemId[agendaItemId] : undefined
     const now = Date.now()
     this.appealWorkflow = appendAppealEvent(
       {
@@ -682,12 +1143,48 @@ export class Committee {
     this.touch()
   }
 
+  prepareAppealPcnFinalization(): boolean {
+    const agendaItemId = this.appealWorkflow.currentAgendaItemId
+    const pcn = agendaItemId ? this.appealWorkflow.pcnByAgendaItemId[agendaItemId] : undefined
+    if (
+      !agendaItemId ||
+      !pcn ||
+      !pcn.fileName.trim() ||
+      !this.canAdvanceAppealToFinalization() ||
+      !['document_reading', 'negotiation_decision'].includes(this.appealWorkflow.stage)
+    ) {
+      return false
+    }
+    const now = Date.now()
+    const reading = this.appealWorkflow.reading
+    this.appealWorkflow = appendAppealEvent(
+      {
+        ...this.appealWorkflow,
+        stage: 'pcn_finalization',
+        reading: reading && !reading.completedAt ? { ...reading, completedAt: now } : reading,
+        pcnByAgendaItemId: {
+          ...this.appealWorkflow.pcnByAgendaItemId,
+          [agendaItemId]: { ...pcn, status: 'ready', updatedAt: now }
+        }
+      },
+      'negotiation_skipped'
+    )
+    this.touch()
+    return true
+  }
+
   finalizeAppealPcn(): boolean {
     const agendaItemId = this.appealWorkflow.currentAgendaItemId
-    if (!agendaItemId) return false
+    if (
+      !agendaItemId ||
+      !this.canAdvanceAppealToFinalization() ||
+      !['document_reading', 'negotiation_decision', 'pcn_finalization'].includes(
+        this.appealWorkflow.stage
+      )
+    )
+      return false
     const pcn = this.appealWorkflow.pcnByAgendaItemId[agendaItemId]
-    const latest = latestAppealPcnVersion(pcn)
-    if (!pcn || !latest || !pcn.fileName.trim()) return false
+    if (!pcn || !pcn.fileName.trim()) return false
     const now = Date.now()
     this.appealWorkflow = appendAppealEvent(
       {
@@ -707,13 +1204,14 @@ export class Committee {
         }
       },
       'pcn_finalized',
-      latest.title
+      pcn.fileName
     )
     this.touch()
     return true
   }
 
   moveToNextAppealAgendaItem(): string | null {
+    if (this.appealWorkflow.stage !== 'item_complete') return null
     const ordered = [...this.agenda].sort((a, b) => a.sortOrder - b.sortOrder)
     const nextId = nextAppealAgendaItemId(
       this.appealWorkflow,
@@ -726,12 +1224,16 @@ export class Committee {
     let next: AppealWorkflowState = {
       ...this.appealWorkflow,
       stage: 'evaluation_debate',
+      meetingStatus: 'formal',
+      chairOverrideEnabled: false,
       currentAgendaItemId: nextId,
       reading: null,
       consensusReading: null,
-      negotiation: null
+      negotiation: null,
+      postponedAt: undefined,
+      postponedAgendaItemId: undefined
     }
-    next = ensureAppealPcn(next, nextId, item.title)
+    next = ensureAppealPcn(next, nextId)
     this.appealWorkflow = appendAppealEvent(next, 'next_item_started', item.title)
     this.touch()
     return nextId
@@ -790,8 +1292,8 @@ export class Committee {
       data.agendaMode ??
       Boolean(
         data.appealWorkflow?.currentAgendaItemId ||
-          data.appealWorkflow?.events?.length ||
-          isAppealCommitteeName(data.name)
+        data.appealWorkflow?.events?.length ||
+        isAppealCommitteeName(data.name)
       )
     if (data.defaultSpeakingTimeSec != null)
       this.defaultSpeakingTimeSec = data.defaultSpeakingTimeSec
@@ -823,6 +1325,7 @@ export class Committee {
         procedure: seat.procedure
           ? {
               ...seat.procedure,
+              isReferenceGroup: seat.procedure.isReferenceGroup ?? seat.procedure.hasVotingRights,
               hasVetoPower:
                 seat.procedure.hasVetoPower ??
                 Boolean(
@@ -836,7 +1339,6 @@ export class Committee {
     if (data.agenda != null) this.agenda = data.agenda.map((item) => ({ ...item }))
     if (data.appealWorkflow != null) {
       this.appealWorkflow = normalizeAppealWorkflow({
-        ...createAppealWorkflow(),
         ...data.appealWorkflow,
         completedAgendaItemIds: data.appealWorkflow.completedAgendaItemIds ?? [],
         pcnByAgendaItemId: data.appealWorkflow.pcnByAgendaItemId ?? {},
@@ -911,6 +1413,63 @@ export class Committee {
       this.rollCallState = {
         reason: data.postRollCallPhase === 'voting' ? 'before_voting' : 'initial',
         nextPhase: data.postRollCallPhase
+      }
+    }
+    this.restoreLegacyAppealConsensusHosting()
+  }
+
+  private restoreLegacyAppealConsensusHosting(): void {
+    const meeting = this.appealWorkflow.activeConsensusMeeting
+    if (this.activeCaucus || meeting?.status !== 'active') return
+
+    const currentSpeakerIndex = meeting.currentSpeakerIndex
+    const caucusSpeakers = meeting.speakers.map((speaker, index) => ({
+      id: speaker.id,
+      seatId: speaker.seatId,
+      allocatedTimeSec: Math.min(speaker.allocatedTimeSec, CONSENSUS_SPEECH_DURATION_SEC),
+      status:
+        speaker.status === 'finished'
+          ? ('finished' as const)
+          : speaker.status === 'speaking'
+            ? ('speaking' as const)
+            : index === currentSpeakerIndex
+              ? ('ready' as const)
+              : ('waiting' as const)
+    }))
+
+    if (caucusSpeakers.length === 0) {
+      this.phase = 'caucus_setup'
+      this.caucusSetup = {
+        motionId: meeting.motionId,
+        proposerPosition: 'first',
+        speakerSeatIds: []
+      }
+      return
+    }
+
+    this.phase = 'caucus'
+    const restoredCaucus: NonNullable<CommitteeDTO['activeCaucus']> = {
+      motionId: meeting.motionId,
+      type: 'consensus_meeting',
+      totalSec: Math.min(meeting.totalSec, CONSENSUS_MEETING_DURATION_SEC),
+      elapsedSec: Math.min(meeting.elapsedSec, CONSENSUS_MEETING_DURATION_SEC),
+      paused: meeting.paused,
+      caucusSpeakers,
+      currentSpeakerIndex:
+        currentSpeakerIndex ?? caucusSpeakers.findIndex((speaker) => speaker.status === 'ready')
+    }
+    this.activeCaucus = restoredCaucus
+
+    if (!this.activeSpeaker) {
+      const current = caucusSpeakers[restoredCaucus.currentSpeakerIndex ?? -1]
+      if (current?.status === 'speaking') {
+        const source = meeting.speakers.find((speaker) => speaker.id === current.id)
+        this.activeSpeaker = {
+          entryId: current.seatId,
+          totalSec: current.allocatedTimeSec,
+          elapsedSec: Math.min(source?.elapsedSec ?? 0, current.allocatedTimeSec),
+          paused: meeting.paused
+        }
       }
     }
   }
@@ -1357,7 +1916,7 @@ export class Committee {
 
   approveMotion(motionId: string): void {
     const motion = this.motions.find((m) => m.id === motionId)
-    if (!motion) return
+    if (!motion || motion.status !== 'pending') return
 
     if (motion.type === 'substantive_vote' && this.phase !== 'voting') {
       console.warn('MotionApprovalRejected', {
@@ -1442,6 +2001,12 @@ export class Committee {
         break
       case 'individual_speech':
         this.startCaucusImpl(motion.id)
+        break
+      case 'consensus_meeting':
+        this.startAppealConsensusMeeting(motion.issue, motion.id)
+        break
+      case 'postpone_consensus_meeting':
+        this.postponeAppealConsensusMeeting()
         break
     }
   }
@@ -1715,9 +2280,18 @@ export class Committee {
       return
     }
 
-    const perSpeakerSec = ((motion as any).speakingTimePerPersonSec as number) ?? 60
-    const totalSec = remainingSec ?? ((motion as any).totalTimeSec as number)
-    const topic = (motion as any).topic
+    const perSpeakerSec =
+      motion.type === 'consensus_meeting'
+        ? CONSENSUS_SPEECH_DURATION_SEC
+        : ((motion as any).speakingTimePerPersonSec as number) ?? 60
+    const totalSec =
+      remainingSec ??
+      (motion.type === 'consensus_meeting'
+        ? CONSENSUS_MEETING_DURATION_SEC
+        : ((motion as any).totalTimeSec as number))
+    const topic = motion.type === 'consensus_meeting' ? motion.issue : (motion as any).topic
+    const caucusType: CaucusType =
+      motion.type === 'consensus_meeting' ? 'consensus_meeting' : 'moderated'
 
     const maxSpeakers = Math.max(1, Math.floor(totalSec / perSpeakerSec))
     const trimmedIds = speakerSeatIds.slice(0, maxSpeakers)
@@ -1740,7 +2314,7 @@ export class Committee {
     this.caucusSetup = null
     this.activeCaucus = {
       motionId,
-      type: 'moderated',
+      type: caucusType,
       totalSec,
       elapsedSec: 0,
       paused: false,
@@ -1974,6 +2548,21 @@ export class Committee {
 
   endCaucus(): void {
     const caucusType = this.activeCaucus?.type
+    const consensusMotionId =
+      this.activeCaucus?.type === 'consensus_meeting'
+        ? this.activeCaucus.motionId
+        : this.caucusSetup &&
+            this.motions.find((motion) => motion.id === this.caucusSetup?.motionId)?.type ===
+              'consensus_meeting'
+          ? this.caucusSetup.motionId
+          : null
+    if (consensusMotionId) {
+      this.finishAppealConsensusMeetingRecord()
+    }
+    this.endCaucusState(caucusType)
+  }
+
+  private endCaucusState(caucusType?: CaucusType): void {
     this.phase = 'general_debate'
     this.caucusSetup = null
     this.activeCaucus = null
@@ -2003,8 +2592,10 @@ export class Committee {
     const motion = this.motions.find((item) => item.id === targetId)
     const kind =
       targetType === 'resolution' || motion?.type === 'substantive_vote' ? 'document' : 'procedural'
+    const isAgendaObjection = targetType === 'agenda'
     if (
-      this.phase !== 'voting' ||
+      (!isAgendaObjection && this.phase !== 'voting') ||
+      (isAgendaObjection && this.appealWorkflow.stage !== 'agenda') ||
       !validateProcedureRules(this.procedureRules, this.participantSeats) ||
       !calculateQuorum(this.participantSeats, this.procedureRules.quorum).met ||
       this.votingSessions.some((session) => !session.endedAt)
@@ -2022,10 +2613,17 @@ export class Committee {
       this.participantSeats,
       kind,
       motion?.type,
-      majorityRule
+      majorityRule,
+      isAgendaObjection ? 'reference_group' : 'procedure'
     )
+    if (isAgendaObjection) {
+      rulesSnapshot.threshold = { type: 'two_thirds' }
+    }
     const presentSeats = rulesSnapshot.seats.filter(
-      (seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights
+      (seat) =>
+        seat.procedure.attendance === 'present' &&
+        (seat.procedure.hasVotingRights ||
+          (isAgendaObjection && seat.procedure.isReferenceGroup === true))
     )
     if (!presentSeats.length) {
       console.warn('EmptyElectorate', {
@@ -2098,7 +2696,13 @@ export class Committee {
     }
 
     const presentSeats = (session.rulesSnapshot?.seats ?? this.participantSeats)
-      .filter((seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights)
+      .filter(
+        (seat) =>
+          seat.procedure.attendance === 'present' &&
+          (seat.procedure.hasVotingRights ||
+            (session.rulesSnapshot?.electorate === 'reference_group' &&
+              seat.procedure.isReferenceGroup === true))
+      )
       .sort((a, b) => a.procedure.sortOrder - b.procedure.sortOrder)
 
     const { nextSeatId, nextRound } = this.advanceVoting(
@@ -2192,7 +2796,24 @@ export class Committee {
     let newSeats = this.seats
     let newQuorumRecord = this.quorumRecord
 
-    if (session.targetType === 'motion') {
+    if (session.targetType === 'agenda') {
+      if (result === 'passed') {
+        this.appealWorkflow = appendAppealEvent(
+          {
+            ...this.appealWorkflow,
+            stage: 'agenda',
+            meetingStatus: 'informal',
+            agendaRevisionRequired: true,
+            reading: null
+          },
+          'agenda_rejected_informally'
+        )
+      } else {
+        this.passAppealAgenda()
+        this.appealWorkflow = appendAppealEvent(this.appealWorkflow, 'agenda_confirmed_formally')
+      }
+      newPhase = result === 'passed' ? 'pending_speakers_list' : 'general_debate'
+    } else if (session.targetType === 'motion') {
       const motion = this.motions.find((m) => m.id === session.targetId)
       if (motion) {
         if (motion.type === 'substantive_vote') {
@@ -2226,17 +2847,32 @@ export class Committee {
                 message('domain_log_phase', { phase: 'closed' })
               )
             } else if (motion.type === 'closure_debate') {
-              newPhase = 'roll_call'
-              newRollCallState = { reason: 'before_voting', nextPhase: 'voting' }
-              newQuorumRecord = undefined
-              newSeats = this.seats.map((seat) =>
-                seat.procedure
-                  ? { ...seat, procedure: { ...seat.procedure, attendance: 'absent' } }
-                  : seat
-              )
-              newActiveSpeaker = null
-              newActiveCaucus = null
-              this.addConferenceEntry('phase_changed', message('domain_log_before_vote'))
+              if (this.agendaMode && this.appealWorkflow.stage === 'evaluation_debate') {
+                newPhase = 'general_debate'
+                newActiveSpeaker = null
+                newActiveCaucus = null
+                this.endAppealEvaluationDebate()
+              } else {
+                newPhase = 'roll_call'
+                newRollCallState = { reason: 'before_voting', nextPhase: 'voting' }
+                newQuorumRecord = undefined
+                newSeats = this.seats.map((seat) =>
+                  seat.procedure
+                    ? { ...seat, procedure: { ...seat.procedure, attendance: 'absent' } }
+                    : seat
+                )
+                newActiveSpeaker = null
+                newActiveCaucus = null
+                this.addConferenceEntry('phase_changed', message('domain_log_before_vote'))
+              }
+            } else if (
+              motion.type === 'consensus_meeting' ||
+              motion.type === 'postpone_consensus_meeting'
+            ) {
+              this.executeMotionAction(motion)
+              newPhase = this.phase
+              newActiveSpeaker = this.activeSpeaker
+              newActiveCaucus = this.activeCaucus
             } else if (
               motion.type === 'unmoderated_caucus' ||
               motion.type === 'moderated_debate' ||
@@ -2417,7 +3053,11 @@ export class Committee {
       name,
       type: motion.type,
       topic:
-        motion.type === 'moderated_caucus' || motion.type === 'moderated_debate' ? motion.topic : ''
+        motion.type === 'moderated_caucus' || motion.type === 'moderated_debate'
+          ? motion.topic
+          : motion.type === 'consensus_meeting'
+            ? motion.issue
+            : ''
     })
   }
 
@@ -2629,7 +3269,11 @@ export class Committee {
       role,
       roleId,
       procedure: procedure
-        ? { ...procedure, hasVetoPower: procedure.hasVetoPower ?? false }
+        ? {
+            ...procedure,
+            isReferenceGroup: procedure.isReferenceGroup ?? procedure.hasVotingRights,
+            hasVetoPower: procedure.hasVetoPower ?? false
+          }
         : undefined
     }
     this.seats = [...this.seats, seat]

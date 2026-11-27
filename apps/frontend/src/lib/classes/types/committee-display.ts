@@ -18,13 +18,14 @@ import type { TimerStatus } from './timer'
 import type { Locale } from '$lib/i18n'
 import type { QuorumEvaluation, VoteEvaluation, VotingRulesSnapshot } from './procedure-rules'
 
-export type DisplayPhase = ConferencePhase | 'motion'
+export type DisplayPhase = ConferencePhase | 'motion' | 'agenda'
 
 export interface MotionDraft {
   proposedBy?: SeatView
   type?: MotionType
   isRequestingVote?: boolean
   topic?: string
+  issue?: string
   totalTimeSec?: number
   speakingTimePerPersonSec?: number
   newTimeSec?: number
@@ -84,6 +85,7 @@ export interface ConferenceDisplayData {
   activeMotion?: {
     type: MotionType
     topic?: string
+    issue?: string
     status: string
     proposedBy: SeatView
     motionId: string
@@ -97,6 +99,43 @@ export interface ConferenceDisplayData {
     speakingTimePerPersonSec?: number
     newTimeSec?: number
     documentName?: string
+  }
+  agendaWorkflow?: {
+    stage: import('./appeal').AppealWorkflowStage
+    meetingStatus: import('./appeal').AppealMeetingStatus
+    agendaRevisionRequired: boolean
+    agendaTitle?: string
+    agendaItems: Array<{
+      title: string
+      status: 'pending' | 'current' | 'completed'
+    }>
+    consensusMeetingCount: number
+    consensusMeetingLimit: number
+    canPostpone: boolean
+    documentName?: string
+    reading?: {
+      remainingSec: number
+      totalSec: number
+      status: 'running' | 'completed'
+    }
+    postponedAt?: number
+    activeConsensusMeeting?: {
+      issue: string
+      remainingSec: number
+      totalSec: number
+      status: 'running' | 'paused' | 'awaiting_revision'
+      currentSpeaker?: {
+        seat: SeatView
+        remainingSec: number
+        allocatedSec: number
+      }
+      speakers: Array<{
+        seat: SeatView
+        status: string
+        remainingSec: number
+        allocatedSec: number
+      }>
+    }
   }
   activePoint?: {
     type: PointType

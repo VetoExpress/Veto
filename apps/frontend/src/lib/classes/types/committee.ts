@@ -115,6 +115,8 @@ export type MotionType =
   | 'substantive_vote'
   | 'change_attendance'
   | 'individual_speech'
+  | 'consensus_meeting'
+  | 'postpone_consensus_meeting'
 
 export type MotionStatus = 'pending' | 'approved' | 'rejected' | 'expired'
 
@@ -201,6 +203,18 @@ export interface IndividualSpeechMotion extends AbstractMotion {
   durationSec: number
 }
 
+export interface ConsensusMeetingMotion extends AbstractMotion {
+  type: 'consensus_meeting'
+  issue: string
+  totalTimeSec: number
+  speakingTimePerPersonSec: number
+}
+
+export interface PostponeConsensusMeetingMotion extends AbstractMotion {
+  type: 'postpone_consensus_meeting'
+  agendaItemId: string
+}
+
 export type Motion =
   | OpenSpeakersListMotion
   | ModeratedCaucusMotion
@@ -217,6 +231,8 @@ export type Motion =
   | SubstantiveVoteMotion
   | ChangeAttendanceMotion
   | IndividualSpeechMotion
+  | ConsensusMeetingMotion
+  | PostponeConsensusMeetingMotion
 
 export type MotionProposal = Motion extends infer T
   ? T extends Motion
@@ -239,7 +255,9 @@ export const MOTION_MESSAGE_KEYS: Record<MotionType, MessageKey> = {
   reorder_resolution: 'domain_motion_reorder_resolution',
   substantive_vote: 'domain_motion_substantive_vote',
   change_attendance: 'domain_motion_change_attendance',
-  individual_speech: 'domain_motion_individual_speech'
+  individual_speech: 'domain_motion_individual_speech',
+  consensus_meeting: 'domain_motion_consensus_meeting',
+  postpone_consensus_meeting: 'domain_motion_postpone_consensus_meeting'
 }
 export const MOTION_LABELS = getLocalizedLabels(MOTION_MESSAGE_KEYS, t)
 
@@ -262,7 +280,7 @@ export interface DraftResolution {
 
 export type VoteValue = 'yes' | 'no' | 'abstain' | 'skip'
 export type MajorityRule = 'simple_majority' | 'two_thirds'
-export type VoteTargetType = 'motion' | 'resolution'
+export type VoteTargetType = 'motion' | 'resolution' | 'agenda'
 
 export interface VoteBallot {
   seatId: string
@@ -294,7 +312,12 @@ export interface MajorityThresholds {
 
 export type ProposerPosition = 'first' | 'last'
 export type CaucusType =
-  'moderated' | 'unmoderated' | 'moderated_debate' | 'unmoderated_debate' | 'individual'
+  | 'moderated'
+  | 'consensus_meeting'
+  | 'unmoderated'
+  | 'moderated_debate'
+  | 'unmoderated_debate'
+  | 'individual'
 
 export interface Committee {
   agendaMode?: boolean

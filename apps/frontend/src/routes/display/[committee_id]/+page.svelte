@@ -44,6 +44,7 @@
   import ReadyDisplay from './ready/index.svelte'
   import ConnectionStatusDisplay from './connection-status/index.svelte'
   import AttendanceChangeDisplay from './attendance-change.svelte'
+  import AgendaDisplay from './agenda/index.svelte'
   import type { DisplayPhase } from '$lib/classes/types/committee-display'
 
   let displayData = $state<ConferenceDisplayData | null>(null)
@@ -270,6 +271,8 @@
           <CaucusDisplay data={displayData} />
         {:else if displayData.votingSession && effectivePhase === 'voting'}
           <VotingDisplay data={displayData} />
+        {:else if effectivePhase === 'agenda'}
+          <AgendaDisplay data={displayData} />
         {:else if effectivePhase === 'pending_speakers_list'}
           <PendingSpeakersListDisplay />
         {:else if effectivePhase === 'suspended'}

@@ -44,6 +44,7 @@
       ? ((targetMotion as any).documentName as string | undefined)
       : undefined
   )
+  const isAgendaVote = $derived(activeSession?.targetType === 'agenda')
 
   const snapshot = $derived(activeSession?.rulesSnapshot)
   // Completed sessions use their persisted evaluation; legacy results are never reconstructed.
@@ -83,7 +84,13 @@
     if (!activeSession) return []
     if (snapshot)
       return snapshot.seats
-        .filter((seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights)
+        .filter(
+          (seat) =>
+            seat.procedure.attendance === 'present' &&
+            (seat.procedure.hasVotingRights ||
+              (snapshot.electorate === 'reference_group' &&
+                seat.procedure.isReferenceGroup === true))
+        )
         .toSorted((a, b) => a.procedure.sortOrder - b.procedure.sortOrder)
     if (activeSession.endedAt)
       return activeSession.ballots.map((ballot) => ({
@@ -92,7 +99,12 @@
         shortName: conf?.seats.find((seat) => seat.id === ballot.seatId)?.shortName
       }))
     return (conf?.seats.filter(isParticipantSeat) ?? [])
-      .filter((seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights)
+      .filter(
+        (seat) =>
+          seat.procedure.attendance === 'present' &&
+          (seat.procedure.hasVotingRights ||
+            (isAgendaVote && seat.procedure.isReferenceGroup === true))
+      )
       .sort((a, b) => a.procedure.sortOrder - b.procedure.sortOrder)
   })
 
@@ -151,6 +163,12 @@
   {#if activeSession && conf}
     <!-- ====== 标题 ====== -->
     <div class="text-center">
+      {#if isAgendaVote}
+        <p class="text-lg font-semibold text-foreground">{t('procedure_agenda_objection_vote_title')}</p>
+        <p class="mt-1 text-sm text-muted-foreground">
+          {t('procedure_agenda_reference_group_only')}
+        </p>
+      {/if}
       {#if documentName}
         <p class="mt-1 text-base font-semibold text-foreground">「{documentName}」</p>
       {/if}

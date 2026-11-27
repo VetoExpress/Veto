@@ -11,7 +11,8 @@
     LogOut,
     Vote,
     UserRoundCheck,
-    Mic
+    Mic,
+    Handshake
   } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import { Input } from '$lib/components/ui/input/index.js'
@@ -35,6 +36,11 @@
   import SeatSelector from '$lib/components/conference/common/seat-selector.svelte'
   import { toSeatView } from '$lib/classes/types/delegate'
   import { defaultProcedureRules } from '$lib/classes/utils/committee/procedure-rules'
+  import { getAppealConsensusProgress } from '$lib/classes/utils/committee/appeal'
+  import {
+    CONSENSUS_MEETING_DURATION_SEC,
+    CONSENSUS_SPEECH_DURATION_SEC
+  } from '$lib/classes/types/appeal'
 
   let {
     open = $bindable(false),
@@ -47,6 +53,7 @@
   )
   const conferenceId = $derived(page.params.conference_id ?? conf?.id ?? null)
   const committeeId = $derived(page.params.committee_id ?? null)
+  const agendaWorkflow = $derived(conf?.appealWorkflow ?? null)
 
   // Proposer
   let selectedProposer = $state<ParticipantSeat | null>(null)
@@ -58,6 +65,22 @@
       return ['change_attendance']
     }
 
+    const appealProgress = agendaWorkflow
+      ? getAppealConsensusProgress(agendaWorkflow)
+      : null
+    if (
+      conf?.agendaMode &&
+      (agendaWorkflow?.stage === 'document_reading' ||
+        agendaWorkflow?.stage === 'negotiation_decision')
+    ) {
+      const options: MotionType[] = ['change_attendance']
+      if (appealProgress?.canStart) options.unshift('consensus_meeting')
+      if (appealProgress?.canPostpone) options.push('postpone_consensus_meeting')
+      return options
+    }
+    if (conf?.agendaMode && agendaWorkflow?.stage === 'consensus_meeting') {
+      return ['change_attendance']
+    }
     if (conf?.phase === 'voting') {
       // 结束辩论后：可进行实质性投票、开启主发言名单（退出投票阶段）、休会/闭幕
       return [
@@ -72,7 +95,6 @@
     if (conf?.phase === 'pending_speakers_list') {
       return ['change_attendance', 'open_speakers_list']
     }
-    // 主发言名单已开启时不可再次动议开启
     if (conf?.phase === 'general_debate') {
       return [
         'change_attendance',
@@ -113,7 +135,9 @@
     close_meeting: LogOut,
     substantive_vote: Vote,
     change_attendance: UserRoundCheck,
-    individual_speech: Mic
+      individual_speech: Mic,
+    consensus_meeting: Handshake,
+    postpone_consensus_meeting: Handshake
   }
 
   // ---- Form state ----
@@ -140,6 +164,8 @@
   // Moderated Debate
   let mdTopic = $state('')
   let committedMdTopic = $state('')
+  let consensusIssue = $state('')
+  let committedConsensusIssue = $state('')
   // 自由磋商 / 有主持的辩论 / 自由辩论（均为总倒计时）
   let ucDurationMin = $state(15)
   let committedUcDurationMin = $state(15)
@@ -169,6 +195,8 @@
     committedMcSpeakerSec = 60
     mdTopic = ''
     committedMdTopic = ''
+    consensusIssue = ''
+    committedConsensusIssue = ''
     ucDurationMin = 15
     committedUcDurationMin = 15
     newTimeSec = 90
@@ -230,6 +258,14 @@
       case 'individual_speech':
         motionData.durationSec = committedIsDurationSec
         break
+      case 'consensus_meeting':
+        motionData.issue = committedConsensusIssue.trim()
+        motionData.totalTimeSec = CONSENSUS_MEETING_DURATION_SEC
+        motionData.speakingTimePerPersonSec = CONSENSUS_SPEECH_DURATION_SEC
+        break
+      case 'postpone_consensus_meeting':
+        motionData.agendaItemId = agendaWorkflow?.currentAgendaItemId ?? ''
+        break
     }
 
     proposeMotion(motionData)
@@ -288,6 +324,8 @@
         return mdTopic !== committedMdTopic || ucDurationMin !== committedUcDurationMin
       case 'individual_speech':
         return isDurationSec !== committedIsDurationSec
+      case 'consensus_meeting':
+        return consensusIssue !== committedConsensusIssue
       case 'modify_speaking_time':
         return newTimeSec !== committedNewTimeSec
       case 'substantive_vote':
@@ -310,7 +348,8 @@
           committedMcTotalSec != null &&
           committedMcTotalSec > 0 &&
           committedMcSpeakerSec != null &&
-          committedMcSpeakerSec > 0))
+          committedMcSpeakerSec > 0)) &&
+      (selectedType !== 'consensus_meeting' || committedConsensusIssue.trim() !== '')
   )
 
   // 实时同步动议草稿到 Display
@@ -339,12 +378,22 @@
             ? committedUcDurationMin * 60
             : selectedType === 'individual_speech'
               ? committedIsDurationSec
-              : undefined,
+              : selectedType === 'consensus_meeting'
+                ? CONSENSUS_MEETING_DURATION_SEC
+                : undefined,
       speakingTimePerPersonSec:
-        selectedType === 'moderated_caucus' ? (committedMcSpeakerSec ?? undefined) : undefined,
+        selectedType === 'moderated_caucus'
+          ? (committedMcSpeakerSec ?? undefined)
+          : selectedType === 'consensus_meeting'
+            ? CONSENSUS_SPEECH_DURATION_SEC
+            : undefined,
       newTimeSec: selectedType === 'modify_speaking_time' ? committedNewTimeSec : undefined,
       documentName:
-        selectedType === 'substantive_vote' ? committedDocumentName.trim() || undefined : undefined
+        selectedType === 'substantive_vote' ? committedDocumentName.trim() || undefined : undefined,
+      issue:
+        selectedType === 'consensus_meeting'
+          ? committedConsensusIssue.trim() || undefined
+          : undefined
     })
   })
 </script>
@@ -513,6 +562,23 @@
                 {t('procedure_the_countdown_starts_for_this_topic_when_the_debate_begins')}
               </p>
             </div>
+          </div>
+        {:else if selectedType === 'consensus_meeting'}
+          <Separator />
+          <div class="space-y-2">
+            <Label class="text-xs text-muted-foreground">
+              {t('procedure_consensus_issue')}
+            </Label>
+            <Input
+              bind:value={consensusIssue}
+              maxlength={200}
+              class="h-9 text-sm"
+              placeholder={t('procedure_consensus_issue_placeholder')}
+              onblur={() => (committedConsensusIssue = consensusIssue)}
+            />
+            <p class="text-[10px] text-muted-foreground">
+              {t('procedure_consensus_limits')}
+            </p>
           </div>
         {:else if selectedType === 'unmoderated_caucus' || selectedType === 'unmoderated_debate'}
           <div>

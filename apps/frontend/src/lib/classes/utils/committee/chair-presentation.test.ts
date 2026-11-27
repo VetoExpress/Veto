@@ -85,7 +85,12 @@ describe('chair presentation', () => {
       getChairPresentation(
         committeeState({ phase: 'caucus', activeCaucus: { ...base, type: 'moderated' } })
       ).screen
-    ).toEqual({ kind: 'moderated_caucus' })
+    ).toEqual({ kind: 'moderated_caucus', mode: 'moderated_caucus' })
+    expect(
+      getChairPresentation(
+        committeeState({ phase: 'caucus', activeCaucus: { ...base, type: 'consensus_meeting' } })
+      ).screen
+    ).toEqual({ kind: 'moderated_caucus', mode: 'consensus_meeting' })
     expect(
       getChairPresentation(
         committeeState({ phase: 'caucus', activeCaucus: { ...base, type: 'unmoderated' } })

@@ -39,6 +39,10 @@
   import type { Committee } from '$lib/classes/domain/committee.svelte'
   import type { SpeakerDisplayEntry } from '$lib/classes/types/conference'
 
+  let {
+    mode = 'moderated_caucus'
+  }: { mode?: 'moderated_caucus' | 'consensus_meeting' } = $props()
+
   // ── 发言队列数据 ──────────────────────────────────────────────
   const conf = $derived($currentCommittee)
   const activeCaucus = $derived(conf?.activeCaucus ?? null)
@@ -168,6 +172,11 @@
       : 0
   )
   const totalBudgetSec = $derived(activeCaucus ? activeCaucus.totalSec : 0)
+  const title = $derived(
+    mode === 'consensus_meeting'
+      ? t('procedure_appeal_consensus_title')
+      : t('procedure_moderated_caucus')
+  )
 
   const isListExhausted = $derived(currentIdx >= speakers.length && speakers.length > 0)
 
@@ -318,7 +327,7 @@
     <div class="flex justify-end">
       <Button variant="destructive" class="gap-2" onclick={endCaucusHandler}>
         <Timer size={14} />
-        {t('procedure_finish_early')}{t('procedure_moderated_caucus')}
+        {t('procedure_finish_early')}{title}
       </Button>
     </div>
 

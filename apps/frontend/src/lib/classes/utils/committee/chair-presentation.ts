@@ -14,7 +14,7 @@ export type ChairScreen =
   | { kind: 'pending_speakers_list' }
   | { kind: 'general_debate' }
   | { kind: 'caucus_setup' }
-  | { kind: 'moderated_caucus' }
+  | { kind: 'moderated_caucus'; mode: 'moderated_caucus' | 'consensus_meeting' }
   | {
       kind: 'caucus_countdown'
       mode: 'unmoderated' | 'moderated_debate' | 'unmoderated_debate' | 'individual'
@@ -87,7 +87,9 @@ function getChairScreen(committee: ChairCommitteeState): ChairScreen {
       }
       switch (committee.activeCaucus.type) {
         case 'moderated':
-          return { kind: 'moderated_caucus' }
+          return { kind: 'moderated_caucus', mode: 'moderated_caucus' }
+        case 'consensus_meeting':
+          return { kind: 'moderated_caucus', mode: 'consensus_meeting' }
         case 'unmoderated':
         case 'moderated_debate':
         case 'unmoderated_debate':
