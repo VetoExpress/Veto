@@ -161,8 +161,10 @@
 
   function handleComplete(): void {
     if (!quorum?.met) return
+    const returnToAgenda =
+      conf?.agendaMode && conf.rollCallState?.nextPhase !== 'voting'
     if (completeRollCall()) {
-      if (conf?.agendaMode) {
+      if (returnToAgenda) {
         goto(resolve(`/client/${conferenceId}/committee/${committeeId}/chair/appeal`))
       } else {
         goto(resolve(`/client/${conferenceId}/committee/${committeeId}/chair`))

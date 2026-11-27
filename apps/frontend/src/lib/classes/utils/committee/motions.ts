@@ -28,6 +28,7 @@ export function resolveMotion(motionType: MotionType): MotionResolution {
     case 'close_meeting':
     case 'postpone_resolution':
     case 'postpone_consensus_meeting':
+    case 'enter_next_procedure':
       return { requiresVoting: true, votingMajority: 'two_thirds', autoApprove: false }
     default:
       return { requiresVoting: true, votingMajority: 'simple_majority', autoApprove: false }

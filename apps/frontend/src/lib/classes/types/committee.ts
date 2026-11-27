@@ -117,6 +117,7 @@ export type MotionType =
   | 'individual_speech'
   | 'consensus_meeting'
   | 'postpone_consensus_meeting'
+  | 'enter_next_procedure'
 
 export type MotionStatus = 'pending' | 'approved' | 'rejected' | 'expired'
 
@@ -215,6 +216,10 @@ export interface PostponeConsensusMeetingMotion extends AbstractMotion {
   agendaItemId: string
 }
 
+export interface EnterNextProcedureMotion extends AbstractMotion {
+  type: 'enter_next_procedure'
+}
+
 export type Motion =
   | OpenSpeakersListMotion
   | ModeratedCaucusMotion
@@ -233,6 +238,7 @@ export type Motion =
   | IndividualSpeechMotion
   | ConsensusMeetingMotion
   | PostponeConsensusMeetingMotion
+  | EnterNextProcedureMotion
 
 export type MotionProposal = Motion extends infer T
   ? T extends Motion
@@ -257,7 +263,8 @@ export const MOTION_MESSAGE_KEYS: Record<MotionType, MessageKey> = {
   change_attendance: 'domain_motion_change_attendance',
   individual_speech: 'domain_motion_individual_speech',
   consensus_meeting: 'domain_motion_consensus_meeting',
-  postpone_consensus_meeting: 'domain_motion_postpone_consensus_meeting'
+  postpone_consensus_meeting: 'domain_motion_postpone_consensus_meeting',
+  enter_next_procedure: 'domain_motion_enter_next_procedure'
 }
 export const MOTION_LABELS = getLocalizedLabels(MOTION_MESSAGE_KEYS, t)
 

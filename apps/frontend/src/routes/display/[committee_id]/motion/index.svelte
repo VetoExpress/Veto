@@ -17,7 +17,8 @@
     LogOut,
     Vote,
     UserRoundCheck,
-    Handshake
+    Handshake,
+    ArrowRight
   } from '@lucide/svelte'
   import { MOTION_LABELS } from '$lib/classes/types/conference'
   import type { ConferenceDisplayData } from '$lib/classes/types/conference'
@@ -48,7 +49,8 @@
     substantive_vote: Vote,
     change_attendance: UserRoundCheck,
     consensus_meeting: Handshake,
-    postpone_consensus_meeting: Handshake
+    postpone_consensus_meeting: Handshake,
+    enter_next_procedure: ArrowRight
   }
 
   const Icon = $derived(
@@ -88,6 +90,8 @@
         return { title: am?.issue ?? t('components_agenda_consensus_meeting') }
       case 'postpone_consensus_meeting':
         return { title: t('components_agenda_postponed') }
+      case 'enter_next_procedure':
+        return { title: MOTION_LABELS.enter_next_procedure }
       default:
         return { title: MOTION_LABELS[type] ?? type }
     }

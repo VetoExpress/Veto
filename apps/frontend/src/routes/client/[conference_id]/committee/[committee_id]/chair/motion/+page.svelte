@@ -21,7 +21,8 @@
     Check,
     X,
     Vote,
-    Handshake
+    Handshake,
+    ArrowRight
   } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import { Separator } from '$lib/components/ui/separator'
@@ -59,7 +60,8 @@
     close_meeting: LogOut,
     substantive_vote: Vote,
     consensus_meeting: Handshake,
-    postpone_consensus_meeting: Handshake
+    postpone_consensus_meeting: Handshake,
+    enter_next_procedure: ArrowRight
   }
 
   const pendingMotion = $derived(conf?.motions.find((m) => m.status === 'pending') ?? null)
@@ -101,7 +103,7 @@
   function handleApprove(): void {
     if (!pendingMotion) return
     approveMotion(pendingMotion.id)
-    if (agendaMode && pendingMotion.type === 'closure_debate') {
+    if (agendaMode && pendingMotion.type === 'enter_next_procedure') {
       goto(resolve(`/client/${conferenceId}/committee/${committeeId}/chair/appeal`))
     } else {
       goBack()
@@ -209,9 +211,11 @@
               </div>
             {:else if pendingMotion.type === 'closure_debate'}
               <div class="mt-3 text-sm text-muted-foreground">
-                {agendaMode
-                  ? t('procedure_appeal_end_debate_motion_description')
-                  : t('procedure_close_debate_on_the_current_topic_then_start_the_pre_vote_roll_call')}
+                {t('procedure_close_debate_on_the_current_topic_then_start_the_pre_vote_roll_call')}
+              </div>
+            {:else if pendingMotion.type === 'enter_next_procedure'}
+              <div class="mt-3 text-sm text-muted-foreground">
+                {t('procedure_enter_next_procedure_motion_description')}
               </div>
             {:else if pendingMotion.type === 'consensus_meeting'}
               <div class="mt-3 rounded-md bg-background/50 px-4 py-2.5 text-sm text-muted-foreground">

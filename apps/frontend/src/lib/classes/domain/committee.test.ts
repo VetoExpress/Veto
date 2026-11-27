@@ -484,7 +484,7 @@ describe('Agenda procedure', () => {
     expect(committee.appealWorkflow.meetingStatus).toBe('formal')
   })
 
-  it('enters 10-minute document reading instead of closing evaluation debate immediately', () => {
+  it('closes evaluation debate into a fresh pre-vote roll call', () => {
     const { committee, seatIds } = createAgendaCommittee()
     acceptAgendaAndPreparePcn(committee)
     const motionId = committee.proposeMotion({
@@ -493,6 +493,37 @@ describe('Agenda procedure', () => {
     })
 
     committee.approveMotion(motionId)
+
+    expect(committee.appealWorkflow.stage).toBe('evaluation_debate')
+    expect(committee.phase).toBe('roll_call')
+    expect(committee.rollCallState).toEqual({
+      reason: 'before_voting',
+      nextPhase: 'voting'
+    })
+    expect(
+      committee.participantSeats.every((seat) => seat.procedure.attendance === 'absent')
+    ).toBe(true)
+    expect(committee.appealWorkflow.reading).toBeNull()
+  })
+
+  it('ends evaluation debate only after the enter-next-procedure motion passes', () => {
+    const { committee, seatIds } = createAgendaCommittee()
+    acceptAgendaAndPreparePcn(committee)
+    const closureMotionId = committee.proposeMotion({
+      type: 'closure_debate',
+      proposedBySeatId: seatIds[0]
+    })
+    committee.approveMotion(closureMotionId)
+
+    seatIds.forEach((seatId) => committee.setAttendance(seatId, 'present'))
+    expect(committee.completeRollCall()).toBe(true)
+    expect(committee.phase).toBe('voting')
+
+    const enterMotionId = committee.proposeMotion({
+      type: 'enter_next_procedure',
+      proposedBySeatId: seatIds[0]
+    })
+    committee.approveMotion(enterMotionId)
 
     expect(committee.appealWorkflow.stage).toBe('document_reading')
     expect(committee.appealWorkflow.reading).toBeNull()

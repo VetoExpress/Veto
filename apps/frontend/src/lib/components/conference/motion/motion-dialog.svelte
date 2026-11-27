@@ -12,7 +12,8 @@
     Vote,
     UserRoundCheck,
     Mic,
-    Handshake
+    Handshake,
+    ArrowRight
   } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import { Input } from '$lib/components/ui/input/index.js'
@@ -83,13 +84,16 @@
     }
     if (conf?.phase === 'voting') {
       // 结束辩论后：可进行实质性投票、开启主发言名单（退出投票阶段）、休会/闭幕
-      return [
-        'change_attendance',
-        'substantive_vote',
-        'open_speakers_list',
-        'suspend_meeting',
-        'close_meeting'
-      ]
+      const options: MotionType[] = ['change_attendance', 'substantive_vote']
+      if (
+        conf?.agendaMode &&
+        agendaWorkflow?.stage === 'evaluation_debate' &&
+        !conf.votingSessions.some((session) => !session.endedAt)
+      ) {
+        options.push('enter_next_procedure')
+      }
+      options.push('open_speakers_list', 'suspend_meeting', 'close_meeting')
+      return options
     }
     // 等待开启主发言名单：首要动议为开启主发言名单
     if (conf?.phase === 'pending_speakers_list') {
@@ -137,7 +141,8 @@
     change_attendance: UserRoundCheck,
       individual_speech: Mic,
     consensus_meeting: Handshake,
-    postpone_consensus_meeting: Handshake
+    postpone_consensus_meeting: Handshake,
+    enter_next_procedure: ArrowRight
   }
 
   // ---- Form state ----

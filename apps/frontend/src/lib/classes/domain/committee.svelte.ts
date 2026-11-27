@@ -1928,6 +1928,22 @@ export class Committee {
       })
       return
     }
+    if (
+      motion.type === 'enter_next_procedure' &&
+      (!this.agendaMode ||
+        this.appealWorkflow.stage !== 'evaluation_debate' ||
+        this.phase !== 'voting' ||
+        this.votingSessions.some((session) => !session.endedAt))
+    ) {
+      console.warn('MotionApprovalRejected', {
+        operation: 'approveMotion',
+        committeeId: this.id,
+        motionId,
+        reason: 'enter next procedure requires agenda evaluation debate in voting phase',
+        impact: 'motion remains pending'
+      })
+      return
+    }
 
     this.motions = this.motions.map((m) =>
       m.id === motionId ? { ...m, status: 'approved' as const } : m
@@ -2008,6 +2024,9 @@ export class Committee {
       case 'postpone_consensus_meeting':
         this.postponeAppealConsensusMeeting()
         break
+      case 'enter_next_procedure':
+        this.executeEnterNextProcedure()
+        break
     }
   }
 
@@ -2057,10 +2076,6 @@ export class Committee {
   }
 
   private executeClosureDebate(): void {
-    if (this.agendaMode && this.appealWorkflow.stage === 'evaluation_debate') {
-      this.endAppealEvaluationDebate()
-      return
-    }
     if (this.activeSpeaker) {
       this.activeSpeaker = null
     }
@@ -2069,6 +2084,34 @@ export class Committee {
       this.addConferenceEntry('caucus_ended', message('domain_log_debate_ended'))
     }
     this.beginRollCall('before_voting', 'voting')
+  }
+
+  private executeEnterNextProcedure(): void {
+    if (
+      !this.agendaMode ||
+      this.appealWorkflow.stage !== 'evaluation_debate' ||
+      this.phase !== 'voting' ||
+      this.votingSessions.some((session) => !session.endedAt)
+    ) {
+      console.warn('MotionActionRejected', {
+        operation: 'executeEnterNextProcedure',
+        committeeId: this.id,
+        agendaMode: this.agendaMode,
+        stage: this.appealWorkflow.stage,
+        phase: this.phase,
+        activeVoting: this.votingSessions.some((session) => !session.endedAt),
+        impact: 'motion approved without advancing the agenda workflow'
+      })
+      return
+    }
+    if (!this.endAppealEvaluationDebate()) {
+      console.warn('MotionActionRejected', {
+        operation: 'executeEnterNextProcedure',
+        committeeId: this.id,
+        reason: 'evaluation debate cannot be ended',
+        impact: 'phase and agenda workflow stay unchanged'
+      })
+    }
   }
 
   private executeSubstantiveVote(motion: Motion): void {
@@ -2847,23 +2890,22 @@ export class Committee {
                 message('domain_log_phase', { phase: 'closed' })
               )
             } else if (motion.type === 'closure_debate') {
-              if (this.agendaMode && this.appealWorkflow.stage === 'evaluation_debate') {
-                newPhase = 'general_debate'
-                newActiveSpeaker = null
-                newActiveCaucus = null
-                this.endAppealEvaluationDebate()
-              } else {
-                newPhase = 'roll_call'
-                newRollCallState = { reason: 'before_voting', nextPhase: 'voting' }
-                newQuorumRecord = undefined
-                newSeats = this.seats.map((seat) =>
-                  seat.procedure
-                    ? { ...seat, procedure: { ...seat.procedure, attendance: 'absent' } }
-                    : seat
-                )
-                newActiveSpeaker = null
-                newActiveCaucus = null
-                this.addConferenceEntry('phase_changed', message('domain_log_before_vote'))
+              newPhase = 'roll_call'
+              newRollCallState = { reason: 'before_voting', nextPhase: 'voting' }
+              newQuorumRecord = undefined
+              newSeats = this.seats.map((seat) =>
+                seat.procedure
+                  ? { ...seat, procedure: { ...seat.procedure, attendance: 'absent' } }
+                  : seat
+              )
+              newActiveSpeaker = null
+              newActiveCaucus = null
+              this.addConferenceEntry('phase_changed', message('domain_log_before_vote'))
+            } else if (motion.type === 'enter_next_procedure') {
+              if (this.endAppealEvaluationDebate()) {
+                newPhase = this.phase
+                newActiveSpeaker = this.activeSpeaker
+                newActiveCaucus = this.activeCaucus
               }
             } else if (
               motion.type === 'consensus_meeting' ||
