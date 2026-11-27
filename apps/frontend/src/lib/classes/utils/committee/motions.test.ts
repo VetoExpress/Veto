@@ -16,5 +16,9 @@ describe('motion utilities', () => {
       requiresVoting: true,
       votingMajority: 'simple_majority'
     })
+    expect(resolveMotion('enter_next_procedure')).toMatchObject({
+      requiresVoting: true,
+      votingMajority: 'two_thirds'
+    })
   })
 })

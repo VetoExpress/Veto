@@ -20,7 +20,9 @@
     LogOut,
     Check,
     X,
-    Vote
+    Vote,
+    Handshake,
+    ArrowRight
   } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import { Separator } from '$lib/components/ui/separator'
@@ -44,6 +46,7 @@
   const committeeId = $derived(page.params.committee_id ?? null)
 
   const conf = $derived($currentCommittee)
+  const agendaMode = $derived(conf?.agendaMode ?? false)
 
   const MOTION_ICONS: Record<string, typeof Presentation> = {
     open_speakers_list: Presentation,
@@ -55,7 +58,10 @@
     closure_debate: Gavel,
     suspend_meeting: Timer,
     close_meeting: LogOut,
-    substantive_vote: Vote
+    substantive_vote: Vote,
+    consensus_meeting: Handshake,
+    postpone_consensus_meeting: Handshake,
+    enter_next_procedure: ArrowRight
   }
 
   const pendingMotion = $derived(conf?.motions.find((m) => m.status === 'pending') ?? null)
@@ -97,7 +103,11 @@
   function handleApprove(): void {
     if (!pendingMotion) return
     approveMotion(pendingMotion.id)
-    goBack()
+    if (agendaMode && pendingMotion.type === 'enter_next_procedure') {
+      goto(resolve(`/client/${conferenceId}/committee/${committeeId}/chair/appeal`))
+    } else {
+      goBack()
+    }
   }
 
   function handleReject(): void {
@@ -112,17 +122,13 @@
     }
   }
 
-  // 如果没有待表决动议，自动返回
+  // 如果没有待表决动议，自动返回；避免残留“没有待表决的动议”状态。
   $effect(() => {
-    if (conf && !pendingMotion) {
-      // 检查是否有刚被处理的动议（短暂延迟后返回）
-      const hasProcessedMotion = conf.motions.some(
-        (m) => m.status === 'approved' || m.status === 'rejected'
-      )
-      if (!hasProcessedMotion) {
-        goto(resolve(`/client/${conferenceId}/committee/${committeeId}/chair`))
-      }
-    }
+    if (!conf || pendingMotion) return
+    const timeout = window.setTimeout(() => {
+      goto(resolve(`/client/${conferenceId}/committee/${committeeId}/chair`))
+    }, 0)
+    return () => window.clearTimeout(timeout)
   })
 </script>
 
@@ -207,6 +213,20 @@
               <div class="mt-3 text-sm text-muted-foreground">
                 {t('procedure_close_debate_on_the_current_topic_then_start_the_pre_vote_roll_call')}
               </div>
+            {:else if pendingMotion.type === 'enter_next_procedure'}
+              <div class="mt-3 text-sm text-muted-foreground">
+                {t('procedure_enter_next_procedure_motion_description')}
+              </div>
+            {:else if pendingMotion.type === 'consensus_meeting'}
+              <div class="mt-3 rounded-md bg-background/50 px-4 py-2.5 text-sm text-muted-foreground">
+                {t('procedure_consensus_issue')}
+                <span class="font-medium text-foreground">{pendingMotion.issue}</span>
+                <p class="mt-1 text-xs">{t('procedure_consensus_limits')}</p>
+              </div>
+            {:else if pendingMotion.type === 'postpone_consensus_meeting'}
+              <div class="mt-3 text-sm text-muted-foreground">
+                {t('procedure_consensus_postpone_motion_description')}
+              </div>
             {:else if pendingMotion.type === 'substantive_vote'}
               <div
                 class="mt-3 rounded-md bg-background/50 px-4 py-2.5 text-sm text-muted-foreground"
@@ -267,7 +287,7 @@
     <div class="flex flex-1 items-center justify-center">
       <div class="flex flex-col items-center gap-4 text-muted-foreground">
         <Vote size={48} class="opacity-30" />
-        <p class="text-lg font-medium">{t('procedure_no_motion_awaiting_a_vote')}</p>
+        <p class="text-lg font-medium">{t('procedure_loading')}</p>
         <Button variant="outline" size="sm" onclick={goBack}>
           {t('procedure_back_to_meeting')}
         </Button>

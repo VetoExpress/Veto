@@ -1,6 +1,6 @@
 // ============================================================
 // create-conference-event-wizard.svelte.ts — 创建大会向导草稿
-// 五步创建向导（大会信息/会场规划/角色权限/席位分配/确认创建）的草稿与校验，
+// 本地大会六步创建向导（选择模式/大会信息/会场信息/议事规则/席位分配/确认创建）的草稿与校验，
 // 以 rune 单例驻留内存（刷新即清空，不持久化草稿——与重构前行为一致）。
 // 提交复用 conference-event-store.createConferenceFromDraft 完成持久化。
 // 本目录（stores/runes/）为 rune 系 store 的约定位置。
@@ -33,7 +33,8 @@ export interface CommitteeDraft {
   type: SeatGroupType
   seats: SeatDraft[]
   procedureRules: ProcedureRulesConfig
-  agenda?: AgendaItemDraft[]
+  agendaMode: boolean
+  agenda: AgendaItemDraft[]
 }
 
 export type ConferenceCreateMode = 'conference' | 'singleton'
@@ -59,7 +60,9 @@ function newCommittee(): CommitteeDraft {
     name: '',
     type: 'cabinet',
     seats: [],
-    procedureRules: defaultProcedureRules()
+    procedureRules: defaultProcedureRules(),
+    agendaMode: false,
+    agenda: []
   }
 }
 
@@ -137,7 +140,6 @@ export class ConferenceCreateWizard {
   organizer = $state('')
   roles = $state<RoleTemplate[]>(createDefaultRoles())
   committees = $state<CommitteeDraft[]>([])
-  agendaItems = $state<AgendaItemDraft[]>([])
   creating = $state(false)
   createError = $state('')
   /** “下一步/跳步”尝试过且当前步未通过校验——各步页面据此显示内联错误 */
@@ -166,12 +168,28 @@ export class ConferenceCreateWizard {
   }
 
   get committeeValid(): boolean {
+    return this.venueValid && this.rulesValid
+  }
+
+  get venueValid(): boolean {
     return (
       this.committees.length > 0 &&
       (this.mode === 'singleton'
         ? this.committees.length === 1 && this.committees[0]?.type === 'cabinet'
         : true) &&
       this.committees.every((committee) => committee.name.trim().length > 0)
+    )
+  }
+
+  get rulesValid(): boolean {
+    return (
+      this.committees.length > 0 &&
+      this.committees.every(
+        (committee) =>
+          !committee.agendaMode ||
+          (committee.agenda.length > 0 &&
+            committee.agenda.every((item) => item.title.trim().length > 0))
+      )
     )
   }
 
@@ -225,8 +243,8 @@ export class ConferenceCreateWizard {
   isStepValid(step: number): boolean {
     if (step <= 0) return this.modeValid
     if (step === 1) return this.eventValid
-    if (step === 2) return this.committeeValid
-    if (step === 3) return this.roleValid
+    if (step === 2) return this.venueValid
+    if (step === 3) return this.rulesValid
     if (step === 4) return this.seatValid
     return true
   }
@@ -240,13 +258,13 @@ export class ConferenceCreateWizard {
   }
 
   isStepValidById(
-    stepId: 'mode' | 'event' | 'meeting' | 'roles' | 'seats' | 'review' | 'platform'
+    stepId: 'mode' | 'event' | 'venue' | 'rules' | 'seats' | 'review' | 'platform'
   ): boolean {
     if (stepId === 'mode') return this.modeValid
     if (stepId === 'platform') return true
     if (stepId === 'event') return this.eventValid
-    if (stepId === 'meeting') return this.committeeValid
-    if (stepId === 'roles') return this.roleValid
+    if (stepId === 'venue') return this.venueValid
+    if (stepId === 'rules') return this.rulesValid
     if (stepId === 'seats') return this.seatValid
     return true
   }
@@ -281,7 +299,6 @@ export class ConferenceCreateWizard {
     this.organizer = ''
     this.roles = createDefaultRoles()
     this.committees = [newCommittee()]
-    this.agendaItems = []
     this.creating = false
     this.createError = ''
     this.attempted = false
@@ -295,15 +312,37 @@ export class ConferenceCreateWizard {
     this.committees = this.committees.filter((committee) => committee.id !== id)
   }
 
-  addAgendaItem(): void {
-    this.agendaItems = [
-      ...this.agendaItems,
-      { id: crypto.randomUUID(), title: '', description: '' }
-    ]
+  setCommitteeAgendaMode(committeeId: string, enabled: boolean): void {
+    this.committees = this.committees.map((committee) => {
+      if (committee.id !== committeeId) return committee
+      const agenda =
+        enabled && committee.agenda.length === 0
+          ? [{ id: crypto.randomUUID(), title: '', description: '' }]
+          : committee.agenda
+      return { ...committee, agendaMode: enabled, agenda }
+    })
   }
 
-  removeAgendaItem(id: string): void {
-    this.agendaItems = this.agendaItems.filter((item) => item.id !== id)
+  addCommitteeAgendaItem(committeeId: string): void {
+    this.committees = this.committees.map((committee) =>
+      committee.id === committeeId
+        ? {
+            ...committee,
+            agenda: [
+              ...committee.agenda,
+              { id: crypto.randomUUID(), title: '', description: '' }
+            ]
+          }
+        : committee
+    )
+  }
+
+  removeCommitteeAgendaItem(committeeId: string, itemId: string): void {
+    this.committees = this.committees.map((committee) =>
+      committee.id === committeeId
+        ? { ...committee, agenda: committee.agenda.filter((item) => item.id !== itemId) }
+        : committee
+    )
   }
 
   addRole(): void {
@@ -490,9 +529,10 @@ export class ConferenceCreateWizard {
         organizer: this.organizer,
         roleTemplates: this.mode === 'singleton' ? [] : this.roles,
         committees:
-          this.mode === 'singleton'
-            ? this.committees.map((committee) => ({ ...committee, agenda: this.agendaItems }))
-            : this.committees
+          this.committees.map((committee) => ({
+            ...committee,
+            agenda: committee.agendaMode ? committee.agenda : []
+          }))
       })
       if (!eventId) {
         this.createError = t('services_create_invalid')

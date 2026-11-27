@@ -85,6 +85,7 @@ export function addSeat(
     ? {
         attendance: 'absent' as const,
         hasVotingRights: true,
+        isReferenceGroup: true,
         sortOrder: engine.participantSeats.length
       }
     : undefined

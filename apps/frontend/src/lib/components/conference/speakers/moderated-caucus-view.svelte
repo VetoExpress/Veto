@@ -9,6 +9,7 @@
   import { get } from 'svelte/store'
   import { Timer, MessageSquare } from '@lucide/svelte'
   import PanelHeader from '$lib/components/conference/common/panel-header.svelte'
+  import { Button } from '$lib/components/ui/button/index.js'
   import { Separator } from '$lib/components/ui/separator/index.js'
   import ActiveSpeakerCard from '$lib/components/conference/speakers/active-speaker-card.svelte'
   import ReadySpeakerCard from '$lib/components/conference/speakers/ready-speaker-card.svelte'
@@ -21,7 +22,8 @@
     resumeSpeaker,
     advanceCaucusSpeaker,
     cancelCaucusSpeaker,
-    startCaucusSpeaker
+    startCaucusSpeaker,
+    endCaucus
   } from '$lib/classes/stores/conference/conference-store'
   import { destroyTimer } from '$lib/classes/services/engine/conference-engine'
   import { formatTime } from '$lib/classes/formatters/time-formater'
@@ -36,6 +38,10 @@
   import { usePausedStateRestore } from '$lib/classes/services/hooks/use-paused-state-restore.svelte'
   import type { Committee } from '$lib/classes/domain/committee.svelte'
   import type { SpeakerDisplayEntry } from '$lib/classes/types/conference'
+
+  let {
+    mode = 'moderated_caucus'
+  }: { mode?: 'moderated_caucus' | 'consensus_meeting' } = $props()
 
   // ── 发言队列数据 ──────────────────────────────────────────────
   const conf = $derived($currentCommittee)
@@ -166,6 +172,11 @@
       : 0
   )
   const totalBudgetSec = $derived(activeCaucus ? activeCaucus.totalSec : 0)
+  const title = $derived(
+    mode === 'consensus_meeting'
+      ? t('procedure_appeal_consensus_title')
+      : t('procedure_moderated_caucus')
+  )
 
   const isListExhausted = $derived(currentIdx >= speakers.length && speakers.length > 0)
 
@@ -201,6 +212,11 @@
 
   function startCaucusSpeakerHandler(): void {
     startCaucusSpeaker()
+    syncDisplay()
+  }
+
+  function endCaucusHandler(): void {
+    endCaucus()
     syncDisplay()
   }
 
@@ -307,6 +323,13 @@
       showIndex={false}
       showDelete={false}
     />
+
+    <div class="flex justify-end">
+      <Button variant="destructive" class="gap-2" onclick={endCaucusHandler}>
+        <Timer size={14} />
+        {t('procedure_finish_early')}{title}
+      </Button>
+    </div>
 
     {#if isListExhausted}
       <div class="text-center text-sm text-muted-foreground">

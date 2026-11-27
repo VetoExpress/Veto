@@ -132,6 +132,7 @@ export function cloneVotingSnapshot(snapshot: VotingRulesSnapshot): VotingRulesS
     ...snapshot,
     threshold: { ...snapshot.threshold },
     vetoSeatIds: [...snapshot.vetoSeatIds],
+    electorate: snapshot.electorate ?? 'procedure',
     seats: snapshot.seats.map((seat) => ({
       ...seat,
       procedure: { ...seat.procedure },
@@ -145,25 +146,38 @@ export function createVotingSnapshot(
   seats: ParticipantSeat[],
   kind: VotingRulesSnapshot['kind'],
   motionType?: MotionType,
-  fallbackMajority?: MajorityRule
+  fallbackMajority?: MajorityRule,
+  electorate: VotingRulesSnapshot['electorate'] = 'procedure'
 ): VotingRulesSnapshot {
+  const eligibleSeats =
+    electorate === 'reference_group'
+      ? seats.filter((seat) => seat.procedure.isReferenceGroup ?? seat.procedure.hasVotingRights)
+      : seats
   return cloneVotingSnapshot({
     kind,
     denominator:
-      kind === 'document' ? config.documentVote.denominator : config.proceduralVote.denominator,
+      electorate === 'reference_group'
+        ? 'present_voting_eligible'
+        : kind === 'document'
+          ? config.documentVote.denominator
+          : config.proceduralVote.denominator,
     threshold:
       kind === 'document'
         ? { type: config.documentVote.ratio }
         : proceduralThreshold(config, motionType, fallbackMajority),
     vetoSeatIds: kind === 'document' && config.veto.enabled ? config.veto.seatIds : [],
-    seats: [...seats].sort((a, b) => a.procedure.sortOrder - b.procedure.sortOrder)
+    electorate,
+    seats: [...eligibleSeats].sort((a, b) => a.procedure.sortOrder - b.procedure.sortOrder)
   })
 }
 
 /** Pure, reproducible decision. Missing, duplicate and ineligible ballots never pass. */
 export function evaluateVote(ballots: VoteBallot[], snapshot: VotingRulesSnapshot): VoteEvaluation {
   const voters = snapshot.seats.filter(
-    (seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights
+    (seat) =>
+      seat.procedure.attendance === 'present' &&
+      (seat.procedure.hasVotingRights ||
+        (snapshot.electorate === 'reference_group' && seat.procedure.isReferenceGroup === true))
   )
   const voterIds = new Set(voters.map((seat) => seat.id))
   const seen = new Set<string>()

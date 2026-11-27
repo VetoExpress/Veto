@@ -283,6 +283,8 @@ import {
   thresholdCount
 } from '$lib/classes/utils/committee/procedure-rules'
 import type { Committee } from '$lib/classes/domain/committee.svelte'
+import { MAX_CONSENSUS_MEETINGS } from '$lib/classes/types/appeal'
+import { getAppealConsensusProgress } from '$lib/classes/utils/committee/appeal'
 
 /**
  * 构建 Display 窗口数据。
@@ -365,7 +367,13 @@ export function buildDisplayData(
       (!activeVoting.endedAt && snapshot ? evaluateVote(activeVoting.ballots, snapshot) : undefined)
     const tally = evaluation ?? tallyVotes(activeVoting.ballots)
     const presentSeats = (snapshot?.seats ?? participantSeats)
-      .filter((seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights)
+      .filter(
+        (seat) =>
+          seat.procedure.attendance === 'present' &&
+          (seat.procedure.hasVotingRights ||
+            (snapshot?.electorate === 'reference_group' &&
+              seat.procedure.isReferenceGroup === true))
+      )
       .sort((a, b) => a.procedure.sortOrder - b.procedure.sortOrder)
 
     // Historical ballots remain visible even if their live seat was removed or marked absent.
@@ -443,8 +451,12 @@ export function buildDisplayData(
       topic: (() => {
         const motion = conf.motions.find((m) => m.id === conf.activeCaucus?.motionId)
         if (!motion) return undefined
-        if (motion.type === 'moderated_caucus' || motion.type === 'moderated_debate') {
-          return motion.topic
+        if (
+          motion.type === 'moderated_caucus' ||
+          motion.type === 'moderated_debate' ||
+          motion.type === 'consensus_meeting'
+        ) {
+          return motion.type === 'consensus_meeting' ? motion.issue : motion.topic
         }
         if (motion.type === 'individual_speech') {
           return conf.seats.find((seat) => seat.id === motion.proposedBySeatId)?.name
@@ -478,10 +490,123 @@ export function buildDisplayData(
     }
   }
 
-  // 动议活跃时覆盖 phase 为 'motion'（Display 专用）
+  const agendaWorkflowData = conf.appealWorkflow
+    ? (() => {
+        const workflow = conf.appealWorkflow
+        const currentItemId = workflow.currentAgendaItemId
+        const agendaTitle = conf.agenda.find((item) => item.id === currentItemId)?.title
+        const progress = getAppealConsensusProgress(workflow, currentItemId)
+        const active = workflow.activeConsensusMeeting
+        const now = Date.now()
+        const reading = workflow.reading
+        const readingRemainingSec = reading
+          ? reading.completedAt
+            ? 0
+            : Math.max(
+                0,
+                Math.ceil((reading.startedAt + reading.durationSec * 1000 - now) / 1000)
+              )
+          : undefined
+        const currentSpeaker =
+          active && active.currentSpeakerIndex != null
+            ? active.speakers[active.currentSpeakerIndex]
+            : undefined
+        const currentSeat = currentSpeaker ? findSeatView(currentSpeaker.seatId) : undefined
+        return {
+          stage: workflow.stage,
+          meetingStatus: workflow.meetingStatus ?? 'formal',
+          agendaRevisionRequired: workflow.agendaRevisionRequired ?? false,
+          agendaTitle,
+          agendaItems: [...conf.agenda]
+            .sort((a, b) => a.sortOrder - b.sortOrder)
+            .map((item) => ({
+              title: item.title,
+              status: workflow.completedAgendaItemIds.includes(item.id)
+                ? ('completed' as const)
+                : item.id === currentItemId
+                  ? ('current' as const)
+                  : ('pending' as const)
+            })),
+          consensusMeetingCount: progress.started,
+          consensusMeetingLimit: MAX_CONSENSUS_MEETINGS,
+          canPostpone: progress.canPostpone,
+          documentName: conf.appealWorkflow.currentAgendaItemId
+            ? conf.appealWorkflow.pcnByAgendaItemId[conf.appealWorkflow.currentAgendaItemId]
+                ?.fileName
+            : undefined,
+          reading:
+            readingRemainingSec != null
+              ? {
+                  remainingSec: readingRemainingSec,
+                  totalSec: reading?.durationSec ?? 10 * 60,
+                  status: reading?.completedAt
+                    ? ('completed' as const)
+                    : ('running' as const)
+                }
+              : undefined,
+          postponedAt: workflow.postponedAt,
+          activeConsensusMeeting: active
+            ? {
+                issue: active.issue,
+                remainingSec: Math.max(0, active.totalSec - active.elapsedSec),
+                totalSec: active.totalSec,
+                status:
+                  active.status === 'awaiting_revision'
+                    ? ('awaiting_revision' as const)
+                    : active.paused
+                      ? ('paused' as const)
+                      : ('running' as const),
+                currentSpeaker:
+                  currentSeat && currentSpeaker
+                    ? {
+                        seat: currentSeat,
+                        remainingSec: Math.max(
+                          0,
+                          currentSpeaker.allocatedTimeSec - currentSpeaker.elapsedSec
+                        ),
+                        allocatedSec: currentSpeaker.allocatedTimeSec
+                      }
+                    : undefined,
+                speakers: active.speakers
+                  .map((speaker) => {
+                    const seat = findSeatView(speaker.seatId)
+                    return seat
+                      ? {
+                          seat,
+                          status: speaker.status,
+                          remainingSec: Math.max(
+                            0,
+                            speaker.allocatedTimeSec - speaker.elapsedSec
+                          ),
+                          allocatedSec: speaker.allocatedTimeSec
+                        }
+                      : null
+                  })
+                  .filter(
+                    (speaker): speaker is NonNullable<typeof speaker> => speaker !== null
+                  )
+              }
+            : undefined
+        }
+      })()
+    : undefined
+
+  const agendaDisplayStage =
+    conf.appealWorkflow != null &&
+    ['agenda', 'document_reading', 'negotiation_decision', 'consensus_meeting', 'pcn_finalization', 'postponed'].includes(
+      conf.appealWorkflow.stage
+    )
+
+  // 动议活跃时覆盖 phase 为 'motion'（Display 专用），议程程序其次覆盖。
   const effectivePhase: ConferenceDisplayData['phase'] = hasActiveMotionPhase
     ? 'motion'
-    : conf.phase
+    : conf.phase === 'voting'
+      ? 'voting'
+      : conf.activeCaucus
+        ? conf.phase
+        : agendaDisplayStage
+          ? 'agenda'
+          : conf.phase
   const attendanceSeats =
     effectivePhase === 'voting' && activeVoting?.rulesSnapshot
       ? activeVoting.rulesSnapshot.seats
@@ -495,7 +620,11 @@ export function buildDisplayData(
     name: conf.name,
     presentCount: attendanceSeats.filter((seat) => seat.procedure.attendance === 'present').length,
     votingCount: attendanceSeats.filter(
-      (seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights
+      (seat) =>
+        seat.procedure.attendance === 'present' &&
+        (seat.procedure.hasVotingRights ||
+          (activeVoting?.rulesSnapshot?.electorate === 'reference_group' &&
+            seat.procedure.isReferenceGroup === true))
     ).length,
     quorum,
     currentSpeaker: (() => {
@@ -561,6 +690,10 @@ export function buildDisplayData(
               displayMotion.type === 'moderated_caucus' || displayMotion.type === 'moderated_debate'
                 ? displayMotion.topic
                 : undefined,
+            issue:
+              displayMotion.type === 'consensus_meeting'
+                ? displayMotion.issue
+                : undefined,
             status: displayMotion.status,
             proposedBy,
             motionId: displayMotion.id,
@@ -596,10 +729,14 @@ export function buildDisplayData(
                     ? (displayMotion as any).durationSec
                     : displayMotion.type === 'individual_speech'
                       ? (displayMotion as any).durationSec
+                      : displayMotion.type === 'consensus_meeting'
+                        ? 25 * 60
                       : undefined,
             speakingTimePerPersonSec:
               displayMotion.type === 'moderated_caucus'
                 ? (displayMotion as any).speakingTimePerPersonSec
+                : displayMotion.type === 'consensus_meeting'
+                  ? 3 * 60
                 : undefined,
             newTimeSec:
               displayMotion.type === 'modify_speaking_time'
@@ -631,7 +768,7 @@ export function buildDisplayData(
           const csMotion = conf.motions.find((m) => m.id === conf.caucusSetup!.motionId) as any
           const proposer = conf.seats.find((seat) => seat.id === csMotion?.proposedBySeatId)
           return {
-            topic: csMotion?.topic,
+            topic: csMotion?.topic ?? csMotion?.issue,
             proposerName: proposer?.name,
             proposerPosition: conf.caucusSetup!.proposerPosition,
             speakerSeatIds: conf.caucusSetup!.speakerSeatIds,
@@ -667,6 +804,7 @@ export function buildDisplayData(
       : undefined,
     attendanceChange: extra?.attendanceChange,
     motionDraft: extra?.motionDraft,
-    pointDraft: extra?.pointDraft
+    pointDraft: extra?.pointDraft,
+    agendaWorkflow: agendaWorkflowData
   }
 }

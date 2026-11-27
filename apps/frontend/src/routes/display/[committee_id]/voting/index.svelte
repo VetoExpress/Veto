@@ -17,6 +17,7 @@
 
   const vs = $derived(data.votingSession!)
   const docName = $derived(data.activeMotion?.documentName)
+  const isAgendaVote = $derived(vs.targetType === 'agenda')
 
   const rosterEntries = $derived<RosterEntry[]>(
     vs.ballots.map((b) => ({
@@ -42,7 +43,13 @@
       .map((id) => vs.ballots.find((ballot) => ballot.seatId === id)?.seatName ?? id)
       .join(', ') ?? ''
   )
-  const headerLabel = $derived(docName ? t('components_substantive_vote') : t('components_voting'))
+  const headerLabel = $derived(
+    isAgendaVote
+      ? t('components_agenda_objection_vote')
+      : docName
+        ? t('components_substantive_vote')
+        : t('components_voting')
+  )
 </script>
 
 <DisplayPage>
@@ -53,6 +60,11 @@
       <span class="text-sm tracking-wider text-white/20">
         {majorityLabel}
       </span>
+      {#if isAgendaVote}
+        <span class="text-sm tracking-wider text-white/20">
+          {t('components_agenda_reference_group_only')}
+        </span>
+      {/if}
     </div>
 
     {#if docName}

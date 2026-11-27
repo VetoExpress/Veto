@@ -1,6 +1,9 @@
 dist/
-node_modules/
+.cloudflare/
+.vinext/
 .next/
+.next-e2e/
+node_modules/
 .turbo/
 coverage/
 pnpm-lock.yaml

@@ -128,6 +128,7 @@
   title={t('procedure_participants')}
   subtitle={conf?.name}
   backHref={resolve(`/client/${conferenceId}/committee/${committeeId}/chair`)}
+  backLabel={t('procedure_back_to_chair_workspace')}
 >
   {#snippet actions()}
     <Button

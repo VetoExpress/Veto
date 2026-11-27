@@ -8,6 +8,7 @@
 
   import {
     currentCommittee,
+    enableAppealChair,
     startInitialRollCall,
     resumeMeeting,
     resetRollCall
@@ -38,7 +39,8 @@
     Timer,
     ScrollText,
     Settings,
-    RotateCcw
+    RotateCcw,
+    ListChecks
   } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import {
@@ -58,6 +60,17 @@
 
   const conf = $derived($currentCommittee)
   const presentation = $derived(conf ? getChairPresentation(conf) : null)
+  const agendaMode = $derived(conf?.agendaMode ?? false)
+  const agendaStage = $derived(conf?.appealWorkflow?.stage ?? null)
+  const consensusMeetingActive = $derived(
+    conf?.appealWorkflow?.activeConsensusMeeting?.status === 'active'
+  )
+  const chairHostingRequired = $derived(
+    !agendaMode ||
+      agendaStage === 'evaluation_debate' ||
+      consensusMeetingActive ||
+      (conf?.appealWorkflow?.chairOverrideEnabled ?? false)
+  )
   const rules = $derived(
     conf?.procedureRules ?? defaultProcedureRules(conf?.substantiveVotingMajority)
   )
@@ -84,6 +97,14 @@
 
   function handlePrimaryAction(): void {
     if (presentation?.hasPrimaryAction) motionDialogOpen = true
+  }
+
+  function openAgendaWorkflow(): void {
+    goto(resolve(`/client/${conferenceId}/committee/${committeeId}/chair/appeal`))
+  }
+
+  function reenableChair(): void {
+    enableAppealChair()
   }
 </script>
 
@@ -176,7 +197,7 @@
           {t('procedure_timer')}
         </Button>
 
-        {#if presentation.canProposePoint}
+        {#if presentation.canProposePoint && chairHostingRequired}
           <Button
             size="sm"
             variant="outline"
@@ -189,7 +210,7 @@
           </Button>
         {/if}
 
-        {#if presentation.hasPrimaryAction}
+        {#if presentation.hasPrimaryAction && chairHostingRequired}
           <Button
             size="sm"
             class="h-8 gap-1.5 text-xs"
@@ -216,7 +237,33 @@
       {/snippet}
     </PageTopBar>
 
-    <ChairPhaseView screen={presentation.screen} onStartRollCall={openRollCall} />
+    {#if chairHostingRequired}
+      <ChairPhaseView screen={presentation.screen} onStartRollCall={openRollCall} />
+    {:else}
+      <div class="flex flex-1 items-center justify-center p-6">
+        <div class="max-w-md rounded-2xl border bg-card px-8 py-12 text-center shadow-sm">
+          <span
+            class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300"
+          >
+            <ListChecks size={22} />
+          </span>
+          <h2 class="mt-4 text-lg font-semibold">{t('procedure_no_hosting_required_title')}</h2>
+          <p class="mt-2 text-sm leading-6 text-muted-foreground">
+            {t('procedure_no_hosting_required_description')}
+          </p>
+          <div class="mt-5 flex flex-col justify-center gap-2 sm:flex-row">
+            <Button class="gap-2" onclick={openAgendaWorkflow}>
+              <ListChecks size={15} />
+              {t('procedure_agenda_open_workflow')}
+            </Button>
+            <Button variant="outline" class="gap-2" onclick={reenableChair}>
+              <Gavel size={15} />
+              {t('procedure_reenable_chair')}
+            </Button>
+          </div>
+        </div>
+      </div>
+    {/if}
 
     <!-- Motion Dialog -->
     {#key motionDialogOpen}

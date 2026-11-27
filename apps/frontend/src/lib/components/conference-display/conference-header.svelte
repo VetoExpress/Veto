@@ -10,7 +10,8 @@
 
   const DISPLAY_PHASE_LABELS = $derived<Record<DisplayPhase, string>>({
     ...PHASE_LABELS,
-    motion: t('components_motion')
+    motion: t('components_motion'),
+    agenda: t('components_agenda_procedure')
   })
 
   let {

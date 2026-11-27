@@ -25,7 +25,12 @@ export function navigateToConference(id: string): void {
   const committeeId = conference?.committees[0]?.id
   if (conference?.mode === 'singleton' && committeeId) {
     openConference(id)
-    goto(resolve(`/client/${id}/committee/${committeeId}/chair`))
+    const agendaMode = conference.committees[0]?.agendaMode === true
+    if (agendaMode) {
+      goto(resolve(`/client/${id}/committee/${committeeId}/chair/appeal`))
+    } else {
+      goto(resolve(`/client/${id}/committee/${committeeId}/chair`))
+    }
     return
   }
 }

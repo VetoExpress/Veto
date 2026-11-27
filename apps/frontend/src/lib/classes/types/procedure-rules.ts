@@ -34,6 +34,7 @@ export interface VotingRulesSnapshot {
   /** The electorate, attendance and labels are fixed when the vote starts. */
   seats: ParticipantSeat[]
   vetoSeatIds: string[]
+  electorate: 'procedure' | 'reference_group'
 }
 
 export interface VoteEvaluation {

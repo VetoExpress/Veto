@@ -9,10 +9,11 @@
   import { Button } from '$lib/components/ui/button'
   import * as Tabs from '$lib/components/ui/tabs'
   import StepInfo from './step-info.svelte'
-  import StepMeetings from './step-meetings.svelte'
   import StepMode from './step-mode.svelte'
   import StepReview from './step-review.svelte'
+  import StepRules from './step-rules.svelte'
   import StepSeats from './step-seats.svelte'
+  import StepVenue from './step-venue.svelte'
   import { getWizardSteps } from './steps'
   import { cloudPlatformView } from '$lib/classes/stores/app/cloud-platform-view.svelte'
 
@@ -97,7 +98,11 @@
     wizard.reset()
     const committeeId = event?.committees[0]?.id
     if (event && committeeId && event.mode === 'singleton') {
-      void goto(resolve(`/client/${event.id}/committee/${committeeId}/chair`))
+      if (event.committees[0]?.agendaMode) {
+        void goto(resolve(`/client/${event.id}/committee/${committeeId}/chair/appeal`))
+      } else {
+        void goto(resolve(`/client/${event.id}/committee/${committeeId}/chair`))
+      }
       return
     }
     void goto(resolve(event && committeeId ? `/client/${event.id}/committee/${committeeId}` : '/'))
@@ -154,8 +159,10 @@
         <StepMode />
       {:else if currentStep?.id === 'event'}
         <StepInfo />
-      {:else if currentStep?.id === 'meeting'}
-        <StepMeetings />
+      {:else if currentStep?.id === 'venue'}
+        <StepVenue />
+      {:else if currentStep?.id === 'rules'}
+        <StepRules />
       {:else if currentStep?.id === 'seats'}
         <StepSeats />
       {:else if currentStep?.id === 'review'}

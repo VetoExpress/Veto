@@ -22,6 +22,7 @@ export interface CommitteeDraft {
     hasVetoPower?: boolean
   }>
   procedureRules: ProcedureRulesConfig
+  agendaMode: boolean
   agenda?: Array<{ title: string; description?: string }>
 }
 
@@ -64,12 +65,14 @@ function createCommittee(
   name: string,
   seats: Seat[],
   agenda: Array<{ title: string; description?: string }> = [],
-  procedureRules?: ProcedureRulesConfig
+  procedureRules?: ProcedureRulesConfig,
+  agendaMode = false
 ): Committee {
   return {
     id,
     name,
     phase: 'preamble',
+    agendaMode,
     agenda: agenda.map((item, index) => ({
       id: crypto.randomUUID(),
       title: item.title.trim(),
@@ -133,8 +136,9 @@ export async function createConferenceFromDraft(input: CreateConferenceInput): P
       draft.id,
       draft.name.trim(),
       seats,
-      draft.agenda ?? [],
-      mapProcedureRulesToCreatedSeats(draft.procedureRules, draft.seats, seats)
+      draft.agendaMode ? (draft.agenda ?? []) : [],
+      mapProcedureRulesToCreatedSeats(draft.procedureRules, draft.seats, seats),
+      draft.agendaMode
     )
 
     const conferenceId = createConference(name, singletonCommittee.name, [], [], {
@@ -226,8 +230,9 @@ export async function createConferenceFromDraft(input: CreateConferenceInput): P
         draft.id,
         draft.name.trim(),
         seats,
-        [],
-        mapProcedureRulesToCreatedSeats(draft.procedureRules, draft.seats, seats)
+        draft.agendaMode ? (draft.agenda ?? []) : [],
+        mapProcedureRulesToCreatedSeats(draft.procedureRules, draft.seats, seats),
+        draft.agendaMode
       )
     )
   }

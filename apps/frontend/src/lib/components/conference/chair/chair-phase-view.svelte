@@ -81,7 +81,7 @@
     </ScrollArea>
   {:else if screen.kind === 'moderated_caucus'}
     <ScrollArea class="flex-1">
-      <ModeratedCaucusView />
+      <ModeratedCaucusView mode={screen.mode} />
     </ScrollArea>
   {:else if screen.kind === 'caucus_countdown'}
     <ScrollArea class="flex-1">

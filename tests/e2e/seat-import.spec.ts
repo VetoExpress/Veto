@@ -75,7 +75,7 @@ test('platform：两个会场分别导入，折叠后导入自动展开且保留
   })
 })
 
-test('App：单例会场卡片支持文本、文件导入和折叠，保留投票权', async ({ page }) => {
+test('App：本地大会席位直接展示并支持文本、文件导入，保留投票权', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('veto-locale', 'zh-CN'))
   await page.goto('http://localhost:4173/conference')
   await page
@@ -88,13 +88,12 @@ test('App：单例会场卡片支持文本、文件导入和折叠，保留投�
   await page.getByRole('button', { name: '下一步', exact: true }).click()
   await page.getByLabel('会场名称').fill('单例会场')
   await page.getByRole('button', { name: '下一步', exact: true }).click()
-  const card = page
-    .getByRole('article')
-    .filter({ has: page.getByRole('heading', { name: '单例会场', exact: true }) })
+  await expect(page.getByRole('heading', { name: '议事模式', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: '下一步', exact: true }).click()
+  const card = page.getByRole('main')
+  await expect(page.getByRole('heading', { name: '单例会场', exact: true })).toHaveCount(0)
   await importText(page, card, '单例会场', '观察员,,否')
   await expect(card.getByLabel('投票权')).not.toBeChecked()
-  await card.getByRole('button', { name: '折叠单例会场席位' }).click()
-  await expect(card.getByLabel('席位名称', { exact: true })).toBeHidden()
   await importFile(page, card, '单例会场', '代表')
   await expect(card.getByLabel('席位名称', { exact: true })).toHaveCount(2)
   await expect(card.getByLabel('席位名称', { exact: true }).first()).toHaveValue('观察员')

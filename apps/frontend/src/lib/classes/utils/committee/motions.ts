@@ -22,10 +22,13 @@ export function resolveMotion(motionType: MotionType): MotionResolution {
     case 'reorder_resolution':
     case 'suspend_meeting':
     case 'substantive_vote':
+    case 'consensus_meeting':
       return { requiresVoting: true, votingMajority: 'simple_majority', autoApprove: false }
     case 'closure_debate':
     case 'close_meeting':
     case 'postpone_resolution':
+    case 'postpone_consensus_meeting':
+    case 'enter_next_procedure':
       return { requiresVoting: true, votingMajority: 'two_thirds', autoApprove: false }
     default:
       return { requiresVoting: true, votingMajority: 'simple_majority', autoApprove: false }
